@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jodi Daniel | Digital Health Law & Policy Leader</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Source+Sans+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Source Sans Pro', sans-serif;
+            font-weight: 300;
+            line-height: 1.8;
+            color: #474747;
+            background: linear-gradient(135deg, #1a3a5c 0%, #2d5a7b 25%, #3d7a9c 50%, #4a8dad 75%, #5ba0be 100%);
+            min-height: 100vh;
+        }
+
+        /* Fade-in slide-up animation */
+        @keyframes fadeSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            opacity: 0;
+            animation: fadeSlideIn 0.8s ease-out forwards;
+        }
+
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.4s; }
+        .delay-4 { animation-delay: 0.6s; }
+        .delay-5 { animation-delay: 0.8s; }
+        .delay-6 { animation-delay: 1.0s; }
+        .delay-7 { animation-delay: 1.2s; }
+        .delay-8 { animation-delay: 1.4s; }
+
+        .site-wrapper {
+            max-width: 74rem;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #ffffff;
+        }
+
+        header h1 {
+            font-family: 'Raleway', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        header .tagline {
+            font-size: 1.25rem;
+            font-weight: 300;
+            opacity: 0.9;
+            letter-spacing: 0.05em;
+        }
+
+        .container {
+            background: #ffffff;
+            border-radius: 0.5rem;
+            padding: 3rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .section-title {
+            font-family: 'Raleway', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: #2d5a7b;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #5dd9e8;
+            display: inline-block;
+        }
+
+        .intro-section {
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 2.5rem;
+            align-items: start;
+        }
+
+        .profile-placeholder {
+            width: 180px;
+            flex-shrink: 0;
+        }
+
+        .profile-image {
+            width: 100%;
+            max-width: 180px;
+            border-radius: 0.5rem;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .profile-image:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .intro-text h2 {
+            font-family: 'Raleway', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #1a3a5c;
+            margin-bottom: 1rem;
+            line-height: 1.3;
+        }
+
+        .intro-text p {
+            margin-bottom: 1rem;
+            font-size: 1.05rem;
+            line-height: 1.85;
+        }
+
+        .highlight {
+            color: #2d5a7b;
+            font-weight: 600;
+        }
+
+        /* Navigation inside the about box */
+        .intro-nav {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2.5rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e8eef3;
+            flex-wrap: wrap;
+        }
+
+        .intro-nav a {
+            color: #2d5a7b;
+            text-decoration: none;
+            font-family: 'Raleway', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 0.5rem 1rem;
+            border-bottom: 2px solid transparent;
+            transition: all 0.25s ease;
+            white-space: nowrap;
+        }
+
+        .intro-nav a:hover {
+            border-bottom-color: #5dd9e8;
+            color: #1a3a5c;
+        }
+
+        .intro-nav a:not(:last-child)::after {
+            content: '';
+            display: none;
+        }
+
+        .expertise-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .expertise-card {
+            padding: 1.5rem;
+            background: #f8fafc;
+            border-radius: 0.5rem;
+            border-left: 4px solid #5dd9e8;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .expertise-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .expertise-card h3 {
+            font-family: 'Raleway', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1a3a5c;
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .expertise-card p {
+            font-size: 0.95rem;
+            color: #5a6a7a;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+            margin-top: 1.5rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #5dd9e8, #2d5a7b);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 2rem;
+            padding-left: 1.5rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -2rem;
+            top: 0.5rem;
+            width: 12px;
+            height: 12px;
+            background: #5dd9e8;
+            border-radius: 50%;
+            border: 3px solid #ffffff;
+            box-shadow: 0 0 0 2px #5dd9e8;
+        }
+
+        .timeline-item h3 {
+            font-family: 'Raleway', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1a3a5c;
+            margin-bottom: 0.25rem;
+        }
+
+        .timeline-item .org {
+            font-weight: 600;
+            color: #2d5a7b;
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-item .period {
+            font-size: 0.85rem;
+            color: #8a9aaa;
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-item p {
+            font-size: 0.95rem;
+            color: #5a6a7a;
+        }
+
+        .education-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .education-card {
+            text-align: center;
+            padding: 2rem;
+            background: #f8fafc;
+            border-radius: 0.5rem;
+        }
+
+        .education-card .degree {
+            font-family: 'Raleway', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2d5a7b;
+            margin-bottom: 0.5rem;
+        }
+
+        .education-card .field {
+            font-weight: 600;
+            color: #1a3a5c;
+            margin-bottom: 0.25rem;
+        }
+
+        .education-card .school {
+            font-size: 0.9rem;
+            color: #5a6a7a;
+        }
+
+        .accomplishments-list {
+            list-style: none;
+            margin-top: 1.5rem;
+        }
+
+        .accomplishments-list li {
+            position: relative;
+            padding-left: 2rem;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        .accomplishments-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.6rem;
+            width: 8px;
+            height: 8px;
+            background: #5dd9e8;
+            border-radius: 50%;
+        }
+
+        /* Media & Publications */
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .media-category {
+            background: #f8fafc;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+        }
+
+        .media-category h3 {
+            font-family: 'Raleway', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #1a3a5c;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #5dd9e8;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .media-category h3 svg {
+            width: 18px;
+            height: 18px;
+            fill: #2d5a7b;
+        }
+
+        .media-list {
+            list-style: none;
+        }
+
+        .media-list li {
+            margin-bottom: 0.75rem;
+        }
+
+        .media-list a {
+            color: #2d5a7b;
+            text-decoration: none;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            display: block;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            transition: all 0.2s ease;
+        }
+
+        .media-list a:hover {
+            background: #e8f4f8;
+            color: #1a3a5c;
+        }
+
+        .media-list .source {
+            font-size: 0.8rem;
+            color: #8a9aaa;
+            display: block;
+            margin-top: 0.15rem;
+        }
+
+        .contact-section {
+            text-align: center;
+        }
+
+        .contact-section p {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .contact-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .contact-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: #2d5a7b;
+            color: #ffffff;
+            text-decoration: none;
+            font-family: 'Raleway', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            border-radius: 0.25rem;
+            transition: all 0.25s ease;
+        }
+
+        .contact-link:hover {
+            background: #1a3a5c;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .contact-link svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: #5dd9e8;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 900px) {
+            .expertise-grid,
+            .media-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2rem;
+                letter-spacing: 0.1em;
+            }
+
+            header .tagline {
+                font-size: 1rem;
+            }
+
+            .intro-section {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .profile-placeholder {
+                width: 150px;
+                margin: 0 auto;
+            }
+
+            .profile-image {
+                max-width: 150px;
+                margin: 0 auto;
+            }
+
+            .intro-text h2 {
+                font-size: 1.5rem;
+            }
+
+            .intro-nav {
+                gap: 0.5rem;
+            }
+
+            .intro-nav a {
+                font-size: 0.7rem;
+                padding: 0.4rem 0.6rem;
+                letter-spacing: 0.05em;
+            }
+
+            .container {
+                padding: 1.5rem;
+            }
+
+            .section-title {
+                font-size: 0.75rem;
+            }
+
+            .expertise-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .education-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="site-wrapper">
+        <header class="animate-in delay-1">
+            <h1>Jodi Daniel</h1>
+            <p class="tagline">Digital Health Law & Policy Leader</p>
+        </header>
+
+        <section id="about" class="container animate-in delay-2">
+            <div class="intro-section">
+                <div class="profile-placeholder">
+                    <svg class="profile-image" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="300" height="300" fill="#e8f4f8"/>
+                        <circle cx="150" cy="120" r="50" fill="#2d5a7b"/>
+                        <ellipse cx="150" cy="280" rx="80" ry="60" fill="#2d5a7b"/>
+                        <text x="150" y="320" text-anchor="middle" fill="#5a6a7a" font-family="Raleway, sans-serif" font-size="12">JD</text>
+                    </svg>
+                </div>
+                <div class="intro-text">
+                    <h2>Pioneering the Future of Digital Health</h2>
+                    <p>
+                        Jodi Daniel is a <span class="highlight">nationally recognized leader</span> in digital health law and policy,
+                        trusted by healthcare organizations and technology innovators to navigate the complex regulatory landscape
+                        of digital health and wellness.
+                    </p>
+                    <p>
+                        With <span class="highlight">over 30 years of experience</span> in healthcare innovation, including 15 years
+                        as a lawyer and senior policymaker at the U.S. Department of Health and Human Services (HHS), Jodi brings
+                        unparalleled expertise to groundbreaking products and services that raise novel legal, policy, and ethical issues.
+                    </p>
+                    <p>
+                        As one of the <span class="highlight">first digital health lawyers</span> and a founding Director at the
+                        Office of the National Coordinator for Health IT (ONC) at HHS, Jodi helped shape the very foundation of
+                        digital health regulation in the United States.
+                    </p>
+                </div>
+            </div>
+            <nav class="intro-nav">
+                <a href="#expertise">Expertise</a>
+                <a href="#experience">Experience</a>
+                <a href="#accomplishments">Accomplishments</a>
+                <a href="#media">Media</a>
+                <a href="#education">Education</a>
+                <a href="#contact">Contact</a>
+            </nav>
+        </section>
+
+        <section id="expertise" class="container animate-in delay-3">
+            <span class="section-title">Areas of Expertise</span>
+            <div class="expertise-grid">
+                <div class="expertise-card">
+                    <h3>Digital Health & AI</h3>
+                    <p>Artificial intelligence and machine learning applications in healthcare, including regulatory strategy and compliance frameworks.</p>
+                </div>
+                <div class="expertise-card">
+                    <h3>Health Data Privacy</h3>
+                    <p>HIPAA compliance, health information exchange, and privacy frameworks for electronic health records and health data platforms.</p>
+                </div>
+                <div class="expertise-card">
+                    <h3>FDA & Regulatory Strategy</h3>
+                    <p>Digital therapeutics, mobile health applications, and medical device software regulatory pathways and approvals.</p>
+                </div>
+                <div class="expertise-card">
+                    <h3>Telehealth & Remote Care</h3>
+                    <p>Remote patient monitoring, telemedicine regulations, and virtual care delivery models across state and federal jurisdictions.</p>
+                </div>
+                <div class="expertise-card">
+                    <h3>Health IT Policy</h3>
+                    <p>Interoperability standards, information blocking rules, and health IT certification requirements.</p>
+                </div>
+                <div class="expertise-card">
+                    <h3>Strategic Advisory</h3>
+                    <p>Policy development, government relations, and strategic counsel for healthcare technology innovators and investors.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="experience" class="container animate-in delay-4">
+            <span class="section-title">Professional Experience</span>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h3>Partner</h3>
+                    <div class="org">Wilson Sonsini Goodrich & Rosati</div>
+                    <div class="period">2025 - Present</div>
+                    <p>Partner in the Washington, D.C. office, serving as a key member of the Digital Health and Data, Privacy, and Cybersecurity practices.</p>
+                </div>
+                <div class="timeline-item">
+                    <h3>Partner & Managing Director</h3>
+                    <div class="org">Crowell & Moring LLP / Crowell Health Solutions</div>
+                    <div class="period">2015 - 2025</div>
+                    <p>Led the Digital Health Practice, served on the Health Care Group steering committee, and co-founded Crowell Health Solutions strategic consulting firm.</p>
+                </div>
+                <div class="timeline-item">
+                    <h3>Founding Director, Office of Policy</h3>
+                    <div class="org">Office of the National Coordinator for Health IT (ONC), HHS</div>
+                    <div class="period">2005 - 2015</div>
+                    <p>Led federal advisory committees and established national health IT policy on privacy, security, consumer e-health, telehealth, and safety oversight. Served under all five ONC leaders since the office was founded.</p>
+                </div>
+                <div class="timeline-item">
+                    <h3>Senior Counsel for Health IT</h3>
+                    <div class="org">Office of the General Counsel, HHS</div>
+                    <div class="period">2000 - 2005</div>
+                    <p>First senior counsel for health IT at HHS. Founded and chaired the health IT practice group, developed legal strategies, and advised CMS on e-prescribing regulations.</p>
+                </div>
+                <div class="timeline-item">
+                    <h3>Attorney-Advisor</h3>
+                    <div class="org">Civil Rights Division, Office of the General Counsel, HHS</div>
+                    <div class="period">Prior to 2000</div>
+                    <p>Began federal career as an attorney-advisor, gaining foundational experience in healthcare law and civil rights.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="accomplishments" class="container animate-in delay-5">
+            <span class="section-title">Key Accomplishments</span>
+            <ul class="accomplishments-list">
+                <li><strong>HIPAA Architect:</strong> Key drafter of the original HIPAA Privacy Rules and Enforcement Rules that govern health data protection nationwide</li>
+                <li><strong>Privacy Framework Developer:</strong> Created the Nationwide Privacy and Security Framework for Electronic Exchange of Health Information</li>
+                <li><strong>Health IT Standards Pioneer:</strong> Helped develop early standards and certification rules for health information technology</li>
+                <li><strong>Consumer Health Champion:</strong> Launched ONC's Consumer e-Health and Health IT Safety programs</li>
+                <li><strong>Information Blocking Expert:</strong> Contributed to drafting ONC's landmark information blocking report and regulations</li>
+                <li><strong>HITECH Act Implementation:</strong> Helped chart health IT strategies before and after the HITECH Act invested billions in healthcare technology</li>
+                <li><strong>Yale Faculty:</strong> Serves as Adjunct Assistant Professor at Yale School of Medicine, educating the next generation of health leaders</li>
+            </ul>
+        </section>
+
+        <section id="media" class="container animate-in delay-6">
+            <span class="section-title">Publications & Media</span>
+            <div class="media-grid">
+                <div class="media-category">
+                    <h3>
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                        Featured Articles
+                    </h3>
+                    <ul class="media-list">
+                        <li>
+                            <a href="https://news.bloomberglaw.com/health-law-and-business/insight-former-hhs-official-says-health-data-must-be-portable-but-dont-forget-the-consumer" target="_blank" rel="noopener">
+                                Health Data Must be Portable, But Don't Forget the Consumer
+                                <span class="source">Bloomberg Law, 2018</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.fiercehealthcare.com/mobile/crowell-moring-partner-jodi-daniel-talks-mhealth-security-and-privacy-and-what-needs-to-be" target="_blank" rel="noopener">
+                                Everyone Has a Role in Shoring Up Patient Privacy
+                                <span class="source">Fierce Healthcare</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.wsgrdataadvisor.com/author/jodi-daniel/" target="_blank" rel="noopener">
+                                The Data Advisor Blog
+                                <span class="source">Wilson Sonsini</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="media-category">
+                    <h3>
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/></svg>
+                        Podcasts & Interviews
+                    </h3>
+                    <ul class="media-list">
+                        <li>
+                            <a href="https://podcasts.apple.com/us/podcast/ai-in-health-care-series-part-2-artificial-intelligence/id1469938124?i=1000662031794" target="_blank" rel="noopener">
+                                AI in Health Care: HIPAA and Data Privacy
+                                <span class="source">Payers, Providers, and Patients Podcast</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.hcinnovationgroup.com/policy-value-based-care/article/13025902/former-onc-policy-director-jodi-daniel-reflects-on-her-government-tenure-looks-at-future-of-health-it-landscape" target="_blank" rel="noopener">
+                                Reflections on Government Tenure & Future of Health IT
+                                <span class="source">Healthcare Innovation</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.hcinnovationgroup.com/policy-value-based-care/article/13026441/at-himss16-former-onc-policy-director-jodi-daniel-dishes-on-new-ehr-certification-process-healthcare-security" target="_blank" rel="noopener">
+                                HIMSS16: EHR Certification & Healthcare Security
+                                <span class="source">Healthcare Innovation</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="media-category">
+                    <h3>
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6 10H6v-2h8v2zm4-4H6v-2h12v2z"/></svg>
+                        Speaking & Panels
+                    </h3>
+                    <ul class="media-list">
+                        <li>
+                            <a href="https://www.wsgr.com/en/people/jodi-daniel.html" target="_blank" rel="noopener">
+                                AI in Healthcare: Key Considerations for Providers & Payers
+                                <span class="source">LA County Bar Association, April 2025</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.wsgr.com/en/people/jodi-daniel.html" target="_blank" rel="noopener">
+                                Trust: The Cornerstone of AI's Bridge Across Health Care
+                                <span class="source">Health Evolution Summit, April 2025</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.wsgr.com/en/people/jodi-daniel.html" target="_blank" rel="noopener">
+                                The Insider's Guide to Health Care AI Policy in 2025
+                                <span class="source">Alliance for Health Policy, Dec 2025</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="media-category">
+                    <h3>
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM18.92 8h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zM5.08 16h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.91-4.33-3.56zm2.95-8H5.08c.96-1.65 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>
+                        Press & News
+                    </h3>
+                    <ul class="media-list">
+                        <li>
+                            <a href="https://www.wsgr.com/en/insights/wilson-sonsini-expands-health-privacy-and-regulatory-capabilities-with-the-addition-of-jodi-daniel.html" target="_blank" rel="noopener">
+                                Wilson Sonsini Expands Health Privacy Capabilities
+                                <span class="source">Wilson Sonsini News, May 2025</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://news.bloomberglaw.com/business-and-practice/wilson-sonsini-hires-jodi-daniel-as-health-privacy-partner" target="_blank" rel="noopener">
+                                Wilson Sonsini Hires Jodi Daniel as Health Privacy Partner
+                                <span class="source">Bloomberg Law, 2025</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.healthcareitnews.com/news/jodi-daniel-step-down-onc" target="_blank" rel="noopener">
+                                Jodi Daniel to Step Down from ONC After Decade of Service
+                                <span class="source">Healthcare IT News, 2015</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="education" class="container animate-in delay-7">
+            <span class="section-title">Education</span>
+            <div class="education-grid">
+                <div class="education-card">
+                    <div class="degree">J.D.</div>
+                    <div class="field">Law</div>
+                    <div class="school">Georgetown University Law Center</div>
+                </div>
+                <div class="education-card">
+                    <div class="degree">M.P.H.</div>
+                    <div class="field">Public Health</div>
+                    <div class="school">Johns Hopkins Bloomberg School of Public Health</div>
+                </div>
+                <div class="education-card">
+                    <div class="degree">B.A.</div>
+                    <div class="field">Economics</div>
+                    <div class="school">Tufts University</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="contact" class="container contact-section animate-in delay-8">
+            <span class="section-title">Connect</span>
+            <p>Interested in discussing digital health strategy, regulatory matters, or speaking opportunities?</p>
+            <div class="contact-links">
+                <a href="https://www.wsgr.com/en/people/jodi-daniel.html" class="contact-link" target="_blank" rel="noopener">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                    </svg>
+                    Wilson Sonsini Profile
+                </a>
+                <a href="https://www.linkedin.com/in/jodidaniel/" class="contact-link" target="_blank" rel="noopener">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.79M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/>
+                    </svg>
+                    LinkedIn
+                </a>
+            </div>
+        </section>
+
+        <footer class="animate-in delay-8">
+            <p>&copy; 2026 Jodi Daniel. All rights reserved.</p>
+        </footer>
+    </div>
+</body>
+</html>
