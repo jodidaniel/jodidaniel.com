@@ -21,9 +21,10 @@ future: true
 
 cms:
   repository: jodidaniel/jodidaniel.com
-  # Filled in after the oauth-proxy stack is deployed (its ApiUrl output).
-  # Empty until then; the rendered Decap config substitutes {{CMS_OAUTH_BASE_URL}}.
-  oauth_base_url: ""
+  # oauth-proxy stack `jodidaniel-com-oauth-proxy` (us-east-1) ApiUrl output.
+  # The rendered Decap config uses this as backend.base_url + auth_endpoint
+  # prod/auth; the GitHub OAuth App callback is <base>/prod/callback.
+  oauth_base_url: "https://zkrofo300b.execute-api.us-east-1.amazonaws.com"
 
 collections:
   projects: { output: false, permalink: /projects/:slug/ }
