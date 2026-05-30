@@ -1,0 +1,32 @@
+# Home page content — single source of truth for jodidaniel.com.
+# Edited end-to-end via /admin (Decap "Home Page" collection).
+#
+# PLACEHOLDER content only: prod main ships a dignified "coming soon".
+# The full mockup content lands later through a reviewed Decap PR
+# (cms/site_content/home) + preview env — never committed to main here.
+# With every list empty, the home layout's for-loops render nothing, so
+# only the header (name + tagline) and footer line appear on the gradient.
+header:
+  name: "Jodi Daniel"
+  tagline: "Site coming soon"
+about:
+  photo: ""
+  intro_heading: ""
+  bio: []
+  nav: []
+expertise_heading: ""
+expertise: []
+experience_heading: ""
+experience: []
+accomplishments_heading: ""
+accomplishments: []
+media_heading: ""
+media: []
+education_heading: ""
+education: []
+contact:
+  heading: ""
+  intro: ""
+  links: []
+footer:
+  copyright: "© 2026 Jodi Daniel"

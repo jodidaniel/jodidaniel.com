@@ -1,0 +1,6 @@
+<svg class="profile-image" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Jodi Daniel placeholder portrait">
+    <rect width="300" height="300" fill="#e8f4f8"/>
+    <circle cx="150" cy="120" r="50" fill="#2d5a7b"/>
+    <ellipse cx="150" cy="280" rx="80" ry="60" fill="#2d5a7b"/>
+    <text x="150" y="320" text-anchor="middle" fill="#5a6a7a" font-family="Raleway, sans-serif" font-size="12">JD</text>
+</svg>
