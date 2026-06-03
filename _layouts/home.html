@@ -11,13 +11,29 @@
 </head>
 <body>
     {%- assign home = site.data.home -%}
+    {%- comment -%}
+      `site_live` gates the whole site. When false (the default until the boss
+      signs off), only the coming-soon shell renders: name + coming_soon.tagline
+      + coming_soon.copyright. The full bio/expertise/experience/media copy is
+      present in _data/home.yml but NOT rendered. Flip site_live: true (via
+      /admin) + restore the real _config.yml description to go live.
+    {%- endcomment -%}
+    {%- assign live = home.site_live -%}
     <div class="site-wrapper">
         <header class="animate-in delay-1">
             <h1>{{ home.header.name }}</h1>
+            {%- if live -%}
             {%- if home.header.tagline and home.header.tagline != "" -%}
             <p class="tagline">{{ home.header.tagline }}</p>
             {%- endif -%}
+            {%- else -%}
+            {%- if home.coming_soon.tagline and home.coming_soon.tagline != "" -%}
+            <p class="tagline">{{ home.coming_soon.tagline }}</p>
+            {%- endif -%}
+            {%- endif -%}
         </header>
+
+        {%- if live -%}
 
         {%- assign about = home.about -%}
         {%- assign has_about = false -%}
@@ -188,10 +204,16 @@
             </div>
         </section>
         {%- endif -%}
+        {%- endif -%}{%- comment -%} end: full-site sections (site_live) {%- endcomment -%}
 
-        {%- if home.footer and home.footer.copyright and home.footer.copyright != "" -%}
+        {%- if live -%}
+        {%- assign copyright = home.footer.copyright -%}
+        {%- else -%}
+        {%- assign copyright = home.coming_soon.copyright -%}
+        {%- endif -%}
+        {%- if copyright and copyright != "" -%}
         <footer class="animate-in delay-8">
-            <p>{{ home.footer.copyright }}</p>
+            <p>{{ copyright }}</p>
         </footer>
         {%- endif -%}
     </div>

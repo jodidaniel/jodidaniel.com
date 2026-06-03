@@ -1,9 +1,19 @@
-# STAGED REAL CONTENT — NOT part of the build / NOT committed to main.
-# This is artifact (B): the full mockup content destined for a Decap PR
-# (cms/site_content/home) + preview-pr* environment for boss review, which
-# flips prod from the minimal placeholder _data/home.yml to this in one
-# reviewed step. The schema/path match the prod placeholder exactly so the
-# Decap "Home Page" files-collection edits the same _data/home.yml.
+# Home page content, edited end-to-end via /admin (Decap "Home Page"
+# files-collection). The full copy below is COMMITTED but GATED: while
+# `site_live` is false the home layout renders ONLY the coming-soon shell
+# (name + coming_soon.tagline + coming_soon.copyright), so none of the bio /
+# expertise / experience / media copy is served on prod. GO-LIVE: an editor
+# flips `site_live: true` via /admin (then a deploy runs) to reveal the full
+# site — boss copy sign-off required first. Also restore the real SEO
+# description in _config.yml at go-live (see the note there).
+site_live: false
+
+# Shown only while site_live is false — reproduces the coming-soon page.
+# Admin-editable like everything else here.
+coming_soon:
+  tagline: "Site coming soon"
+  copyright: "© 2026 Jodi Daniel"
+
 header:
   name: "Jodi Daniel"
   tagline: "Digital Health Law & Policy Leader"
