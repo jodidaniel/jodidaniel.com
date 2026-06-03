@@ -55,7 +55,7 @@ permissions:
 
 jobs:
   visual-regression:
-    uses: Adam-S-Daniel/cms-platform/.github/workflows/visual-regression.yml@v0.1.1
+    uses: Adam-S-Daniel/cms-platform/.github/workflows/visual-regression.yml@v0.1.3
     with:
       # Pin to the SAME ref as the `uses:` pin above so the pipeline matches.
       platform_ref: v0.1.1
