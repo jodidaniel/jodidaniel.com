@@ -87,6 +87,9 @@ media:
       - title: "The Data Advisor Blog"
         source: "Wilson Sonsini"
         url: "https://www.wsgrdataadvisor.com/author/jodi-daniel/"
+      - title: "Brief of Over 640 State Legislators as Amici Curiae — FDA v. Alliance for Hippocratic Medicine"
+        source: "U.S. Supreme Court (No. 23-235), Jan 2024 · Counsel, Crowell & Moring"
+        url: "https://www.supremecourt.gov/DocketPDF/23/23-235/299258/20240130151552206_State%20Legislator%20Amicus%20Brief.pdf"
   - category: "Podcasts & Interviews"
     icon: "microphone"
     items:
@@ -123,6 +126,9 @@ media:
       - title: "Jodi Daniel to Step Down from ONC After Decade of Service"
         source: "Healthcare IT News, 2015"
         url: "https://www.healthcareitnews.com/news/jodi-daniel-step-down-onc"
+      - title: "646 State Legislators File Supreme Court Amicus Brief"
+        source: "State Innovation Exchange (SiX), 2024 · coverage of the brief above"
+        url: "https://sixrepro.org/article/646-state-legislators-file-supreme-court-amicus-brief/"
 education_heading: "Education"
 education:
   - { degree: "J.D.",   field: "Law",           school: "Georgetown University Law Center" }
