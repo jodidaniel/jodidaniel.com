@@ -1,0 +1,15 @@
+_site/
+.jekyll-cache/
+vendor/
+infrastructure/site-params.env
+.bundle/
+# Decap admin config is RENDERED at deploy time (gem post_write hook /
+# render-decap-config.rb inject window.CMS_* + splice the site collections).
+admin/config.yml
+admin/config-local.yml
+# Local agent session state — never part of the site.
+.claude/
+# Staging area for the boss-review content PR (cms/site_content/home); the
+# full mockup content lives here until it lands via a reviewed Decap PR, and
+# must never be committed onto the placeholder branch / main.
+.jodidaniel-real-content/

@@ -1,0 +1,160 @@
+# Home page content, edited end-to-end via /admin (Decap "Home Page"
+# files-collection). The full copy below is COMMITTED but GATED: while
+# `site_live` is false the home layout renders ONLY the coming-soon shell
+# (name + coming_soon.tagline + coming_soon.copyright), so none of the bio /
+# expertise / experience / media copy is served on prod. GO-LIVE: an editor
+# flips `site_live: true` via /admin (then a deploy runs) to reveal the full
+# site — boss copy sign-off required first. Also restore the real SEO
+# description in _config.yml at go-live (see the note there).
+site_live: false
+
+# Shown only while site_live is false — reproduces the coming-soon page.
+# Admin-editable like everything else here.
+coming_soon:
+  tagline: "Site coming soon"
+  copyright: "© 2026 Jodi Daniel"
+
+header:
+  name: "Jodi Daniel"
+  tagline: "Digital Health Law & Policy Leader"
+about:
+  photo: "/assets/images/uploads/jodi-daniel.jpg"
+  intro_heading: "Pioneering the Future of Digital Health"
+  bio:
+    - "Jodi Daniel is a nationally recognized leader in digital health law and policy, trusted by healthcare organizations and technology innovators to navigate the complex regulatory landscape of digital health and wellness."
+    - "With over 30 years of experience in healthcare innovation, including 15 years as a lawyer and senior policymaker at the U.S. Department of Health and Human Services (HHS), Jodi brings unparalleled expertise to groundbreaking products and services that raise novel legal, policy, and ethical issues."
+    - "As one of the first digital health lawyers and a founding Director at the Office of the National Coordinator for Health IT (ONC) at HHS, Jodi helped shape the very foundation of digital health regulation in the United States."
+  nav:
+    - { label: "Expertise",       anchor: "expertise" }
+    - { label: "Experience",      anchor: "experience" }
+    - { label: "Accomplishments", anchor: "accomplishments" }
+    - { label: "Media",           anchor: "media" }
+    - { label: "Education",       anchor: "education" }
+    - { label: "Contact",         anchor: "contact" }
+expertise_heading: "Areas of Expertise"
+expertise:
+  - title: "Digital Health & AI"
+    description: "Artificial intelligence and machine learning applications in healthcare, including regulatory strategy and compliance frameworks."
+  - title: "Health Data Privacy"
+    description: "HIPAA compliance, health information exchange, and privacy frameworks for electronic health records and health data platforms."
+  - title: "FDA & Regulatory Strategy"
+    description: "Digital therapeutics, mobile health applications, and medical device software regulatory pathways and approvals."
+  - title: "Telehealth & Remote Care"
+    description: "Remote patient monitoring, telemedicine regulations, and virtual care delivery models across state and federal jurisdictions."
+  - title: "Health IT Policy"
+    description: "Interoperability standards, information blocking rules, and health IT certification requirements."
+  - title: "Strategic Advisory"
+    description: "Policy development, government relations, and strategic counsel for healthcare technology innovators and investors."
+experience_heading: "Professional Experience"
+experience:
+  - role: "Partner"
+    org: "Wilson Sonsini Goodrich & Rosati"
+    period: "2025 - Present"
+    description: "Partner in the Washington, D.C. office, serving as a key member of the Digital Health and Data, Privacy, and Cybersecurity practices."
+  - role: "Partner & Managing Director"
+    org: "Crowell & Moring LLP / Crowell Health Solutions"
+    period: "2015 - 2025"
+    description: "Led the Digital Health Practice, served on the Health Care Group steering committee, and co-founded Crowell Health Solutions strategic consulting firm."
+  - role: "Founding Director, Office of Policy"
+    org: "Office of the National Coordinator for Health IT (ONC), HHS"
+    period: "2005 - 2015"
+    description: "Led federal advisory committees and established national health IT policy on privacy, security, consumer e-health, telehealth, and safety oversight. Served under all five ONC leaders since the office was founded."
+  - role: "Senior Counsel for Health IT"
+    org: "Office of the General Counsel, HHS"
+    period: "2000 - 2005"
+    description: "First senior counsel for health IT at HHS. Founded and chaired the health IT practice group, developed legal strategies, and advised CMS on e-prescribing regulations."
+  - role: "Attorney-Advisor"
+    org: "Civil Rights Division, Office of the General Counsel, HHS"
+    period: "Prior to 2000"
+    description: "Began federal career as an attorney-advisor, gaining foundational experience in healthcare law and civil rights."
+accomplishments_heading: "Key Accomplishments"
+accomplishments:
+  - label: "HIPAA Architect"
+    text: "Key drafter of the original HIPAA Privacy Rules and Enforcement Rules that govern health data protection nationwide"
+  - label: "Privacy Framework Developer"
+    text: "Created the Nationwide Privacy and Security Framework for Electronic Exchange of Health Information"
+  - label: "Health IT Standards Pioneer"
+    text: "Helped develop early standards and certification rules for health information technology"
+  - label: "Consumer Health Champion"
+    text: "Launched ONC's Consumer e-Health and Health IT Safety programs"
+  - label: "Information Blocking Expert"
+    text: "Contributed to drafting ONC's landmark information blocking report and regulations"
+  - label: "HITECH Act Implementation"
+    text: "Helped chart health IT strategies before and after the HITECH Act invested billions in healthcare technology"
+  - label: "Yale Faculty"
+    text: "Serves as Adjunct Assistant Professor at Yale School of Medicine, educating the next generation of health leaders"
+media_heading: "Publications & Media"
+media:
+  - category: "Featured Articles"
+    icon: "article"
+    items:
+      - title: "Everyone Has a Role in Shoring Up Patient Privacy"
+        source: "Fierce Healthcare"
+        url: "https://www.fiercehealthcare.com/mobile/crowell-moring-partner-jodi-daniel-talks-mhealth-security-and-privacy-and-what-needs-to-be"
+      - title: "The Data Advisor Blog"
+        source: "Wilson Sonsini"
+        url: "https://www.wsgrdataadvisor.com/author/jodi-daniel/"
+  - category: "Policy & Advocacy"
+    icon: "globe"
+    items:
+      - title: "Brief of Over 640 State Legislators as Amici Curiae — FDA v. Alliance for Hippocratic Medicine"
+        source: "U.S. Supreme Court (No. 23-235), Jan 2024 · Counsel, Crowell & Moring"
+        url: "https://www.supremecourt.gov/DocketPDF/23/23-235/299258/20240130151552206_State%20Legislator%20Amicus%20Brief.pdf"
+      - title: "646 State Legislators File Supreme Court Amicus Brief"
+        source: "State Innovation Exchange (SiX), 2024 · coverage of the brief above"
+        url: "https://sixrepro.org/article/646-state-legislators-file-supreme-court-amicus-brief/"
+      - title: "Reflections on Government Tenure & Future of Health IT"
+        source: "Healthcare Innovation"
+        url: "https://www.hcinnovationgroup.com/policy-value-based-care/article/13025902/former-onc-policy-director-jodi-daniel-reflects-on-her-government-tenure-looks-at-future-of-health-it-landscape"
+      - title: "HIMSS16: EHR Certification & Healthcare Security"
+        source: "Healthcare Innovation"
+        url: "https://www.hcinnovationgroup.com/policy-value-based-care/article/13026441/at-himss16-former-onc-policy-director-jodi-daniel-dishes-on-new-ehr-certification-process-healthcare-security"
+      - title: "Jodi Daniel to Step Down from ONC After Decade of Service"
+        source: "Healthcare IT News, 2015"
+        url: "https://www.healthcareitnews.com/news/jodi-daniel-step-down-onc"
+      - title: "Health Data Must be Portable, But Don't Forget the Consumer"
+        source: "Bloomberg Law, 2018"
+        url: "https://news.bloomberglaw.com/health-law-and-business/insight-former-hhs-official-says-health-data-must-be-portable-but-dont-forget-the-consumer"
+      - title: "Promoting Safe and Effective Genetic Testing in the United States"
+        source: "Task Force on Genetic Testing (NIH-DOE), 1997 · background research, as Jodi Goldstein"
+        url: "https://www.genome.gov/10002393/genetic-testing-reportexecutive-summary"
+  - category: "Podcasts & Interviews"
+    icon: "microphone"
+    items:
+      - title: "AI in Health Care: HIPAA and Data Privacy"
+        source: "Payers, Providers, and Patients Podcast"
+        url: "https://podcasts.apple.com/us/podcast/ai-in-health-care-series-part-2-artificial-intelligence/id1469938124?i=1000662031794"
+  - category: "Speaking & Panels"
+    icon: "folder"
+    items:
+      - title: "AI in Healthcare: Key Considerations for Providers & Payers"
+        source: "LA County Bar Association, April 2025"
+        url: "https://www.wsgr.com/en/people/jodi-daniel.html"
+      - title: "Trust: The Cornerstone of AI's Bridge Across Health Care"
+        source: "Health Evolution Summit, April 2025"
+        url: "https://www.wsgr.com/en/people/jodi-daniel.html"
+      - title: "The Insider's Guide to Health Care AI Policy in 2025"
+        source: "Alliance for Health Policy, Dec 2025"
+        url: "https://www.wsgr.com/en/people/jodi-daniel.html"
+  - category: "Press & News"
+    icon: "globe"
+    items:
+      - title: "Wilson Sonsini Expands Health Privacy Capabilities"
+        source: "Wilson Sonsini News, May 2025"
+        url: "https://www.wsgr.com/en/insights/wilson-sonsini-expands-health-privacy-and-regulatory-capabilities-with-the-addition-of-jodi-daniel.html"
+      - title: "Wilson Sonsini Hires Jodi Daniel as Health Privacy Partner"
+        source: "Bloomberg Law, 2025"
+        url: "https://news.bloomberglaw.com/business-and-practice/wilson-sonsini-hires-jodi-daniel-as-health-privacy-partner"
+education_heading: "Education"
+education:
+  - { degree: "J.D.",   field: "Law",           school: "Georgetown University Law Center" }
+  - { degree: "M.P.H.", field: "Public Health", school: "Johns Hopkins Bloomberg School of Public Health" }
+  - { degree: "B.A.",   field: "Economics",     school: "Tufts University" }
+contact:
+  heading: "Connect"
+  intro: "Interested in discussing digital health strategy, regulatory matters, or speaking opportunities?"
+  links:
+    - { label: "Wilson Sonsini Profile", url: "https://www.wsgr.com/en/people/jodi-daniel.html", icon: "globe" }
+    - { label: "LinkedIn",               url: "https://www.linkedin.com/in/jodidaniel/",          icon: "linkedin" }
+footer:
+  copyright: "© 2026 Jodi Daniel. All rights reserved."

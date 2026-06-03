@@ -1,0 +1,101 @@
+  - name: site_content
+    label: "Home Page"
+    delete: false
+    editor:
+      preview: false   # the mockup design isn't the Decap card-preview; rely on the per-PR preview env
+    files:
+      - name: home
+        label: "Home Page Content"
+        file: "_data/home.yml"
+        description: "All copy on the single-page jodidaniel.com home. Section headings, bio, expertise cards, experience timeline, accomplishments, media links, education, and contact — every field here renders on the live site."
+        fields:
+          - name: header
+            label: "Header"
+            widget: object
+            fields:
+              - { name: name,    label: "Name",    widget: string }
+              - { name: tagline, label: "Tagline", widget: string }
+          - name: about
+            label: "About"
+            widget: object
+            fields:
+              - { name: photo,         label: "Profile Photo", widget: image, required: false, media_library: { config: { multiple: false } } }
+              - { name: intro_heading, label: "Intro Heading", widget: string }
+              - { name: bio,           label: "Bio Paragraphs", widget: list, summary: "{{fields.paragraph | truncate(60)}}", field: { name: paragraph, label: "Paragraph", widget: text } }
+              - name: nav
+                label: "In-Page Nav Links"
+                widget: list
+                summary: "{{fields.label}}"
+                fields:
+                  - { name: label,  label: "Label",  widget: string }
+                  - { name: anchor, label: "Anchor (section id, no #)", widget: string }
+          - { name: expertise_heading, label: "Expertise — Heading", widget: string }
+          - name: expertise
+            label: "Areas of Expertise"
+            widget: list
+            summary: "{{fields.title}}"
+            fields:
+              - { name: title,       label: "Title",       widget: string }
+              - { name: description, label: "Description", widget: text }
+          - { name: experience_heading, label: "Experience — Heading", widget: string }
+          - name: experience
+            label: "Professional Experience"
+            widget: list
+            summary: "{{fields.role}} — {{fields.org}}"
+            fields:
+              - { name: role,        label: "Role",        widget: string }
+              - { name: org,         label: "Organization", widget: string }
+              - { name: period,      label: "Period",      widget: string }
+              - { name: description, label: "Description", widget: text }
+          - { name: accomplishments_heading, label: "Accomplishments — Heading", widget: string }
+          - name: accomplishments
+            label: "Key Accomplishments"
+            widget: list
+            summary: "{{fields.label}}"
+            fields:
+              - { name: label, label: "Label (bold lead-in)", widget: string }
+              - { name: text,  label: "Text", widget: text }
+          - { name: media_heading, label: "Media — Heading", widget: string }
+          - name: media
+            label: "Publications & Media"
+            widget: list
+            summary: "{{fields.category}}"
+            fields:
+              - { name: category, label: "Category", widget: string }
+              - { name: icon,     label: "Icon",     widget: select, options: [article, microphone, folder, globe], default: article }
+              - name: items
+                label: "Items"
+                widget: list
+                summary: "{{fields.title}}"
+                fields:
+                  - { name: title,  label: "Title",  widget: string }
+                  - { name: source, label: "Source", widget: string }
+                  - { name: url,    label: "URL",    widget: string, pattern: ["^https?://.*", "Must be a valid http(s) URL"] }
+          - { name: education_heading, label: "Education — Heading", widget: string }
+          - name: education
+            label: "Education"
+            widget: list
+            summary: "{{fields.degree}} — {{fields.school}}"
+            fields:
+              - { name: degree, label: "Degree", widget: string }
+              - { name: field,  label: "Field",  widget: string }
+              - { name: school, label: "School", widget: string }
+          - name: contact
+            label: "Contact"
+            widget: object
+            fields:
+              - { name: heading, label: "Heading", widget: string }
+              - { name: intro,   label: "Intro",   widget: text }
+              - name: links
+                label: "Contact Links"
+                widget: list
+                summary: "{{fields.label}}"
+                fields:
+                  - { name: label, label: "Label", widget: string }
+                  - { name: url,   label: "URL",   widget: string, pattern: ["^(https?:|mailto:).*", "http(s) or mailto URL"] }
+                  - { name: icon,  label: "Icon",  widget: select, options: [globe, linkedin, email], default: globe }
+          - name: footer
+            label: "Footer"
+            widget: object
+            fields:
+              - { name: copyright, label: "Copyright", widget: string }
