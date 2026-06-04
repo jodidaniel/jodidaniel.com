@@ -74,11 +74,17 @@ no marketing claim ships. Do not flip the gate on your own initiative.
   entry: API_ERROR … OAuth App access restrictions"). Fix is an **org owner**
   approving the app (Settings → Third-party access) — not a code change.
   adamdaniel never hit this (it's user-owned). See #27.
-- **#28 — "Live Preview" 404s.** The admin's Live Preview button opens
-  `/preview/`, but this site has no `preview.md` page (nor a `404.html`). The
-  gem ships the `preview` layout; the site must add `preview.md`
-  (`layout: preview`, `permalink: /preview/`) + a `404.html`, mirroring
-  adamdaniel.ai. See #28.
+- ~~**#28 — "Live Preview" 404s.**~~ **RESOLVED.** The site now ships
+  `preview.md` (`layout: preview`, `permalink: /preview/`, mirroring
+  adamdaniel.ai) + a friendly `404.html`, so the admin's Live Preview button
+  reaches the gem's preview shell instead of a raw S3 `NoSuchKey`. The preview
+  layout (shipped by `cms-platform-theme`, confirmed in the v0.1.7 pin) renders
+  ONLY the empty preview chrome — no gated bio content; drafts stream in over
+  `postMessage`/`BroadcastChannel` at edit time. `404.html` links back to `/`
+  only (no `/blog/` — single-page bio) and is `noindex,nofollow`. Build
+  verification: `bundle exec jekyll build && ruby scripts/verify-build-artifacts.rb`
+  asserts `_site/preview/index.html` + `_site/404.html` exist, the preview is
+  noindex and bio-free, and the 404 body links home not to a blog. See #28.
 
 ## Content model (per-section, all `/admin`-editable)
 
