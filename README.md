@@ -35,10 +35,20 @@ Elements use the `animate-in` class with staggered delays (`delay-1` through `de
 
 ## Content Sections
 
-1. **Header** - Name and tagline with gradient background
-2. **About/Intro** - Profile placeholder, bio text, and navigation links
-3. **Expertise** - 6 cards covering practice areas (Digital Health & AI, Health Data Privacy, FDA & Regulatory Strategy, Telehealth, Health IT Policy, Strategic Advisory)
-4. **Experience** - Timeline of professional history
-5. **Accomplishments** - Key career achievements (HIPAA architect, etc.)
-6. **Education** - J.D., M.P.H., and B.A. credentials
-7. **Contact** - Links to WSGR profile and LinkedIn
+The page is `index.html` (`layout: home` → `_layouts/home.html`). `mockup.html`
+is the design reference for the layout and `assets/css/jodidaniel.css`. All
+copy is editable via `/admin` (Decap CMS) — see [AGENTS.md](AGENTS.md) for the
+full content model, the `site_live` go-live gate, and OAuth details.
+
+1. **Header** - Name and tagline (`_data/header.yml`)
+2. **About/Intro** - Profile photo, bio paragraphs, in-page nav (`_data/about.yml`)
+3. **Expertise** - Practice-area cards (`_expertise/` collection, ordered by `weight`)
+4. **Experience** - Timeline of professional history (`_experience/` collection)
+5. **Accomplishments** - Key career achievements (`_accomplishments/` collection)
+6. **Media** - Publications, podcasts, speaking, press, grouped by `category` (`_media/` collection)
+7. **Education** - J.D., M.P.H., and B.A. credentials (`_education/` collection)
+8. **Contact** - Links to WSGR profile and LinkedIn (`_data/contact.yml`)
+
+Site-wide settings — including the `site_live` gate (coming-soon vs. full bio),
+coming-soon/footer copyright, and section headings — live in
+`_data/settings.yml`.

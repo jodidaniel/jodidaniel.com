@@ -1,9 +1,10 @@
 title: Jodi Daniel
 # COMING-SOON SEO (go-live content policy): while the site is gated
-# (`site_live: false` in _data/home.yml), keep this description neutral so
+# (`site_live: false` in _data/settings.yml), keep this description neutral so
 # {% seo %} does not leak the marketing blurb in <meta>/og:description/JSON-LD
-# even though the full copy is present in _data/home.yml. GO-LIVE = flip
-# `site_live: true` in _data/home.yml AND restore the real description here:
+# even though the full copy is present in the per-section data + collections.
+# GO-LIVE = flip `site_live: true` in _data/settings.yml AND restore the real
+# description here:
 #   "Jodi Daniel — nationally recognized leader in digital health law and
 #    policy. Regulatory strategy, health data privacy, FDA and telehealth
 #    counsel for healthcare organizations and technology innovators."
@@ -20,8 +21,9 @@ highlighter: rouge
 permalink: /blog/:slug/
 
 # Render scheduled / future-dated posts. Harmless on this single-page site
-# (the home page reads _data/home.yml, not site.posts) but lets the Posts
-# collection + publish-scheduled-posts workflow behave as on a blog site.
+# (the home page reads per-section _data/*.yml + collections, not site.posts)
+# but lets the Posts collection + publish-scheduled-posts workflow behave as
+# on a blog site.
 future: true
 
 cms:
