@@ -1,0 +1,17 @@
+# Home page gating and site-wide settings.
+# Edit site_live to toggle between coming-soon and full-bio modes.
+site_live: false
+
+coming_soon:
+  tagline: "Site coming soon"
+  copyright: "© 2026 Jodi Daniel"
+
+footer:
+  copyright: "© 2026 Jodi Daniel. All rights reserved."
+
+section_headings:
+  expertise_heading: "Areas of Expertise"
+  experience_heading: "Professional Experience"
+  accomplishments_heading: "Key Accomplishments"
+  media_heading: "Publications & Media"
+  education_heading: "Education"

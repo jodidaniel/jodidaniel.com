@@ -1,0 +1,13 @@
+photo: "/assets/images/uploads/jodi-daniel.jpg"
+intro_heading: "Pioneering the Future of Digital Health"
+bio:
+  - "Jodi Daniel is a nationally recognized leader in digital health law and policy, trusted by healthcare organizations and technology innovators to navigate the complex regulatory landscape of digital health and wellness."
+  - "With over 30 years of experience in healthcare innovation, including 15 years as a lawyer and senior policymaker at the U.S. Department of Health and Human Services (HHS), Jodi brings unparalleled expertise to groundbreaking products and services that raise novel legal, policy, and ethical issues."
+  - "As one of the first digital health lawyers and a founding Director at the Office of the National Coordinator for Health IT (ONC) at HHS, Jodi helped shape the very foundation of digital health regulation in the United States."
+nav:
+  - { label: "Expertise",       anchor: "expertise" }
+  - { label: "Experience",      anchor: "experience" }
+  - { label: "Accomplishments", anchor: "accomplishments" }
+  - { label: "Media",           anchor: "media" }
+  - { label: "Education",       anchor: "education" }
+  - { label: "Contact",         anchor: "contact" }
