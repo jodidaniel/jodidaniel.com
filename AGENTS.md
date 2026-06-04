@@ -139,6 +139,19 @@ list — 2 spaces for `- name:`). `admin/collections.site.yml.example` documents
 the seam format. Do not add a vendored `admin/config.yml` or admin machinery;
 edit the seam and bump the gem.
 
+**Brand mark (`/admin` + site logo).** The gem's render hook defaults the
+admin's `logo_url` (`CMS_LOGO_URL`) to `<url>/assets/images/logo.svg` when
+`cms.logo_url` is unset. The gem ships a placeholder `assets/images/logo.svg`
+that is an **"AD" (Adam Daniel)** monogram — so a consuming site that ships no
+logo leaks Adam's mark into its `/admin`. This repo therefore owns
+`assets/images/logo.svg` — Jodi's own **"JD"** mark in her palette (teal accent
+`#5dd9e8`, Raleway, matching `assets/css/jodidaniel.css`). The **site file
+shadows the gem's** copy (Jekyll site files override theme-gem files), so
+`/admin` and the rendered `_site/assets/images/logo.svg` resolve to Jodi's
+mark, not "AD". Verify: `bundle exec jekyll build && ruby scripts/verify-logo.rb`
+(asserts the rendered logo is the JD mark and `logo_url` points at the site
+asset). Resolved #31.
+
 ## OAuth (Decap editorial login)
 
 The Decap GitHub backend authenticates through an **API Gateway OAuth proxy**:
