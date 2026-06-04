@@ -66,6 +66,20 @@ real (post-go-live) values to restore.
 after the boss approves the copy. Until then, no bio content reaches prod and
 no marketing claim ships. Do not flip the gate on your own initiative.
 
+### Known open blockers (CMS editing)
+- **#27 — saving fails: org OAuth App access restrictions.** Login works, but
+  the `jodidaniel` GitHub **org** has OAuth App access restrictions on and the
+  CMS OAuth App (Client ID `Ov23li6Nb58IZi6Nj5SY`) isn't approved for the org,
+  so Decap can authenticate (read) but **can't persist** ("Failed to persist
+  entry: API_ERROR … OAuth App access restrictions"). Fix is an **org owner**
+  approving the app (Settings → Third-party access) — not a code change.
+  adamdaniel never hit this (it's user-owned). See #27.
+- **#28 — "Live Preview" 404s.** The admin's Live Preview button opens
+  `/preview/`, but this site has no `preview.md` page (nor a `404.html`). The
+  gem ships the `preview` layout; the site must add `preview.md`
+  (`layout: preview`, `permalink: /preview/`) + a `404.html`, mirroring
+  adamdaniel.ai. See #28.
+
 ## Content model (per-section, all `/admin`-editable)
 
 The home layout reads its copy from two kinds of source, NOT from a single
