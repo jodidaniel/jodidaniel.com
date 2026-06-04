@@ -1,0 +1,5 @@
+heading: "Connect"
+intro: "Interested in discussing digital health strategy, regulatory matters, or speaking opportunities?"
+links:
+  - { label: "Wilson Sonsini Profile", url: "https://www.wsgr.com/en/people/jodi-daniel.html", icon: "globe" }
+  - { label: "LinkedIn",               url: "https://www.linkedin.com/in/jodidaniel/",          icon: "linkedin" }

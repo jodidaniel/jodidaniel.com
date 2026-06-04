@@ -30,11 +30,26 @@ cms:
   # The rendered Decap config uses this as backend.base_url + auth_endpoint
   # prod/auth; the GitHub OAuth App callback is <base>/prod/callback.
   oauth_base_url: "https://zkrofo300b.execute-api.us-east-1.amazonaws.com"
+  # Single-page bio: hide the platform's generic blog collections
+  # (posts/tags/projects/pages/e2e) from /admin so Jodi sees only her own
+  # section editors. `base_collections` is a KEEP-LIST; [] hides them all.
+  # (Honored by cms-platform-theme >= v0.1.7.)
+  base_collections: []
 
 collections:
   projects: { output: false, permalink: /projects/:slug/ }
   tags: { output: true, permalink: /tags/:slug/ }
   e2e: { output: true, permalink: /e2e/:slug/ }
+  # Per-section data collections for the bio home page. output:false → these are
+  # editable content (one file per item, ordered by `weight`) read by
+  # _layouts/home.html as site.expertise / site.experience / etc., NOT published
+  # as standalone pages. Decap edits them via the folder collections in
+  # admin/collections.site.yml.
+  expertise: { output: false }
+  experience: { output: false }
+  accomplishments: { output: false }
+  media: { output: false }
+  education: { output: false }
 
 defaults:
   - { scope: { path: "", type: "posts" },    values: { layout: "post" } }
@@ -49,14 +64,15 @@ plugins:
   - jekyll-sitemap
 
 # ── Site-specific data / collections seam ────────────────────────────────────
-# This is a single-page site: index.html uses `layout: home` (site-local
-# _layouts/home.html, which shadows the gem's default layout) and reads ALL of
-# its copy from site.data.home. That data lives in `_data/home.yml`, edited
-# end-to-end via /admin through the "Home Page" files-collection that the
-# admin/collections.site.yml seam splices into the Decap base config at the
-# `# __SITE_COLLECTIONS__` marker. `_data/` is deliberately NOT excluded below,
-# so Jekyll loads it into `site.data.home` automatically — no _config change
-# needed when the home content changes; only the YAML data file does.
+# This single-page bio (index.html → site-local _layouts/home.html) reads its
+# copy from per-section sources, ALL editable via /admin:
+#   - singletons → _data/header.yml, _data/about.yml, _data/contact.yml,
+#     _data/settings.yml (the latter holds the site_live GATE + coming-soon copy)
+#   - repeating sections → the expertise/experience/accomplishments/media/
+#     education collections above (one file per item, ordered by `weight`)
+# admin/collections.site.yml splices the matching Decap file+folder collections
+# into the base config at the `# __SITE_COLLECTIONS__` marker; cms.base_collections
+# (above) hides the generic base collections so /admin shows only these.
 
 exclude:
   - Gemfile

@@ -10,32 +10,32 @@
     <link rel="stylesheet" href="{{ '/assets/css/jodidaniel.css' | cachebust }}">
 </head>
 <body>
-    {%- assign home = site.data.home -%}
+    {%- assign settings = site.data.settings -%}
+    {%- assign live = settings.site_live -%}
     {%- comment -%}
       `site_live` gates the whole site. When false (the default until the boss
       signs off), only the coming-soon shell renders: name + coming_soon.tagline
       + coming_soon.copyright. The full bio/expertise/experience/media copy is
-      present in _data/home.yml but NOT rendered. Flip site_live: true (via
-      /admin) + restore the real _config.yml description to go live.
+      present in the data and collections but NOT rendered. Flip site_live: true (via
+      /admin) to go live.
     {%- endcomment -%}
-    {%- assign live = home.site_live -%}
     <div class="site-wrapper">
         <header class="animate-in delay-1">
-            <h1>{{ home.header.name }}</h1>
+            <h1>{{ site.data.header.name }}</h1>
             {%- if live -%}
-            {%- if home.header.tagline and home.header.tagline != "" -%}
-            <p class="tagline">{{ home.header.tagline }}</p>
+            {%- if site.data.header.tagline and site.data.header.tagline != "" -%}
+            <p class="tagline">{{ site.data.header.tagline }}</p>
             {%- endif -%}
             {%- else -%}
-            {%- if home.coming_soon.tagline and home.coming_soon.tagline != "" -%}
-            <p class="tagline">{{ home.coming_soon.tagline }}</p>
+            {%- if settings.coming_soon.tagline and settings.coming_soon.tagline != "" -%}
+            <p class="tagline">{{ settings.coming_soon.tagline }}</p>
             {%- endif -%}
             {%- endif -%}
         </header>
 
         {%- if live -%}
 
-        {%- assign about = home.about -%}
+        {%- assign about = site.data.about -%}
         {%- assign has_about = false -%}
         {%- if about -%}
             {%- if about.photo and about.photo != "" -%}{%- assign has_about = true -%}{%- endif -%}
@@ -48,7 +48,7 @@
             <div class="intro-section">
                 <div class="profile-placeholder">
                     {%- if about.photo and about.photo != "" -%}
-                    <img class="profile-image" src="{{ about.photo | relative_url }}" alt="{{ home.header.name }}">
+                    <img class="profile-image" src="{{ about.photo | relative_url }}" alt="{{ site.data.header.name }}">
                     {%- else -%}
                     <svg class="profile-image" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
                         <rect width="300" height="300" fill="#e8f4f8"/>
@@ -77,13 +77,14 @@
         </section>
         {%- endif -%}
 
-        {%- if home.expertise and home.expertise != empty -%}
+        {%- assign expertise_sorted = site.expertise | sort: 'weight' -%}
+        {%- if expertise_sorted and expertise_sorted != empty -%}
         <section id="expertise" class="container animate-in delay-3">
-            {%- if home.expertise_heading and home.expertise_heading != "" -%}
-            <span class="section-title">{{ home.expertise_heading }}</span>
+            {%- if settings.section_headings.expertise_heading and settings.section_headings.expertise_heading != "" -%}
+            <span class="section-title">{{ settings.section_headings.expertise_heading }}</span>
             {%- endif -%}
             <div class="expertise-grid">
-                {%- for e in home.expertise -%}
+                {%- for e in expertise_sorted -%}
                 <div class="expertise-card">
                     <h3>{{ e.title }}</h3>
                     <p>{{ e.description }}</p>
@@ -93,15 +94,16 @@
         </section>
         {%- endif -%}
 
-        {%- if home.experience and home.experience != empty -%}
+        {%- assign experience_sorted = site.experience | sort: 'weight' -%}
+        {%- if experience_sorted and experience_sorted != empty -%}
         <section id="experience" class="container animate-in delay-4">
-            {%- if home.experience_heading and home.experience_heading != "" -%}
-            <span class="section-title">{{ home.experience_heading }}</span>
+            {%- if settings.section_headings.experience_heading and settings.section_headings.experience_heading != "" -%}
+            <span class="section-title">{{ settings.section_headings.experience_heading }}</span>
             {%- endif -%}
             <div class="timeline">
-                {%- for x in home.experience -%}
+                {%- for x in experience_sorted -%}
                 <div class="timeline-item">
-                    <h3>{{ x.role }}</h3>
+                    <h3>{{ x.title }}</h3>
                     <div class="org">{{ x.org }}</div>
                     <div class="period">{{ x.period }}</div>
                     <p>{{ x.description }}</p>
@@ -111,63 +113,79 @@
         </section>
         {%- endif -%}
 
-        {%- if home.accomplishments and home.accomplishments != empty -%}
+        {%- assign accomplishments_sorted = site.accomplishments | sort: 'weight' -%}
+        {%- if accomplishments_sorted and accomplishments_sorted != empty -%}
         <section id="accomplishments" class="container animate-in delay-5">
-            {%- if home.accomplishments_heading and home.accomplishments_heading != "" -%}
-            <span class="section-title">{{ home.accomplishments_heading }}</span>
+            {%- if settings.section_headings.accomplishments_heading and settings.section_headings.accomplishments_heading != "" -%}
+            <span class="section-title">{{ settings.section_headings.accomplishments_heading }}</span>
             {%- endif -%}
             <ul class="accomplishments-list">
-                {%- for a in home.accomplishments -%}
-                <li><strong>{{ a.label }}:</strong> {{ a.text }}</li>
+                {%- for a in accomplishments_sorted -%}
+                <li><strong>{{ a.title }}:</strong> {{ a.text }}</li>
                 {%- endfor -%}
             </ul>
         </section>
         {%- endif -%}
 
-        {%- if home.media and home.media != empty -%}
+        {%- comment -%}
+          Media is organized by category. Build a grouped/sorted view:
+          1. Group media items by category
+          2. Define icon mapping per category
+          3. Sort items within each category by weight
+        {%- endcomment -%}
+        {%- assign media_by_category = "Featured Articles|Policy & Advocacy|Podcasts & Interviews|Speaking & Panels|Press & News" | split: "|" -%}
+        {%- assign media_icons = "article|globe|microphone|folder|globe" | split: "|" -%}
+        {%- assign all_media_sorted = site.media | sort: 'weight' -%}
+        {%- if all_media_sorted and all_media_sorted != empty -%}
         <section id="media" class="container animate-in delay-6">
-            {%- if home.media_heading and home.media_heading != "" -%}
-            <span class="section-title">{{ home.media_heading }}</span>
+            {%- if settings.section_headings.media_heading and settings.section_headings.media_heading != "" -%}
+            <span class="section-title">{{ settings.section_headings.media_heading }}</span>
             {%- endif -%}
             <div class="media-grid">
-                {%- for c in home.media -%}
-                <div class="media-category">
-                    <h3>
-                        {%- case c.icon -%}
-                        {%- when 'article' -%}
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-                        {%- when 'microphone' -%}
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/></svg>
-                        {%- when 'folder' -%}
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6 10H6v-2h8v2zm4-4H6v-2h12v2z"/></svg>
-                        {%- when 'globe' -%}
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM18.92 8h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zM5.08 16h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.91-4.33-3.56zm2.95-8H5.08c.96-1.65 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>
-                        {%- endcase -%}
-                        {{ c.category }}
-                    </h3>
-                    <ul class="media-list">
-                        {%- for i in c.items -%}
-                        <li>
-                            <a href="{{ i.url }}" target="_blank" rel="noopener">
-                                {{ i.title }}
-                                <span class="source">{{ i.source }}</span>
-                            </a>
-                        </li>
-                        {%- endfor -%}
-                    </ul>
-                </div>
+                {%- for cat_idx in (0..4) -%}
+                  {%- assign category = media_by_category[cat_idx] -%}
+                  {%- assign cat_icon = media_icons[cat_idx] -%}
+                  {%- assign category_items = all_media_sorted | where: "category", category -%}
+                  {%- if category_items and category_items != empty -%}
+                  <div class="media-category">
+                      <h3>
+                          {%- case cat_icon -%}
+                          {%- when 'article' -%}
+                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                          {%- when 'microphone' -%}
+                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/></svg>
+                          {%- when 'folder' -%}
+                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6 10H6v-2h8v2zm4-4H6v-2h12v2z"/></svg>
+                          {%- when 'globe' -%}
+                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM18.92 8h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zM5.08 16h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.91-4.33-3.56zm2.95-8H5.08c.96-1.65 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>
+                          {%- endcase -%}
+                          {{ category }}
+                      </h3>
+                      <ul class="media-list">
+                          {%- for item in category_items -%}
+                          <li>
+                              <a href="{{ item.url }}" target="_blank" rel="noopener">
+                                  {{ item.title }}
+                                  <span class="source">{{ item.source }}</span>
+                              </a>
+                          </li>
+                          {%- endfor -%}
+                      </ul>
+                  </div>
+                  {%- endif -%}
                 {%- endfor -%}
             </div>
         </section>
         {%- endif -%}
 
-        {%- if home.education and home.education != empty -%}
+        {%- assign education_sorted = site.education | sort: 'weight' -%}
+        {%- if education_sorted and education_sorted != empty -%}
         <section id="education" class="container animate-in delay-7">
-            {%- if home.education_heading and home.education_heading != "" -%}
-            <span class="section-title">{{ home.education_heading }}</span>
+            {%- if settings.section_headings.education_heading and settings.section_headings.education_heading != "" -%}
+            <span class="section-title">{{ settings.section_headings.education_heading }}</span>
             {%- endif -%}
             <div class="education-grid">
-                {%- for ed in home.education -%}
+                {%- for ed in education_sorted -%}
                 <div class="education-card">
                     <div class="degree">{{ ed.degree }}</div>
                     <div class="field">{{ ed.field }}</div>
@@ -178,7 +196,7 @@
         </section>
         {%- endif -%}
 
-        {%- assign contact = home.contact -%}
+        {%- assign contact = site.data.contact -%}
         {%- if contact and contact.links and contact.links != empty -%}
         <section id="contact" class="container contact-section animate-in delay-8">
             {%- if contact.heading and contact.heading != "" -%}
@@ -207,9 +225,9 @@
         {%- endif -%}{%- comment -%} end: full-site sections (site_live) {%- endcomment -%}
 
         {%- if live -%}
-        {%- assign copyright = home.footer.copyright -%}
+        {%- assign copyright = settings.footer.copyright -%}
         {%- else -%}
-        {%- assign copyright = home.coming_soon.copyright -%}
+        {%- assign copyright = settings.coming_soon.copyright -%}
         {%- endif -%}
         {%- if copyright and copyright != "" -%}
         <footer class="animate-in delay-8">
