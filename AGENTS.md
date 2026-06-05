@@ -138,10 +138,15 @@ Each item is a front-matter-only `.md` file slugged `{{weight}}-{{slug}}`
 **Media is special**: items carry a `category`
 (Featured Articles / Policy & Advocacy / Podcasts & Interviews /
 Speaking & Panels / Press & News). The home layout groups all `site.media`
-items by that `category` field and renders a per-category block with an icon —
-so the on-disk subfolders under `_media/` (e.g. `_media/policy/`) are just
-organization; grouping in the rendered page is driven by the `category` field,
-not the subdirectory.
+items by that `category` field and renders a per-category block with an icon.
+**Media item `.md` files live FLAT in `_media/` (no subdirectories).** They
+used to be organized into category subfolders (`_media/policy/` etc.), but a
+Decap **folder collection reads its `folder:` NON-recursively** — so the nested
+files were invisible in `/admin` (the collection showed zero entries) even
+though Jekyll's `site.media` reads them recursively and the live page rendered
+fine. Grouping is by the `category` FIELD, never the path, so flattening is
+loss-free; keep new items flat (Decap writes `{{weight}}-{{slug}}.md` into
+`_media/`).
 
 ## `/admin` (Decap CMS)
 
