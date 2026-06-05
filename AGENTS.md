@@ -17,6 +17,15 @@ the home layout and `assets/css/jodidaniel.css`) — it is excluded from the
 Jekyll build (`exclude:` in `_config.yml`), not a published page. All bio copy
 on the live site is verbatim from `mockup.html`.
 
+**Page-background gradient carries a noise DITHER overlay — do not remove it.**
+`assets/css/jodidaniel.css` paints a 135° linear gradient on `body`; that
+gradient BANDS on Firefox + WebKit (Chromium dithers CSS gradients, those
+engines don't), which the platform `glow-banding` e2e catches. A near-invisible
+(3.5% opacity) `feTurbulence` noise overlay on `body::after` (z-index:-1,
+pointer-events:none — strictly behind content) scatters the banding so it reads
+smooth on all engines. Same technique the platform theme uses. Removing it
+re-reds `glow-banding` on firefox-desktop + webkit-tablet.
+
 This site is **consumer #2** of `cms-platform` (after adamdaniel.ai). The
 platform release this repo is pinned to is recorded in `platform.lock`
 (`platform_ref`); a Dependabot bundler bump of the `cms-platform-theme` gem (in
@@ -74,6 +83,12 @@ no marketing claim ships. Do not flip the gate on your own initiative.
   entry: API_ERROR … OAuth App access restrictions"). Fix is an **org owner**
   approving the app (Settings → Third-party access) — not a code change.
   adamdaniel never hit this (it's user-owned). See #27.
+- **`CMS_E2E_PAT` repo secret not provisioned.** The token-driven CMS
+  automation reusables — `cms-automerge-nudge`, `auto-resolve-newline-conflict`,
+  `sweep-stale-cms-prs` — require a `CMS_E2E_PAT` secret. Until an org owner
+  adds it, those scheduled workflows fail (the sweep reusable marks it
+  `required: true`, so its absence is a `startup_failure`). Not a code change —
+  provision the PAT (repo scope) as `CMS_E2E_PAT`.
 - ~~**#28 — "Live Preview" 404s.**~~ **RESOLVED.** The site now ships
   `preview.md` (`layout: preview`, `permalink: /preview/`, mirroring
   adamdaniel.ai) + a friendly `404.html`, so the admin's Live Preview button
