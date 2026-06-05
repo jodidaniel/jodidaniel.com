@@ -7,5 +7,5 @@ group :jekyll_plugins do
   # platform.lock (platform_ref) and the @v0.1.0 pins on the .github thin
   # callers. Dependabot's bundler ecosystem bumps this tag when the platform
   # tags a new release.
-  gem "cms-platform-theme", git: "https://github.com/Adam-S-Daniel/cms-platform", glob: "theme/*.gemspec", tag: "v0.1.17"
+  gem "cms-platform-theme", git: "https://github.com/Adam-S-Daniel/cms-platform", glob: "theme/*.gemspec", tag: "v0.1.18"
 end
