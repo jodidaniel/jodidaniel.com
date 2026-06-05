@@ -174,7 +174,7 @@ logo leaks Adam's mark into its `/admin`. This repo therefore owns
 `#5dd9e8`, Raleway, matching `assets/css/jodidaniel.css`). The **site file
 shadows the gem's** copy (Jekyll site files override theme-gem files), so
 `/admin` and the rendered `_site/assets/images/logo.svg` resolve to Jodi's
-mark, not "AD". Verify: `bundle exec jekyll build && ruby scripts/verify-logo.rb`
+mark, not "AD". Verify: `bundle exec jekyll build && ruby scripts/verify-build-artifacts.rb`
 (asserts the rendered logo is the JD mark and `logo_url` points at the site
 asset). Resolved #31.
 
