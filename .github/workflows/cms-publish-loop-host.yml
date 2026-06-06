@@ -25,16 +25,14 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+    # #70: disjoint push paths — only this caller + the canary surfaces;
+    # prod OWNS the shared infra paths on push, host covers them via its
+    # 12:00 cron.
     paths:
       - .github/workflows/cms-publish-loop-host.yml
-      - admin/**
       - _e2e/canary-post.md
       - _e2e/canary-page.md
       - _e2e/canary-project.md
-      - playwright.config.js
-      - package.json
-      - package-lock.json
-      - _config.yml
       - _layouts/canary.html
       - _layouts/default.html
 
@@ -45,9 +43,9 @@ permissions:
 
 jobs:
   host-loop:
-    uses: Adam-S-Daniel/cms-platform/.github/workflows/cms-publish-loop-host.yml@v0.1.28
+    uses: Adam-S-Daniel/cms-platform/.github/workflows/cms-publish-loop-host.yml@v0.1.29
     with:
       # Pin to the SAME ref as the `uses:` pin above so the harness matches.
-      platform_ref: v0.1.28
+      platform_ref: v0.1.29
     secrets:
       CMS_E2E_PAT: ${{ secrets.CMS_E2E_PAT }}
