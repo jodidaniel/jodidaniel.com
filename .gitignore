@@ -7,8 +7,13 @@ infrastructure/site-params.env
 # render-decap-config.rb inject window.CMS_* + splice the site collections).
 admin/config.yml
 admin/config-local.yml
-# Local agent session state — never part of the site.
-.claude/
+# Local agent session state — never part of the site. (The committed
+# .claude/settings.json wires the platform pre-commit guards on clone;
+# everything else under .claude/ is transient local state.)
+.claude/settings.local.json
+.claude/worktrees/
+.claude/scheduled_tasks.lock
+.claude/skills/
 # Staging area for the boss-review content PR (cms/site_content/home); the
 # full mockup content lives here until it lands via a reviewed Decap PR, and
 # must never be committed onto the placeholder branch / main.
