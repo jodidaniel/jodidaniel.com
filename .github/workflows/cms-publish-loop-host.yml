@@ -27,14 +27,15 @@ on:
     branches: [main]
     # #70: disjoint push paths — only this caller + the canary surfaces;
     # prod OWNS the shared infra paths on push, host covers them via its
-    # 12:00 cron.
+    # 12:00 cron. This site has NO canary surfaces to list: `_e2e/canary-*.md`
+    # and `_layouts/canary.html`/`default.html` never exist here — this
+    # single-page bio's `cms.base_collections: []` hides the `e2e` collection
+    # from `/admin`, so the host-loop's own canary spec self-skips
+    # (cms-platform's e2e/cms-publish-loop.spec.js `hasE2ECanaries` guard) and
+    # never writes those files. The only real trigger is the caller file
+    # itself; this loop otherwise runs solely off the 12:00 UTC cron.
     paths:
       - .github/workflows/cms-publish-loop-host.yml
-      - _e2e/canary-post.md
-      - _e2e/canary-page.md
-      - _e2e/canary-project.md
-      - _layouts/canary.html
-      - _layouts/default.html
 
 permissions:
   contents: read

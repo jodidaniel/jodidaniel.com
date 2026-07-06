@@ -76,19 +76,25 @@ after the boss approves the copy. Until then, no bio content reaches prod and
 no marketing claim ships. Do not flip the gate on your own initiative.
 
 ### Known open blockers (CMS editing)
-- **#27 — saving fails: org OAuth App access restrictions.** Login works, but
-  the `jodidaniel` GitHub **org** has OAuth App access restrictions on and the
-  CMS OAuth App (Client ID `Ov23li6Nb58IZi6Nj5SY`) isn't approved for the org,
-  so Decap can authenticate (read) but **can't persist** ("Failed to persist
-  entry: API_ERROR … OAuth App access restrictions"). Fix is an **org owner**
-  approving the app (Settings → Third-party access) — not a code change.
-  adamdaniel never hit this (it's user-owned). See #27.
-- **`CMS_E2E_PAT` repo secret not provisioned.** The token-driven CMS
-  automation reusables — `cms-automerge-nudge`, `auto-resolve-newline-conflict`,
-  `sweep-stale-cms-prs` — require a `CMS_E2E_PAT` secret. Until an org owner
-  adds it, those scheduled workflows fail (the sweep reusable marks it
-  `required: true`, so its absence is a `startup_failure`). Not a code change —
-  provision the PAT (repo scope) as `CMS_E2E_PAT`.
+- ~~**#27 — saving fails: org OAuth App access restrictions.**~~ **RESOLVED.**
+  Login worked, but the `jodidaniel` GitHub **org** had OAuth App access
+  restrictions on and the CMS OAuth App (Client ID `Ov23li6Nb58IZi6Nj5SY`)
+  wasn't approved for the org, so Decap could authenticate (read) but
+  **couldn't persist** ("Failed to persist entry: API_ERROR … OAuth App
+  access restrictions"). An **org owner** approved the app (Settings →
+  Third-party access) — saving from `/admin` now works (login + persist both
+  succeed). adamdaniel never hit this (it's user-owned); jodidaniel was the
+  first org-owned consumer. See #27.
+- ~~**`CMS_E2E_PAT` repo secret not provisioned.**~~ **RESOLVED.** The secret
+  is provisioned and the token-driven CMS automation reusables —
+  `cms-automerge-nudge`, `auto-resolve-newline-conflict`, `sweep-stale-cms-prs`
+  — are green. The sweep's earlier 30/30-failure streak was never a missing
+  secret: it was a `cms-platform` bug where the sweep 404'd on this repo's
+  missing `_e2e/`/`_posts/` directories (this single-page bio has neither),
+  fixed upstream in cms-platform v0.1.49/v0.1.50 (PRs #127/#130 —
+  "tolerate missing _e2e/_posts/uploads directories in consumers" /
+  "discard gh api error-body stdout when directory listings fail"). Confirmed
+  green on this repo after the bump.
 - ~~**#28 — "Live Preview" 404s.**~~ **RESOLVED.** The site now ships
   `preview.md` (`layout: preview`, `permalink: /preview/`, mirroring
   adamdaniel.ai) + a friendly `404.html`, so the admin's Live Preview button
