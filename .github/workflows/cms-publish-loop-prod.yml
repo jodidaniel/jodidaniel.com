@@ -17,14 +17,19 @@ run-name: >-
 on:
   push:
     branches: [main]
+    # Shared-infra paths this loop owns on push. Trimmed to what actually
+    # exists in this repo: no playwright.config.js / package.json /
+    # package-lock.json (this site vendors no Node toolchain — the e2e
+    # harness runs from the platform checkout, .cms-platform/) and no
+    # _layouts/post.html (single-page bio, no _posts collection; only
+    # _layouts/home.html exists, and it isn't part of this loop's
+    # _posts-collection flow). This loop's mutate spec also self-skips here
+    # (cms-platform's e2e/cms-publish-loop-prod-mutate.spec.js
+    # hasE2ECanaries-style guard: no _posts, base_collections:[] hides it).
     paths:
       - .github/workflows/cms-publish-loop-prod.yml
       - admin/**
-      - playwright.config.js
-      - package.json
-      - package-lock.json
       - _config.yml
-      - _layouts/post.html
   workflow_dispatch:
 
 permissions:

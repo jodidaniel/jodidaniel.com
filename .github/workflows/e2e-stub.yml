@@ -1,16 +1,19 @@
 # Thin caller — copied into a site repo as
 # `.github/workflows/e2e-stub.yml`. Companion to `e2e-tests.yml`: it emits a
 # synthetic `e2e / e2e` success on the docs-/infra-/tooling-only PRs that the
-# heavy e2e lane skips (its `paths-ignore`), so the REQUIRED `e2e / e2e`
-# context still reports and branch protection doesn't hang ("Waiting for
-# status to be reported").
+# heavy e2e lane skips (its `paths-ignore`). This repo's live `main` ruleset
+# does NOT require an `e2e / e2e` context (it requires zero status checks) —
+# so this stub isn't unblocking a hung required check here; it's kept so the
+# `e2e / e2e` context still reports, for parity with the platform consumer
+# shape, and because it's harmless: a docs-only PR gets a fast synthetic pass
+# instead of no e2e signal at all.
 #
 # The `paths:` list below MUST be the byte-for-byte mirror of
 # `e2e-tests.yml`'s `paths-ignore` — if they drift, a PR can either hang (in
 # neither) or needlessly run both. The mirror is lint-locked by the platform's
 # e2e/required-check-stub-paths.test.js. The job MUST stay named `e2e` so the
 # surfaced context is exactly `e2e / e2e` (matching e2e-tests.yml's caller job).
-# Keep the `@<sha>` pin in lockstep with the other platform `uses:` pins.
+# Keep the `@vX.Y.Z` tag pin in lockstep with the other platform `uses:` pins.
 name: E2E (docs-only stub)
 run-name: "${{ format('PR #{0} — {1}', github.event.pull_request.number, github.event.pull_request.title) }}"
 

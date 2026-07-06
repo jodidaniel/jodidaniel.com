@@ -8,9 +8,32 @@
 # BLOCKED (issue #1815 Blocker 1 — see the reusable's header for the
 # full #1812 differential).
 #
-# The `required_contexts` list below MUST stay in lock-step with THIS
-# repo's `.github/rulesets/main.json` `required_status_checks` array
-# (lint-locked by this repo's copy of e2e/cms-automerge-nudge.test.js).
+# This repo has NO `.github/rulesets/main.json` and NO `e2e/` directory (no
+# local lint-lock) — those were adamdaniel.ai artifacts this comment used to
+# describe by mistake. The live `main` ruleset here requires ZERO status
+# checks (only `cms-feature-branches`, which gates feature-branch PRs, not
+# main, requires anything: `validate-content`). So `required_contexts` below
+# is NOT mirroring branch protection; it's a safety gate on the reusable's
+# explicit recovery merge (see the reusable's header) — every listed context
+# must be present AND green on the PR's head sha, and a context that never
+# reports on this repo (the reusable's `headIsTrulyGreen` "missing on head
+# sha" branch) permanently BLOCKS recovery for that PR; it is not ignored.
+# The previous list (`validate-content`, `scan`, `select`, `unit`, `parity`,
+# `e2e (1)`, `e2e-admin`, `finalize`, `preview-media`) never matched any real
+# check-run name on this repo — checks here report as `<caller job> / <called
+# job>` (e.g. `editorial / validate-content`, `scan / scan`), so the nudge's
+# recovery merge could never have fired. Trimmed to the one context
+# guaranteed to report, under a stable name, on every content PR this repo
+# produces. `e2e / e2e` was deliberately NOT kept: it reports under a
+# DIFFERENT name on docs-only PRs (`E2E (docs-only stub) / e2e`, see
+# e2e-stub.yml), which would reproduce the same missing-context hazard.
+#
+# In practice this whole nudge is dormant here: `cms.base_collections: []`
+# hides the `e2e`/`posts` collections from `/admin`, so the host-loop and
+# prod-loop canary specs self-skip (cms-platform's
+# e2e/cms-publish-loop.spec.js `hasE2ECanaries` guard) and this repo has
+# never produced an `automated-test`-labeled PR. Kept for parity with the
+# platform consumer shape in case that changes.
 # Keep `@vX.Y.Z` on the `uses:` line pinned to a released platform tag.
 name: CMS auto-merge nudge
 run-name: >-
@@ -42,17 +65,11 @@ jobs:
   nudge:
     uses: Adam-S-Daniel/cms-platform/.github/workflows/cms-automerge-nudge.yml@v0.1.52
     with:
-      # Required-status-check contexts this site's branch protection
-      # enforces — mirror `.github/rulesets/main.json`. One per line.
+      # NOT branch-protection contexts (this repo's main ruleset requires
+      # none) — the one check-run name guaranteed to report, correctly
+      # named, on every content PR. See the header comment above for why
+      # the rest of the old list was dropped.
       required_contexts: |
-        validate-content
-        scan
-        select
-        unit
-        parity
-        e2e (1)
-        e2e-admin
-        finalize
-        preview-media
+        editorial / validate-content
     secrets:
       CMS_E2E_PAT: ${{ secrets.CMS_E2E_PAT }}

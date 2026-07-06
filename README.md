@@ -23,10 +23,10 @@ The design is inspired by [lisabari.com](https://lisabari.com/), featuring:
 - **Body:** Source Sans Pro (300 weight for light, readable text)
 
 ### Animations
-Elements use the `animate-in` class with staggered delays (`delay-1` through `delay-7`):
+Elements use the `animate-in` class with staggered delays (`delay-1` through `delay-8`):
 - Animation: fade in while sliding up 30px
 - Duration: 0.8s ease-out
-- Delays range from 0.1s to 1.2s for cascading effect
+- Delays range from 0.1s to 1.4s for cascading effect
 
 ### Responsive Breakpoints
 - **> 900px:** 2-column expertise grid

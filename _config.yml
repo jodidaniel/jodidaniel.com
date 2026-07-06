@@ -103,5 +103,4 @@ exclude:
   - e2e
   - .cms-platform
   - platform.lock
-  - admin/README.md
   - admin/collections.site.yml.example
