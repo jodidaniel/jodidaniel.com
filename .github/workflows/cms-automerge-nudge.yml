@@ -63,7 +63,7 @@ concurrency:
 
 jobs:
   nudge:
-    uses: Adam-S-Daniel/cms-platform/.github/workflows/cms-automerge-nudge.yml@v0.1.58
+    uses: Adam-S-Daniel/cms-platform/.github/workflows/cms-automerge-nudge.yml@v0.1.60
     with:
       # NOT branch-protection contexts (this repo's main ruleset requires
       # none) — the one check-run name guaranteed to report, correctly
