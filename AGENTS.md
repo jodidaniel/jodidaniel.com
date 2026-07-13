@@ -253,6 +253,30 @@ mark, not "AD". Verify: `bundle exec jekyll build && ruby scripts/verify-build-a
 (asserts the rendered logo is the JD mark and `logo_url` points at the site
 asset). Resolved #31.
 
+### Visual-regression gotchas (new sections / site-owned collections)
+
+Footguns that bit adamdaniel.ai's Tools section rollout (fixed in
+cms-platform#146) — check these before adding any new folder collection or
+top-level route to this site:
+
+- **New-section pages and the gate.** The regression page universe is a scan
+  of the built `_site/`, so a new site-owned collection is covered
+  automatically — nothing to wire — and a brand-new page is confirmed by prod
+  answering 404/410 at capture time, scored "new", and routed through the
+  manual `regression-review` gate. **Expect the first PR adding a new
+  section's pages to force a one-time human regression approval — expected,
+  not a failure.**
+- **Sub-threshold and below-the-fold changes don't move the pixel diff.** The
+  pixel gate ignores diffs under 0.5% of the viewport. The visible-text check
+  closes this gap: a whitespace-normalized text delta escalates a
+  pixel-"identical" page to review regardless of pixel count, and covers
+  below-the-fold content the 1920×1080 screenshot never captures. Don't
+  reason from pixel thresholds alone.
+- Salience (which diffs are worth a human look) is decided entirely in the
+  platform's `e2e/visual-regression-salient.js` — **not** by any caller-level
+  `paths:` filter; `.github/workflows/visual-regression.yml` here intentionally
+  fires on every PR.
+
 ## OAuth (Decap editorial login)
 
 The Decap GitHub backend authenticates through an **API Gateway OAuth proxy**:
