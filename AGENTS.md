@@ -370,11 +370,22 @@ Most of those jobs are nearly empty here: `cms.base_collections: []` means the
 generic-collection specs self-skip (see the platform's #33 guard registry), so a
 single-page bio exercises far fewer tests than a full consumer.
 
-Worker counts differ per project by design and `--shard` is deliberately unused
-— the measurements are in the platform's
+Every project job runs at the SAME worker count (`150%` — 6 on a 4-vCPU runner);
+an earlier version of this line said the counts "differ per project by design",
+which was never true of the shipped config. `--shard` is deliberately unused (it
+balances by test count, and per-test durations span 5 ms → 49 s) — the
+measurements are in the platform's
 [`docs/E2E-PARALLELISM.md`](https://github.com/Adam-S-Daniel/cms-platform/blob/main/docs/E2E-PARALLELISM.md).
 To dial the workers down without a platform release, pass the reusable's
 `workers` input from this caller (e.g. `workers: "2"`).
+
+**Expect ~150-210 s**, not a single number: three consecutive bump PRs of the
+same suite measured 148 s, 150 s and 210 s. The spread is per-lane browser-install
+variance (this repo's `webkit-iphone16` install ranged 29-61 s) plus runner
+allocation, not test time — so a 20% swing between two runs is not a regression.
+`webkit-iphone16` is the long pole here too (190 s on the v0.1.70 bump: 61 s
+install + 99 s tests), because WebKit runs the `@admin-read` specs several times
+slower than Chromium does.
 
 ## OAuth (Decap editorial login)
 
