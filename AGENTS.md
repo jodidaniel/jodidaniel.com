@@ -356,6 +356,26 @@ top-level route to this site:
   `paths:` filter; `.github/workflows/visual-regression.yml` here intentionally
   fires on every PR.
 
+## CI: the e2e lane surfaces many contexts but requires ONE
+
+`e2e-tests.yml` here is a thin caller; the platform reusable fans the Playwright
+suite out over a **`project` matrix — one job per Playwright project** (10 of
+them, each on its own runner, each installing only its own browser engine)
+behind an aggregating `e2e` gate job. So a PR shows ~10 informational
+`e2e / project (<name>)` checks plus the ONE required `e2e / e2e`, which is the
+gate. No ruleset names the per-project contexts, and nothing in this repo needed
+changing for it.
+
+Most of those jobs are nearly empty here: `cms.base_collections: []` means the
+generic-collection specs self-skip (see the platform's #33 guard registry), so a
+single-page bio exercises far fewer tests than a full consumer.
+
+Worker counts differ per project by design and `--shard` is deliberately unused
+— the measurements are in the platform's
+[`docs/E2E-PARALLELISM.md`](https://github.com/Adam-S-Daniel/cms-platform/blob/main/docs/E2E-PARALLELISM.md).
+To dial the workers down without a platform release, pass the reusable's
+`workers` input from this caller (e.g. `workers: "2"`).
+
 ## OAuth (Decap editorial login)
 
 The Decap GitHub backend authenticates through an **API Gateway OAuth proxy**:
