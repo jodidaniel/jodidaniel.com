@@ -45,12 +45,18 @@ permissions:
 
 jobs:
   sync:
-    uses: Adam-S-Daniel/cms-platform/.github/workflows/dependabot-comment-sync.yml@v0.1.75
+    uses: Adam-S-Daniel/cms-platform/.github/workflows/dependabot-comment-sync.yml@v0.1.76
     with:
       # Pin to the SAME ref as the `uses:` pin above so the script matches.
-      platform_ref: v0.1.75
+      platform_ref: v0.1.76
     secrets:
       # Fine-grained PAT with `workflows: write` so the follow-up commit can
       # push the refreshed workflow files. Drop this line if the site hasn't
       # configured the PAT — the reusable then skips cleanly with a notice.
       workflow_sha_comment_pat: ${{ secrets.CMS_PLATFORM_PAT }}
+      # Fallback when no PAT is configured: a GitHub App (Contents R/W, Pull
+      # requests R/W, Workflows R/W). Its App ID is NOT passed here — the
+      # reusable reads it from this repo's `vars.CMS_AUTOMATION_APP_ID`
+      # variable — so only the private key crosses the boundary. With neither
+      # credential the reusable still skips cleanly with a notice naming both.
+      app_private_key: ${{ secrets.CMS_AUTOMATION_APP_PRIVATE_KEY }}
