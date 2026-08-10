@@ -387,6 +387,38 @@ allocation, not test time — so a 20% swing between two runs is not a regressio
 install + 99 s tests), because WebKit runs the `@admin-read` specs several times
 slower than Chromium does.
 
+## Platform v0.1.76 — what changed for this repo
+
+- **The 9 PR-triggered callers no longer fire on `pull_request: edited`**
+  (`dependabot-auto-merge`, `deploy-preview`, `e2e-stub`, `e2e-tests`,
+  `parity-preview`, `platform-pin-consistency`, `preview-media`, `secrets-scan`,
+  `visual-regression`). A caller that skips emits **no check-run at all**, so an
+  `edited` run WITHDRAWS a context an earlier run already reported green, and
+  only a new SHA restores it — which a finished automated PR (a bump, a
+  comment-sync) never gets. The per-job `if:` that used to narrow `edited` to
+  base retargets went with it. **`deploy-preview` keeps `closed`**: the
+  reusable's teardown job fires only on that action (S3 `rm --recursive` +
+  CloudFront invalidation + the preview bot-comment update), so dropping it
+  would leak every closed PR's `pr-N/` prefix with no red check to show it.
+- **The scheduled-run health audit no longer alerts on runs that never got a
+  runner** — and this repo is where the class was found. All four 2026-08-06
+  failures on tracking issue **#105** (`cms-automerge-nudge` ×2,
+  `cms-media-roundtrip`, `publish-scheduled-posts`) were runner starvation: the
+  job cancelled with `runner_id: 0` and an empty `runner_name`, ~15m02s from
+  creation to cancellation, no steps run. Over a 168h window our alertable count
+  goes **5 → 1**; the survivor is the genuine #220 stale-`platform_ref` failure
+  (run 31242320695), which still alerts. #105 had already auto-closed on
+  2026-08-10, so this is **prevention, not a repair** — the audit will open a
+  FRESH issue on the next starvation event rather than reopening #105.
+- **The loop deploy diagnostic gained merge-aware verdicts.** When a canary URL
+  never reflects and the PR simply has not merged yet, it now reports
+  `pr-awaiting-required-check` / `pr-required-check-red` (naming the check) and
+  waits the merge out, instead of blaming the deploy chain. So an **older log
+  line reading "NO deploy-production run fired … the chain never fired" is not
+  evidence of a trigger problem** — before this fix a merely-slow auto-merge
+  produced exactly that message. `no-deploy-fired` is still emitted, but only
+  once the PR really has merged.
+
 ## OAuth (Decap editorial login)
 
 The Decap GitHub backend authenticates through an **API Gateway OAuth proxy**:
