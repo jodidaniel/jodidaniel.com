@@ -224,200 +224,42 @@ after the boss approves the copy. Until then, no bio content reaches prod and
 no marketing claim ships. Do not flip the gate on your own initiative.
 
 ### Known open blockers (CMS editing)
-- ~~**#27 — saving fails: org OAuth App access restrictions.**~~ **RESOLVED.**
-  Login worked, but the `jodidaniel` GitHub **org** had OAuth App access
-  restrictions on and the CMS OAuth App (Client ID `Ov23li6Nb58IZi6Nj5SY`)
-  wasn't approved for the org, so Decap could authenticate (read) but
-  **couldn't persist** ("Failed to persist entry: API_ERROR … OAuth App
-  access restrictions"). An **org owner** approved the app (Settings →
-  Third-party access) — saving from `/admin` now works (login + persist both
-  succeed). adamdaniel never hit this (it's user-owned); jodidaniel was the
-  first org-owned consumer. See #27.
-- ~~**`CMS_E2E_PAT` repo secret not provisioned.**~~ **RESOLVED.** The secret
-  is provisioned and the token-driven CMS automation reusables —
-  `cms-automerge-nudge`, `auto-resolve-newline-conflict`, `sweep-stale-cms-prs`
-  — are green. The sweep's earlier 30/30-failure streak was never a missing
-  secret: it was a `cms-platform` bug where the sweep 404'd on this repo's
-  missing `_e2e/`/`_posts/` directories (this single-page bio has neither),
-  fixed upstream in cms-platform v0.1.49/v0.1.50 (PRs #127/#130 —
-  "tolerate missing _e2e/_posts/uploads directories in consumers" /
-  "discard gh api error-body stdout when directory listings fail"). Confirmed
-  green on this repo after the bump.
-- ~~**#28 — "Live Preview" 404s.**~~ **RESOLVED.** The site now ships
-  `preview.md` (`layout: preview`, `permalink: /preview/`, mirroring
-  adamdaniel.ai) + a friendly `404.html`, so the admin's Live Preview button
-  reaches the gem's preview shell instead of a raw S3 `NoSuchKey`. The preview
-  layout (shipped by `cms-platform-theme`, confirmed in the v0.1.7 pin) renders
-  ONLY the empty preview chrome — no gated bio content; drafts stream in over
-  `postMessage`/`BroadcastChannel` at edit time. `404.html` links back to `/`
-  only (no `/blog/` — single-page bio) and is `noindex,nofollow`. Build
-  verification: `bundle exec jekyll build && ruby scripts/verify-build-artifacts.rb`
-  asserts `_site/preview/index.html` + `_site/404.html` exist, the preview is
-  noindex and bio-free, and the 404 body links home not to a blog. See #28.
+
+All three blockers previously tracked here (#27 org OAuth App access
+restrictions, the `CMS_E2E_PAT` repo secret, #28 "Live Preview" 404s) are now
+RESOLVED — see
+[`docs/CI-AND-PLATFORM.md`](docs/CI-AND-PLATFORM.md#resolved-blockers-historical)
+for the full history.
 
 ## Content model (per-section, all `/admin`-editable)
 
-The home layout reads its copy from two kinds of source, NOT from a single
-data file:
-
-### Singleton sections → `_data/*.yml` (Decap *file* collections)
-
-| Source file | Holds | Edited in `/admin` as |
-|-------------|-------|------------------------|
-| `_data/header.yml`   | `name`, `tagline`                              | **Header / Hero** (`site_header`) |
-| `_data/about.yml`    | `photo`, `intro_heading`, `bio[]`, `nav[]`     | **About** (`site_about`) |
-| `_data/contact.yml`  | `heading`, `intro`, `links[]`                  | **Contact** (`site_contact`) |
-| `_data/settings.yml` | `site_live` GATE, `coming_soon`, `footer`, `section_headings` | **Site Settings** (`site_settings`) |
-
-The layout reads these as `site.data.header` / `.about` / `.contact` /
-`.settings`.
-
-### Repeating sections → folder collections (one file per item, ordered by `weight`)
-
-Declared in `_config.yml` `collections:` with **`output: false`** (editable
-content, NOT standalone published pages). The layout reads each as
-`site.<collection> | sort: 'weight'`:
-
-| Collection | Directory | Per-item fields |
-|------------|-----------|-----------------|
-| `expertise`       | `_expertise/`       | `title`, `description`, `weight` |
-| `experience`      | `_experience/`      | `title`, `org`, `period`, `description`, `weight` |
-| `accomplishments` | `_accomplishments/` | `title`, `text`, `weight` |
-| `media`           | `_media/`           | `category`, `title`, `source`, `url`, `weight` |
-| `education`       | `_education/`       | `degree`, `field`, `school`, `weight` |
-
-Each item is a front-matter-only `.md` file slugged `{{weight}}-{{slug}}`
-(e.g. `_expertise/1-digital-health-ai.md`). `weight` controls render order.
-
-**Media is special**: items carry a `category`
-(Featured Articles / Policy & Advocacy / Podcasts & Interviews /
-Speaking & Panels / Press & News). The home layout groups all `site.media`
-items by that `category` field and renders a per-category block with an icon.
-**Media item `.md` files live FLAT in `_media/` (no subdirectories).** They
-used to be organized into category subfolders (`_media/policy/` etc.), but a
-Decap **folder collection reads its `folder:` NON-recursively** — so the nested
-files were invisible in `/admin` (the collection showed zero entries) even
-though Jekyll's `site.media` reads them recursively and the live page rendered
-fine. Grouping is by the `category` FIELD, never the path, so flattening is
-loss-free; keep new items flat (Decap writes `{{weight}}-{{slug}}.md` into
-`_media/`).
+Per-section content sources: singleton `_data/*.yml` files (Decap file
+collections) vs. per-item folder collections ordered by `weight`, their field
+lists, and the flat-`_media/` (non-recursive folder collection) gotcha →
+read [`docs/CONTENT-MODEL.md`](docs/CONTENT-MODEL.md) before adding, renaming,
+or reshaping a content source.
 
 ## `/admin` (Decap CMS)
 
-`/admin` shows **9 per-section editors** — the 5 folder collections + the 4
-file collections above — and **nothing else**. The generic platform
-collections (posts / tags / projects / pages / e2e) are hidden by
-`cms.base_collections: []` in `_config.yml` (an empty keep-list hides them all;
-honored by `cms-platform-theme` >= v0.1.7). This single-page bio has no blog.
-
-The admin UI itself is **delivered by the gem** (`cms-platform-theme`), not
-vendored here. The only admin file this repo owns is the **site seam**
-`admin/collections.site.yml`: a YAML fragment of Decap collection definitions
-that the platform's render hook splices into the base config at the
-`# __SITE_COLLECTIONS__` marker at build time (indentation must match the base
-list — 2 spaces for `- name:`). `admin/collections.site.yml.example` documents
-the seam format. Do not add a vendored `admin/config.yml` or admin machinery;
-edit the seam and bump the gem.
-
-**Brand mark (`/admin` + site logo).** The gem's render hook defaults the
-admin's `logo_url` (`CMS_LOGO_URL`) to `<url>/assets/images/logo.svg` when
-`cms.logo_url` is unset. The gem ships a placeholder `assets/images/logo.svg`
-that is an **"AD" (Adam Daniel)** monogram — so a consuming site that ships no
-logo leaks Adam's mark into its `/admin`. This repo therefore owns
-`assets/images/logo.svg` — Jodi's own **"JD"** mark in her palette (teal accent
-`#5dd9e8`, Raleway, matching `assets/css/jodidaniel.css`). The **site file
-shadows the gem's** copy (Jekyll site files override theme-gem files), so
-`/admin` and the rendered `_site/assets/images/logo.svg` resolve to Jodi's
-mark, not "AD". Verify: `bundle exec jekyll build && ruby scripts/verify-build-artifacts.rb`
-(asserts the rendered logo is the JD mark and `logo_url` points at the site
-asset). Resolved #31.
-
-### Visual-regression gotchas (new sections / site-owned collections)
-
-Footguns that bit adamdaniel.ai's Tools section rollout (fixed in
-cms-platform#146) — check these before adding any new folder collection or
-top-level route to this site:
-
-- **New-section pages and the gate.** The regression page universe is a scan
-  of the built `_site/`, so a new site-owned collection is covered
-  automatically — nothing to wire — and a brand-new page is confirmed by prod
-  answering 404/410 at capture time, scored "new", and routed through the
-  manual `regression-review` gate. **Expect the first PR adding a new
-  section's pages to force a one-time human regression approval — expected,
-  not a failure.**
-- **Sub-threshold and below-the-fold changes don't move the pixel diff.** The
-  pixel gate ignores diffs under 0.5% of the viewport. The visible-text check
-  closes this gap: a whitespace-normalized text delta escalates a
-  pixel-"identical" page to review regardless of pixel count, and covers
-  below-the-fold content the 1920×1080 screenshot never captures. Don't
-  reason from pixel thresholds alone.
-- Salience (which diffs are worth a human look) is decided entirely in the
-  platform's `e2e/visual-regression-salient.js` — **not** by any caller-level
-  `paths:` filter; `.github/workflows/visual-regression.yml` here intentionally
-  fires on every PR.
+The 9 section editors, the site-owned `admin/collections.site.yml` seam
+format, the brand-mark shadowing fix, and visual-regression gotchas for new
+folder collections/top-level routes → read
+[`docs/CONTENT-MODEL.md`](docs/CONTENT-MODEL.md) before touching `/admin`
+config or adding a new section.
 
 ## CI: the e2e lane surfaces many contexts but requires ONE
 
-`e2e-tests.yml` here is a thin caller; the platform reusable fans the Playwright
-suite out over a **`project` matrix — one job per Playwright project** (10 of
-them, each on its own runner, each installing only its own browser engine)
-behind an aggregating `e2e` gate job. So a PR shows ~10 informational
-`e2e / project (<name>)` checks plus the ONE required `e2e / e2e`, which is the
-gate. No ruleset names the per-project contexts, and nothing in this repo needed
-changing for it.
-
-Most of those jobs are nearly empty here: `cms.base_collections: []` means the
-generic-collection specs self-skip (see the platform's #33 guard registry), so a
-single-page bio exercises far fewer tests than a full consumer.
-
-Every project job runs at the SAME worker count (`150%` — 6 on a 4-vCPU runner);
-an earlier version of this line said the counts "differ per project by design",
-which was never true of the shipped config. `--shard` is deliberately unused (it
-balances by test count, and per-test durations span 5 ms → 49 s) — the
-measurements are in the platform's
-[`docs/E2E-PARALLELISM.md`](https://github.com/Adam-S-Daniel/cms-platform/blob/main/docs/E2E-PARALLELISM.md).
-To dial the workers down without a platform release, pass the reusable's
-`workers` input from this caller (e.g. `workers: "2"`).
-
-**Expect ~150-210 s**, not a single number: three consecutive bump PRs of the
-same suite measured 148 s, 150 s and 210 s. The spread is per-lane browser-install
-variance (this repo's `webkit-iphone16` install ranged 29-61 s) plus runner
-allocation, not test time — so a 20% swing between two runs is not a regression.
-`webkit-iphone16` is the long pole here too (190 s on the v0.1.70 bump: 61 s
-install + 99 s tests), because WebKit runs the `@admin-read` specs several times
-slower than Chromium does.
+The e2e matrix's per-project jobs, worker counts, expected wall-clock range
+(~150-210s), and why `--shard` is unused → read
+[`docs/CI-AND-PLATFORM.md`](docs/CI-AND-PLATFORM.md) before reasoning about a
+red or slow e2e run.
 
 ## Platform v0.1.76 — what changed for this repo
 
-- **The 9 PR-triggered callers no longer fire on `pull_request: edited`**
-  (`dependabot-auto-merge`, `deploy-preview`, `e2e-stub`, `e2e-tests`,
-  `parity-preview`, `platform-pin-consistency`, `preview-media`, `secrets-scan`,
-  `visual-regression`). A caller that skips emits **no check-run at all**, so an
-  `edited` run WITHDRAWS a context an earlier run already reported green, and
-  only a new SHA restores it — which a finished automated PR (a bump, a
-  comment-sync) never gets. The per-job `if:` that used to narrow `edited` to
-  base retargets went with it. **`deploy-preview` keeps `closed`**: the
-  reusable's teardown job fires only on that action (S3 `rm --recursive` +
-  CloudFront invalidation + the preview bot-comment update), so dropping it
-  would leak every closed PR's `pr-N/` prefix with no red check to show it.
-- **The scheduled-run health audit no longer alerts on runs that never got a
-  runner** — and this repo is where the class was found. All four 2026-08-06
-  failures on tracking issue **#105** (`cms-automerge-nudge` ×2,
-  `cms-media-roundtrip`, `publish-scheduled-posts`) were runner starvation: the
-  job cancelled with `runner_id: 0` and an empty `runner_name`, ~15m02s from
-  creation to cancellation, no steps run. Over a 168h window our alertable count
-  goes **5 → 1**; the survivor is the genuine #220 stale-`platform_ref` failure
-  (run 31242320695), which still alerts. #105 had already auto-closed on
-  2026-08-10, so this is **prevention, not a repair** — the audit will open a
-  FRESH issue on the next starvation event rather than reopening #105.
-- **The loop deploy diagnostic gained merge-aware verdicts.** When a canary URL
-  never reflects and the PR simply has not merged yet, it now reports
-  `pr-awaiting-required-check` / `pr-required-check-red` (naming the check) and
-  waits the merge out, instead of blaming the deploy chain. So an **older log
-  line reading "NO deploy-production run fired … the chain never fired" is not
-  evidence of a trigger problem** — before this fix a merely-slow auto-merge
-  produced exactly that message. `no-deploy-fired` is still emitted, but only
-  once the PR really has merged.
+The `pull_request: edited` trigger removal, the scheduled-run health audit's
+runner-starvation fix, and the deploy-lane diagnostic's merge-aware verdicts
+→ read [`docs/CI-AND-PLATFORM.md`](docs/CI-AND-PLATFORM.md) before treating an
+old "chain never fired" log line as a trigger bug.
 
 ## OAuth (Decap editorial login)
 
@@ -444,10 +286,22 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
 - Content lives in `_data/{header,about,contact,settings}.yml` (singletons) +
   the `_expertise/_experience/_accomplishments/_media/_education` folder
   collections (ordered by `weight`, `output: false`). NOT a single data file.
+  Full field lists → `docs/CONTENT-MODEL.md`.
 - `/admin` = 9 section editors; generics hidden via `cms.base_collections: []`;
   admin UI shipped by the `cms-platform-theme` gem; seam =
   `admin/collections.site.yml`.
+  Full detail → `docs/CONTENT-MODEL.md`.
 - `mockup.html` is the design reference (excluded from the build); live copy is
   verbatim from it.
 - Go-live (flip the gate + restore SEO/title + headshot) is **issue #26**,
   pending boss copy sign-off. Do not leak bio content to prod before then.
+- CI/platform behavior (e2e matrix, platform version notes) → `docs/CI-AND-PLATFORM.md`.
+
+## Deeper references
+
+- [`docs/CONTENT-MODEL.md`](docs/CONTENT-MODEL.md) — read when adding, renaming,
+  or reshaping a content source, or when touching `/admin` config or adding a
+  new section/collection.
+- [`docs/CI-AND-PLATFORM.md`](docs/CI-AND-PLATFORM.md) — read when triaging a
+  red or slow e2e run, understanding what the platform v0.1.76 bump changed
+  here, or looking up the history of a now-resolved CMS-editing blocker.
