@@ -41,4 +41,3 @@ updates:
       # untouched and keeps flowing.
       #
       # See cms-platform#242.
-      - dependency-name: "cms-platform-theme"
