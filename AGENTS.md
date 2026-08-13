@@ -216,8 +216,10 @@ This site is **consumer #2** of `cms-platform` (after adamdaniel.ai). The
 platform release this repo is pinned to is recorded in `platform.lock`
 (`platform_ref`); the sync path is `platform-bump.yml`, which moves the
 `cms-platform-theme` gem in lockstep with the `uses:@` action pins in one atomic
-PR. Dependabot's `bundler` ecosystem `ignore`s that gem (cms-platform#242) — it
-could only move the `Gemfile` half and would skew the pins. Do not vendor the
+PR. Dependabot's `bundler` ecosystem `ignore`s that gem (cms-platform#242), and
+its `github-actions` ecosystem ignores the `uses:@` pins the same way
+(cms-platform#244) — either ecosystem could only move its own half and would
+skew the pins. See cms-platform's `docs/SYNC.md` for the sync model. Do not vendor the
 platform's `admin/` machinery — the gem ships it; this repo keeps only the
 site-owned seam (`admin/collections.site.yml`).
 
