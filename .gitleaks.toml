@@ -30,8 +30,10 @@
 # .github/workflows/secrets-scan.yml enforces this: it plants a detectable
 # credential at every allowlisted path and fails if the config cannot see
 # it. It only probes paths matching files TRACKED at scan time, though, so
-# an entry matching nothing passes vacuously — which is how these survived
-# with green CI.
+# an entry matching nothing passes vacuously — so they would still pass on
+# the day an entry re-armed against an untracked path. (It is not what let
+# these survive: the canary only reached this repo with the v0.1.84 bump,
+# so for their whole life there was no canary at all.)
 
 [extend]
 useDefault = true
