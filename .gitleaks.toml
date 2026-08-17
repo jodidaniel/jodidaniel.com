@@ -6,24 +6,38 @@
 # fixtures below are suppressed.
 #
 # When adding a new test that hardcodes a fake-looking token, add it
-# here rather than disabling gitleaks. See AGENTS.md "Secrets scan".
+# here rather than disabling gitleaks — as a `regexes` entry.
+#
+# Suppress by `regexes` — NEVER by `paths` (cms-platform issue #260). A
+# `paths` entry is not a finding filter: gitleaks skips the file ENTIRELY,
+# before any rule runs, so a REAL credential pasted into it is never
+# reported. This config used to exclude oauth-proxy/test_lambda.py, the two
+# e2e/admin-reviews-*.spec.js files and scripts/scrub-secrets.js that way.
+# This repo has never tracked any of them (0 commits each), so the entries
+# suppressed nothing here — measured on the pinned 8.30.1 over the full
+# history, a config carrying ONLY those paths and no regexes reports exactly
+# what the bare default ruleset reports (1 finding either way). Recreating
+# them in a test tree of the platform's real fixtures made gitleaks skip all
+# 29,326 bytes and tripped the canary with "allowlist blind spot" errors.
+#
+# Narrowing a `paths` entry does not work either: `regexTarget = "secret"`
+# is ACCEPTED — it names the allowlist's DEFAULT target, so it narrows
+# nothing — and gitleaks SILENTLY IGNORES unknown TOML keys, so a
+# `condition = "AND"` is dropped without warning and the path alone
+# re-suppresses the whole file. Delete, do not narrow.
+#
+# The "Allowlist canary" step in cms-platform's
+# .github/workflows/secrets-scan.yml enforces this: it plants a detectable
+# credential at every allowlisted path and fails if the config cannot see
+# it. It only probes paths matching files TRACKED at scan time, though, so
+# an entry matching nothing passes vacuously — which is how these survived
+# with green CI.
 
 [extend]
 useDefault = true
 
 [[allowlists]]
 description = "CMS platform test fixtures"
-paths = [
-  # OAuth Lambda unit tests use literal "test_client_id",
-  # "test_client_secret", and "ghp_test_access_token".
-  '''oauth-proxy/test_lambda\.py''',
-  # Admin-reviews specs hardcode a fake GitHub PAT to drive the auth
-  # flow without touching the real OAuth proxy.
-  '''e2e/admin-reviews-(auth|stats)\.spec\.js''',
-  # The scrubber's own comments reference rule IDs and example
-  # secrets in docstrings.
-  '''scripts/scrub-secrets\.js''',
-]
 regexes = [
   # Belt-and-braces: any ghp_*test*/ghp_*fake* literal anywhere.
   '''ghp_(test|fake)[A-Za-z0-9_]*''',
