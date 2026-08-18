@@ -440,3 +440,24 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
 - [`docs/CI-AND-PLATFORM.md`](docs/CI-AND-PLATFORM.md) — read when triaging a
   red or slow e2e run, understanding what the platform v0.1.76 bump changed
   here, or looking up the history of a now-resolved CMS-editing blocker.
+
+## Keep every visible string `/admin`-editable
+
+- **New or changed on-page copy comes from a Decap-backed source — a
+  `_data/*.yml` singleton or a `weight`-ordered folder collection — never a
+  literal in `_layouts/home.html` or an include.** The premise of this site is
+  that its owner maintains it end to end without a developer; a string only a
+  commit can change is invisible in `/admin` and she cannot fix it herself. Add
+  the data source first, then have the layout read it (`site.data.*` /
+  `site.<collection>`), not the other way round. Even the five section headings
+  live in `_data/settings.yml` `section_headings` for this reason.
+- **A string you genuinely cannot route through `/admin` is a decision to
+  surface, not a detail to absorb silently** — call it out in the PR and get it
+  agreed before merge. Hardcoded chrome stays at the irreducible minimum.
+- **The one standing exception is the media category list, and it lives in two
+  places that must move together**: `media_by_category` in
+  `_layouts/home.html` (drives grouping, order, and the rendered `<h3>` label)
+  and the `category` select `options:` in `admin/collections.site.yml` (drives
+  what the editor can pick). Adding, renaming, or reordering a category means
+  editing BOTH — a value present in only one silently drops items from the page
+  or from the picker, with no build error.
