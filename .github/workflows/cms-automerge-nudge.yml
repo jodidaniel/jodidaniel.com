@@ -69,7 +69,36 @@ jobs:
       # none) — the one check-run name guaranteed to report, correctly
       # named, on every content PR. See the header comment above for why
       # the rest of the old list was dropped.
+      # All SIX contexts this repo's live `main` ruleset requires — verified
+      # 2026-08-20 against `GET /repos/jodidaniel/jodidaniel.com/rulesets`
+      # (ruleset `main`, id 17032014). This list is the nudge's ENTIRE notion of
+      # "green": the reusable builds `REQUIRED` from it and gates on
+      # `[...REQUIRED].every(GREEN)` before calling `pulls.merge()`.
+      #
+      # It listed only `editorial / validate-content` from the day it was seeded
+      # until now — six platform bumps touched this file and none revisited the
+      # value. With one entry the nudge would have called `pulls.merge()` as soon
+      # as that single context went green, while `scan`, `parity`,
+      # `preview-media`, `e2e` and `visual-regression` were still pending. The
+      # ruleset would have rejected the call, so the symptom was a failing merge
+      # attempt rather than an unsafe merge — but a guard that asks for a merge
+      # it has not established is safe only by accident, and only while the
+      # ruleset holds.
+      #
+      # It has never fired because this site is gated (`_data/settings.yml`
+      # `site_live: false`), so there is no editorial traffic and no CMS canary
+      # PR for the nudge to act on. That changes at go-live (#26). Fixed before
+      # then rather than after.
+      #
+      # The template's caution is about the opposite error — a WRONG entry makes
+      # the nudge wait forever for a context no run reports. A SHORT list is the
+      # inverse failure and the template does not warn about it.
       required_contexts: |
         editorial / validate-content
+        scan / scan
+        parity / parity
+        preview-media / preview-media
+        e2e / e2e
+        visual-regression / approve-regression
     secrets:
       CMS_E2E_PAT: ${{ secrets.CMS_E2E_PAT }}
