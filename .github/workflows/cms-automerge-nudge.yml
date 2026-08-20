@@ -10,23 +10,47 @@
 #
 # This repo has NO `.github/rulesets/main.json` and NO `e2e/` directory (no
 # local lint-lock) — those were adamdaniel.ai artifacts this comment used to
-# describe by mistake. The live `main` ruleset here requires ZERO status
-# checks (only `cms-feature-branches`, which gates feature-branch PRs, not
-# main, requires anything: `validate-content`). So `required_contexts` below
-# is NOT mirroring branch protection; it's a safety gate on the reusable's
-# explicit recovery merge (see the reusable's header) — every listed context
-# must be present AND green on the PR's head sha, and a context that never
-# reports on this repo (the reusable's `headIsTrulyGreen` "missing on head
-# sha" branch) permanently BLOCKS recovery for that PR; it is not ignored.
-# The previous list (`validate-content`, `scan`, `select`, `unit`, `parity`,
-# `e2e (1)`, `e2e-admin`, `finalize`, `preview-media`) never matched any real
-# check-run name on this repo — checks here report as `<caller job> / <called
-# job>` (e.g. `editorial / validate-content`, `scan / scan`), so the nudge's
-# recovery merge could never have fired. Trimmed to the one context
-# guaranteed to report, under a stable name, on every content PR this repo
-# produces. `e2e / e2e` was deliberately NOT kept: it reports under a
-# DIFFERENT name on docs-only PRs (`E2E (docs-only stub) / e2e`, see
-# e2e-stub.yml), which would reproduce the same missing-context hazard.
+# describe by mistake.
+#
+# WHAT `required_contexts` IS, and it is BOTH things at once. It is the
+# reusable's safety gate — every listed context must be present AND green on
+# the PR's head sha, and a context that never reports here (the reusable's
+# `headIsTrulyGreen` "missing on head sha" branch) permanently BLOCKS recovery
+# for that PR rather than being ignored. It is ALSO what branch protection
+# will enforce at the merge itself, so the two have to agree: the reusable
+# calls `pulls.merge()` once its own gate passes, and the ruleset answers 405
+# if the real required set is not satisfied. Deriving the list from anything
+# other than this repo's live ruleset therefore breaks it in one direction or
+# the other.
+#
+# TWO CLAIMS THIS COMMENT USED TO MAKE WERE WRONG. Both were load-bearing —
+# they were the stated reason the list held a single entry — and both were
+# measured false on 2026-08-20. They are recorded here rather than deleted,
+# because a stale comment that merely disappears gets re-derived.
+#
+#   1. "The live `main` ruleset here requires ZERO status checks." It requires
+#      SIX. `GET /repos/jodidaniel/jodidaniel.com/rulesets` -> ruleset `main`,
+#      id 17032014: editorial / validate-content, scan / scan, parity / parity,
+#      preview-media / preview-media, e2e / e2e,
+#      visual-regression / approve-regression. `cms-feature-branches` (id
+#      17032043) is a second, separate ruleset that gates the feature-branch
+#      refs and requires a bare `validate-content`; it does not target main.
+#
+#   2. "`e2e / e2e` reports under a DIFFERENT name on docs-only PRs
+#      (`E2E (docs-only stub) / e2e`)." It does not. A check-run context from a
+#      reusable call is `<caller job id> / <reusable job id>` — the workflow's
+#      own `name:` never enters it. `e2e-stub.yml`'s job id is `e2e` and
+#      `e2e-required-stub.yml`'s job id is `e2e`, so the stub reports exactly
+#      `e2e / e2e`, the same context the heavy lane reports. Observed directly
+#      on adamdaniel.ai#3223, a docs-only PR where the heavy lane was skipped by
+#      `paths-ignore` and the stub supplied `e2e / e2e` -> success. It is also
+#      true by construction: `e2e / e2e` is REQUIRED on main, so if the stub
+#      reported under another name every docs-only PR would hang forever on a
+#      context nothing ever supplies. They do not.
+#
+# So the single-entry list was not a considered narrowing, and excluding
+# `e2e / e2e` protected against nothing. See the block above `required_contexts`
+# for what the list is now and how it was derived.
 #
 # In practice this whole nudge is dormant here: `cms.base_collections: []`
 # hides the `e2e`/`posts` collections from `/admin`, so the host-loop and
