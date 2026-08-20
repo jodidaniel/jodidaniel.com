@@ -3,11 +3,40 @@
 # trigger + run-name; delegates the single-version anti-skew gate (issue #29)
 # to the platform's reusable workflow.
 #
-# NO `paths:` filter on purpose: a version skew can be introduced by editing ANY
-# of the many pin-bearing files (every workflow `uses:@`, the Gemfile,
-# Gemfile.lock, or platform.lock), so this gate runs on every PR — it's a fast,
-# pure-fs check. (If this is ever made a REQUIRED check, the absence of a
-# `paths:` filter also avoids the missing-required-check trap.)
+# NO `paths:` OR `paths-ignore:` FILTER HERE — and unlike adamdaniel.ai, that is
+# not merely the default, it is a decision taken against measured data. Written
+# down so nobody "finishes the job" by copying that site's filter across.
+#
+# adamdaniel.ai added a site-tuned `paths-ignore` on 2026-08-20 because the
+# numbers there justify it: ~20 runs/day at ~47s, 81% of them from `cms/*`
+# editorial (71%) and `agents-md-sync/*` (10%) branches that cannot introduce a
+# version skew. THIS SITE LOOKS NOTHING LIKE THAT. Measured the same day over
+# the 90 most recent runs of this workflow here:
+#
+#   runs/day                ~1.8 lifetime (136 runs over 76 days); ~2-3.7 recent
+#   mean duration           17.2s  (median 17s), not 47s
+#   `cms/*` branches        ZERO in 90 sampled — the site is gated
+#                           (`_data/settings.yml` `site_live: false`), so there
+#                           is no editorial traffic yet
+#   `agents-md-sync/*`      21%
+#   `platform/*`            48%  <- platform-bump PRs, which by definition EDIT
+#                                   pin-bearing files and MUST keep running
+#
+# So the whole saving available here is roughly 136 runs x 17s ~= 39 minutes of
+# runner time across 76 days. The dominant traffic is exactly the traffic this
+# gate exists to check. A filter would buy nothing measurable and add a way to
+# get it wrong — in particular `assets/**` must never be ignored, because the
+# `preview-media` sentinel `assets/images/uploads/e2e-preview-media-probe.png`
+# is one of the six pin-bearing inputs the checker reads and it lives inside the
+# Decap `media_folder`.
+#
+# REVISIT THIS AFTER GO-LIVE (issue #26). Once `site_live: true` and real
+# editorial `cms/*` traffic starts, re-measure; if this site's profile comes to
+# resemble adamdaniel.ai's, port that filter — but port the REASONING, not the
+# list: the two sites' content trees are disjoint (this one has
+# `_accomplishments/ _education/ _experience/ _expertise/ _media/`; that one has
+# `_posts/ _tags/ _tools/ blog/ projects/ recordings/ tools/`), so a copied list
+# would ignore directories that do not exist and miss the ones that do.
 #
 # Keep `platform_ref` pinned to the SAME release as the `uses:@<tag>` below —
 # this guard's whole point is that they (and every other platform pin) agree.
