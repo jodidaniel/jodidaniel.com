@@ -38,8 +38,8 @@ slower than Chromium does.
   `parity-preview`, `platform-pin-consistency`, `preview-media`, `secrets-scan`,
   `visual-regression`). A caller that skips emits **no check-run at all**, so an
   `edited` run WITHDRAWS a context an earlier run already reported green, and
-  only a new SHA restores it — which a finished automated PR (a bump, a
-  comment-sync) never gets. The per-job `if:` that used to narrow `edited` to
+  only a new SHA restores it — which a finished automated PR (a bump) never
+  gets. The per-job `if:` that used to narrow `edited` to
   base retargets went with it. **`deploy-preview` keeps `closed`**: the
   reusable's teardown job fires only on that action (S3 `rm --recursive` +
   CloudFront invalidation + the preview bot-comment update), so dropping it
