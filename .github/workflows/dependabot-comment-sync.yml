@@ -8,13 +8,13 @@
 #
 # The account has eliminated the trailing `# vX.Y.Z (YYYY-MM-DD)` comment on
 # SHA-pinned actions, and cms-platform#293 RETIRES the upstream reusable this
-# caller invokes. The `uses:` below pins `@v0.1.88` — an IMMUTABLE tag — so
+# caller invokes. The `uses:` below pins `@v0.1.89` — an IMMUTABLE tag — so
 # deleting that reusable on the platform's `main` does NOT disarm this caller.
 # Only removing the triggers does.
 #
 # Why the FILE stays: `platform-pin-consistency` asserts this repo's workflow
 # BASENAME SET equals the canonical set at platform.lock's `platform_ref`, and
-# at v0.1.88 the platform template still dictates this caller. Deleting it here
+# at v0.1.89 the platform template still dictates this caller. Deleting it here
 # first reads as `workflow-set: MISSING (platform-dictated)`, not as cleanup
 # (measured: run 32373353577). The deletion belongs in the SAME commit that
 # bumps `platform_ref` to the first release whose template lacks it.
@@ -24,7 +24,7 @@
 # comment as an OPTIONAL group (`(#.*)?`) while `build_new_line()` emits one
 # UNCONDITIONALLY with a two-space default gap — so a bare
 # `uses: owner/repo@<40-hex>` line comes back carrying a comment. Today that
-# regex has no target in this repo (all 32 `uses:` are `@v0.1.88` cms-platform
+# regex has no target in this repo (all 32 `uses:` are `@v0.1.89` cms-platform
 # tag pins; `USES_RE` matches only a 40-hex SHA), but it RE-ARMS the instant any
 # bare SHA-pinned `uses:` lands under `.github/workflows/` — i.e. the first
 # third-party action this site adopts. Restoring `pull_request_target:` or
@@ -60,10 +60,10 @@ permissions:
 
 jobs:
   sync:
-    uses: Adam-S-Daniel/cms-platform/.github/workflows/dependabot-comment-sync.yml@v0.1.88
+    uses: Adam-S-Daniel/cms-platform/.github/workflows/dependabot-comment-sync.yml@v0.1.89
     with:
       # Pin to the SAME ref as the `uses:` pin above so the script matches.
-      platform_ref: v0.1.88
+      platform_ref: v0.1.89
     secrets:
       # Fine-grained PAT with `workflows: write` so the follow-up commit can
       # push the refreshed workflow files. Drop this line if the site hasn't
