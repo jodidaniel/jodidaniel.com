@@ -51,7 +51,12 @@
       - { name: category, label: "Category", widget: select, options: ["Featured Articles", "Policy & Advocacy", "Podcasts & Interviews", "Speaking & Panels", "Press & News"] }
       - { name: title,    label: "Title", widget: string }
       - { name: source,   label: "Source", widget: string }
-      - { name: url,      label: "URL", widget: string, pattern: ["^https?://.*", "Must be a valid http(s) URL"] }
+      # NOT `url`. A front-matter key named `url` is unreachable from Liquid:
+      # Jekyll's DocumentDrop defines `url` (the document's OWN address) and it
+      # shadows the front-matter value, so {{ item.url }} renders /media/<slug>/
+      # instead of the article link. See docs/CONTENT-MODEL.md.
+      - { name: article_url, label: "Article URL", widget: string, pattern: ["^https?://.*", "Must be a valid http(s) URL"] }
+      - { name: pdf,      label: "PDF Copy", widget: file, required: false, hint: "Optional. Upload a PDF of the piece (an offprint, or a copy of a paywalled article). It appears as a download link on the item's own page, next to the Article URL." }
       - { name: weight,   label: "Order within category", widget: number }
 
   - name: education

@@ -164,7 +164,14 @@
                       <ul class="media-list">
                           {%- for item in category_items -%}
                           <li>
-                              <a href="{{ item.url }}" target="_blank" rel="noopener">
+                              {%- comment -%}
+                                item.url is the item's OWN page (/media/<slug>/),
+                                not the article link — Jekyll's DocumentDrop
+                                shadows any front-matter `url:`. That page is
+                                where the archived PDF and the outbound
+                                `article_url` live, so this link stays in-tab.
+                              {%- endcomment -%}
+                              <a href="{{ item.url | relative_url }}">
                                   {{ item.title }}
                                   <span class="source">{{ item.source }}</span>
                               </a>

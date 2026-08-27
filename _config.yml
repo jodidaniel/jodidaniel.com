@@ -50,7 +50,17 @@ collections:
   expertise: { output: false }
   experience: { output: false }
   accomplishments: { output: false }
-  media: { output: false }
+  # media is the ONE exception to output:false. Each item gets its own page at
+  # /media/<slug>/, which is what the home page's media list links to, and which
+  # carries the optional archived PDF next to the outbound Article URL. It has to
+  # be a real page: Jekyll's DocumentDrop defines `url` (the document's OWN
+  # address), so a front-matter `url:` is shadowed and {{ item.url }} always
+  # renders /media/<slug>/. With output:false that address was never written and
+  # every media link 404'd. The article link lives in `article_url` instead.
+  # sitemap:false below (not the gate) keeps these thin link-out pages out of
+  # sitemap.xml — including their title-derived slugs while site_live is false.
+  # They stay crawlable via the home page's links once the site is live.
+  media: { output: true, permalink: /media/:slug/ }
   education: { output: false }
 
 defaults:
@@ -59,6 +69,7 @@ defaults:
   - { scope: { path: "", type: "tags" },     values: { layout: "tag" } }
   - { scope: { path: "pages" },              values: { layout: "page" } }
   - { scope: { path: "", type: "e2e" },      values: { layout: "canary", sitemap: false, robots: "noindex,nofollow" } }
+  - { scope: { path: "", type: "media" },    values: { layout: "media", sitemap: false } }
 
 plugins:
   - jekyll-seo-tag
