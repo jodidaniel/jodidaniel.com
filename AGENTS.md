@@ -824,8 +824,9 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
   `false`); `_layouts/home.html` wraps bio sections in `{% if live %}`.
 - Content lives in `_data/{header,about,contact,settings}.yml` (singletons) +
   the `_expertise/_experience/_accomplishments/_media/_education` folder
-  collections (ordered by `weight`, `output: false`). NOT a single data file.
-  Full field lists → `docs/CONTENT-MODEL.md`.
+  collections (ordered by `weight`, `output: false` — **except `media`**, which
+  is `output: true` and publishes a page per item at `/media/<slug>/`). NOT a
+  single data file. Full field lists → `docs/CONTENT-MODEL.md`.
 - `/admin` = 9 section editors; generics hidden via `cms.base_collections: []`;
   admin UI shipped by the `cms-platform-theme` gem; seam =
   `admin/collections.site.yml`.
@@ -858,6 +859,16 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
 - **A string you genuinely cannot route through `/admin` is a decision to
   surface, not a detail to absorb silently** — call it out in the PR and get it
   agreed before merge. Hardcoded chrome stays at the irreducible minimum.
+- **A `_media/` item's outbound link is `article_url`, NEVER `url`.** A
+  front-matter key named `url` is unreachable from Liquid — Jekyll's
+  `DocumentDrop` defines `url` (the document's own address) and shadows it — so
+  `{{ item.url }}` renders `/media/<slug>/` no matter what the front matter
+  says. That is why `media` is the one `output: true` collection: the item page
+  is real, and it carries the optional archived `pdf` next to `article_url`.
+  This shadowing silently 404'd all 16 media links until PR #176 first rendered
+  the section. Check any new field name against `DocumentDrop` before using it;
+  `scripts/verify-build-artifacts.rb` guards the rest. Detail →
+  `docs/CONTENT-MODEL.md`.
 - **The one standing exception is the media category list, and it lives in two
   places that must move together**: `media_by_category` in
   `_layouts/home.html` (drives grouping, order, and the rendered `<h3>` label)

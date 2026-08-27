@@ -20,15 +20,16 @@ The layout reads these as `site.data.header` / `.about` / `.contact` /
 ### Repeating sections → folder collections (one file per item, ordered by `weight`)
 
 Declared in `_config.yml` `collections:` with **`output: false`** (editable
-content, NOT standalone published pages). The layout reads each as
-`site.<collection> | sort: 'weight'`:
+content, NOT standalone published pages) — **except `media`, which is
+`output: true`**; see "Media items are real pages" below. The layout reads each
+as `site.<collection> | sort: 'weight'`:
 
 | Collection | Directory | Per-item fields |
 |------------|-----------|-----------------|
 | `expertise`       | `_expertise/`       | `title`, `description`, `weight` |
 | `experience`      | `_experience/`      | `title`, `org`, `period`, `description`, `weight` |
 | `accomplishments` | `_accomplishments/` | `title`, `text`, `weight` |
-| `media`           | `_media/`           | `category`, `title`, `source`, `url`, `weight` |
+| `media`           | `_media/`           | `category`, `title`, `source`, `article_url`, `pdf` (optional), `weight` |
 | `education`       | `_education/`       | `degree`, `field`, `school`, `weight` |
 
 Each item is a front-matter-only `.md` file slugged `{{weight}}-{{slug}}`
@@ -46,6 +47,51 @@ though Jekyll's `site.media` reads them recursively and the live page rendered
 fine. Grouping is by the `category` FIELD, never the path, so flattening is
 loss-free; keep new items flat (Decap writes `{{weight}}-{{slug}}.md` into
 `_media/`).
+
+### Media items are real pages, and NEVER use a front-matter `url:`
+
+`media` is the one folder collection with **`output: true`**. Each item
+publishes to `/media/<slug>/` via `_layouts/media.html`, and that page — not
+the third-party site — is what the home page's media list links to. It carries
+the item's optional archived **`pdf`** next to the outbound **`article_url`**.
+
+This is not a styling preference; it is forced by a Jekyll trap that cost this
+site every single media link:
+
+- `_layouts/home.html` renders each link as `{{ item.url }}`. For a collection
+  **document**, `url` is the document's **own address** — `Jekyll::Drops::
+  DocumentDrop` defines `url`, and a Drop resolves its defined methods **before**
+  falling back to front matter. A front-matter `url:` key is therefore
+  **unreachable from Liquid**: `{{ item.url }}` and `{{ item['url'] }}` both
+  yield `/media/<slug>/`. There is no accessor that reaches past it.
+- With the collection at `output: false`, that address was never written, so
+  **all 16 media links 404'd** — verified against preview-pr176 before the fix.
+  Nothing failed the build; the gate (`site_live: false`) had simply hidden the
+  section until go-live, so nobody had clicked one.
+
+So: **the outbound link lives in `article_url`.** `admin/collections.site.yml`
+names that field, so Decap writes it; `scripts/verify-build-artifacts.rb` fails
+if any `_media/*.md` regains a top-level `url:` key, if an item stops resolving
+to a built page, or if the admin seam loses the PDF widget. The same trap
+applies to any new field you add here — check the name against `DocumentDrop`
+(`url`, `content`, `output`, `path`, `relative_path`, `date`, `collection`,
+`excerpt`, `id`, `next`, `previous`) before using it.
+
+**PDF uploads use the site-wide media folder.** The `pdf` field is a plain
+Decap `file` widget with no per-field `media_folder`/`public_folder`. The
+platform's `config.base.yml` documents `public_folder == "/" + media_folder` as
+an invariant enforced by `e2e/cms-config.spec.js` — Decap appends only the
+uploaded basename to `public_folder` and does not mirror subdirectories into the
+URL, so a per-field override reintroduces the broken-path / "Copy Path" bug.
+Uploads land in `assets/images/uploads/` alongside the profile photo.
+
+**Gating.** `_layouts/media.html` honours `site_live` exactly as `home.html`
+does: while the gate is closed an item page renders only the coming-soon shell,
+skips `{% seo %}` (so no article title reaches `<title>`/`og:title`/JSON-LD) and
+is `noindex,nofollow`. `_config.yml` also sets `sitemap: false` for the whole
+collection — unconditionally, because front-matter defaults can't read the gate
+and the slugs are title-derived. The pages stay crawlable through the home
+page's links once the site is live.
 
 ## `/admin` (Decap CMS)
 
@@ -83,6 +129,9 @@ Footguns that bit adamdaniel.ai's Tools section rollout (fixed in
 cms-platform#146) — check these before adding any new folder collection or
 top-level route to this site:
 
+- **The media item pages are exactly this case.** Turning `media` to
+  `output: true` added 16 brand-new routes under `/media/`, so the PR that did
+  it needed a one-time human regression approval.
 - **New-section pages and the gate.** The regression page universe is a scan
   of the built `_site/`, so a new site-owned collection is covered
   automatically — nothing to wire — and a brand-new page is confirmed by prod
