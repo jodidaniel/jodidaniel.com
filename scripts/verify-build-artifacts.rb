@@ -90,6 +90,76 @@ check(failures, "admin config.yml logo_url -> <site>/assets/images/logo.svg") do
   admin_cfg&.include?("logo_url: https://jodidaniel.com/assets/images/logo.svg")
 end
 
+puts "== media items resolve (no 404) =="
+# Regression guard for the bug where EVERY media link 404'd.
+#
+# _layouts/home.html links each media item with {{ item.url }}. For a Jekyll
+# collection document `url` is the document's OWN address — Jekyll's
+# DocumentDrop defines `url`, which shadows any front-matter `url:` key — so
+# that link can only ever be /media/<slug>/. While the collection was
+# `output: false` that address was never written and all 15 links 404'd
+# (proven on preview-pr176 before the fix). The outbound article link now
+# lives in `article_url`, and each item renders a real page.
+media_src = Dir[File.join(__dir__, "..", "_media", "*.md")].sort
+check(failures, "_media/ has entries to check") { !media_src.empty? }
+
+media_src.each do |src|
+  slug = File.basename(src, ".md")
+  fm = File.read(src)
+  # The trap that caused the outage: a front-matter `url:` is unreachable from
+  # Liquid. Decap writes whatever admin/collections.site.yml names, so this
+  # also catches the seam regressing to `url`.
+  check(failures, "_media/#{slug}.md uses `article_url:`, not the shadowed `url:`") do
+    fm.match?(/^article_url:/) && !fm.match?(/^url:/)
+  end
+  check(failures, "/media/#{slug}/ is a real page (home page links here)") do
+    File.exist?(File.join(SITE, "media", slug, "index.html"))
+  end
+end
+
+check(failures, "admin seam offers a PDF upload on media entries") do
+  seam = read(File.join(__dir__, "..", "admin", "collections.site.yml"))
+  seam&.match?(/name: pdf,.*widget: file/)
+end
+
+# Every media link the home page actually renders must resolve to a built file.
+# Vacuous while site_live is false (the gate hides the section) — the per-item
+# page assertions above cover both gate states.
+home_html = read(File.join(SITE, "index.html"))
+home_media_links = home_html.to_s.scan(%r{href="(/media/[^"]*)"}).flatten.uniq
+home_media_links.each do |href|
+  check(failures, "home page link #{href} resolves in _site") do
+    File.exist?(File.join(SITE, href.sub(%r{\A/}, ""), "index.html"))
+  end
+end
+
+# Each built item page must carry its outbound article link, and the PDF link
+# whenever the entry has one.
+media_src.each do |src|
+  slug = File.basename(src, ".md")
+  page = read(File.join(SITE, "media", slug, "index.html"))
+  next if page.nil?
+  gated = page.include?("noindex,nofollow")
+  article = File.read(src)[/^article_url:\s*"?([^"\n]+)"?/, 1].to_s.strip
+  pdf = File.read(src)[/^pdf:\s*"?([^"\n]+)"?/, 1].to_s.strip
+  if gated
+    # Gate closed: the item page must be the coming-soon shell only.
+    check(failures, "/media/#{slug}/ leaks no bio content while gated") do
+      !page.include?(article) && !page.include?("section-title")
+    end
+  else
+    check(failures, "/media/#{slug}/ links out to its article_url") do
+      !article.empty? && page.include?(article)
+    end
+    unless pdf.empty?
+      check(failures, "/media/#{slug}/ links to its PDF (#{pdf})") { page.include?(pdf) }
+      check(failures, "PDF #{pdf} is published to _site") do
+        File.exist?(File.join(SITE, pdf.sub(%r{\A/}, "")))
+      end
+    end
+  end
+end
+
 puts
 if failures.empty?
   puts "All build-artifact assertions passed."

@@ -73,6 +73,11 @@ header {
     color: #ffffff;
 }
 
+header h1 a {
+    color: inherit;
+    text-decoration: none;
+}
+
 header h1 {
     font-family: 'Raleway', sans-serif;
     font-size: 3rem;
@@ -407,6 +412,49 @@ header .tagline {
     margin-top: 0.15rem;
 }
 
+/* Per-item media page (/media/<slug>/) — the target of every entry in the
+   media list above. Reuses .container / .section-title / .contact-link so the
+   detail page reads as the same document as the home page. */
+.media-detail h2 {
+    font-family: 'Raleway', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #1a3a5c;
+    line-height: 1.35;
+    margin-top: 1.25rem;
+}
+
+.media-detail__source {
+    color: #6a7a8a;
+    font-size: 1rem;
+    margin-top: 0.5rem;
+}
+
+.media-detail__actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+}
+
+.media-detail__back {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e4ecf2;
+    font-size: 0.95rem;
+}
+
+.media-detail__back a {
+    color: #2d5a7b;
+    text-decoration: none;
+    transition: color 0.25s ease;
+}
+
+.media-detail__back a:hover {
+    color: #1a3a5c;
+    text-decoration: underline;
+}
+
 .contact-section {
     text-align: center;
 }
@@ -529,5 +577,17 @@ footer a:hover {
 
     .education-grid {
         grid-template-columns: 1fr;
+    }
+
+    .media-detail h2 {
+        font-size: 1.35rem;
+    }
+
+    .media-detail__actions {
+        flex-direction: column;
+    }
+
+    .media-detail__actions .contact-link {
+        justify-content: center;
     }
 }
