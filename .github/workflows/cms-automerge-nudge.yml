@@ -93,9 +93,15 @@ jobs:
       # none) — the one check-run name guaranteed to report, correctly
       # named, on every content PR. See the header comment above for why
       # the rest of the old list was dropped.
-      # All SIX contexts this repo's live `main` ruleset requires — verified
+      # Every context this repo's `main` ruleset requires. Six were verified
       # 2026-08-20 against `GET /repos/jodidaniel/jodidaniel.com/rulesets`
-      # (ruleset `main`, id 17032014). This list is the nudge's ENTIRE notion of
+      # (ruleset `main`, id 17032014); `prerelease-guard / prerelease-guard` is
+      # the seventh, added to `consumer-main` by cms-platform#309 and converged
+      # onto this repo by `repo-settings-apply.yml`. It is listed here in the
+      # same PR as the v0.1.89 bump because `platform-bump` moves pins and seeds
+      # new callers but never rewrites an EXISTING caller's inputs — so a
+      # platform-side change to this list only reaches a consumer by hand.
+      # This list is the nudge's ENTIRE notion of
       # "green": the reusable builds `REQUIRED` from it and gates on
       # `[...REQUIRED].every(GREEN)` before calling `pulls.merge()`.
       #
@@ -124,5 +130,6 @@ jobs:
         preview-media / preview-media
         e2e / e2e
         visual-regression / approve-regression
+        prerelease-guard / prerelease-guard
     secrets:
       CMS_E2E_PAT: ${{ secrets.CMS_E2E_PAT }}
