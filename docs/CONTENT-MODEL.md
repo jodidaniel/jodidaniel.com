@@ -85,6 +85,27 @@ uploaded basename to `public_folder` and does not mirror subdirectories into the
 URL, so a per-field override reintroduces the broken-path / "Copy Path" bug.
 Uploads land in `assets/images/uploads/` alongside the profile photo.
 
+**The chain is verified by build — and its guard is conditional.** `pdf` is not
+shadowed by `DocumentDrop`; that is measured, not inferred from the list above.
+Adding `pdf: /assets/images/uploads/<file>.pdf` to a `_media/*.md` and building
+renders the "Download PDF" link at exactly that href, and Jekyll copies the file
+to `_site/assets/images/uploads/` (it is a plain static asset — no `exclude:`
+entry touches it). To re-run that probe:
+
+```sh
+cp any.pdf assets/images/uploads/probe.pdf   # bytes are irrelevant to the build
+# add `pdf: /assets/images/uploads/probe.pdf` to one _media/*.md, then:
+bundle exec jekyll build && ruby scripts/verify-build-artifacts.rb
+# revert both when done
+```
+
+What that guard does **not** cover by default: the two PDF assertions in
+`verify-build-artifacts.rb` (`links to its PDF`, `is published to _site`) fire
+only for entries that actually carry a `pdf:`. No entry does yet — the widget
+shipped before any editor used it — so they are vacuous, and the script prints a
+`note` saying so rather than letting a green run imply coverage it lacks. The
+first real upload arms them.
+
 **Gating.** `_layouts/media.html` honours `site_live` exactly as `home.html`
 does: while the gate is closed an item page renders only the coming-soon shell,
 skips `{% seo %}` (so no article title reaches `<title>`/`og:title`/JSON-LD) and

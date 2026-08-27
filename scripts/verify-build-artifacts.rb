@@ -135,6 +135,7 @@ end
 
 # Each built item page must carry its outbound article link, and the PDF link
 # whenever the entry has one.
+pdf_checks = 0
 media_src.each do |src|
   slug = File.basename(src, ".md")
   page = read(File.join(SITE, "media", slug, "index.html"))
@@ -152,12 +153,29 @@ media_src.each do |src|
       !article.empty? && page.include?(article)
     end
     unless pdf.empty?
+      pdf_checks += 1
       check(failures, "/media/#{slug}/ links to its PDF (#{pdf})") { page.include?(pdf) }
       check(failures, "PDF #{pdf} is published to _site") do
         File.exist?(File.join(SITE, pdf.sub(%r{\A/}, "")))
       end
     end
   end
+end
+
+# The two PDF assertions above are CONDITIONAL — they fire only for an entry
+# that actually carries a `pdf:`, and only while the gate is open. With none
+# (the state today: the widget shipped before any editor used it) they are
+# vacuous, and "All build-artifact assertions passed" would imply a coverage
+# this script did not have. That is the failure mode AGENTS.md names as a green
+# light wired to nothing, so say it out loud instead. Not a failure: an empty
+# PDF set is a legitimate content state, and the first real upload arms them.
+if pdf_checks.zero?
+  puts "  note no media entry carries a `pdf:` yet, so the PDF link/publish assertions"
+  puts "       did NOT run. A pass here is not evidence the PDF chain works — see"
+  puts "       docs/CONTENT-MODEL.md for the build probe that verified it, and how"
+  puts "       to re-run it."
+else
+  puts "  ok   PDF assertions exercised on #{pdf_checks} media entr#{pdf_checks == 1 ? 'y' : 'ies'}"
 end
 
 puts
