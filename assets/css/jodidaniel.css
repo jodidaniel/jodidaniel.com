@@ -4,8 +4,45 @@
     box-sizing: border-box;
 }
 
+/* issue #198 item 3: NOT `scroll-behavior: smooth` here. That CSS property
+   governs every browser-native "scroll an element into view" — including
+   the one the browser runs on every keyboard Tab focus move, not just the
+   nav-pill/back-to-top anchor clicks it was meant for. With it global, a
+   brisk keyboard tabber trails the focus ring by ~150ms/press and it sits
+   off-viewport for ~2 Tab stops across the page's largest gap
+   (Expertise -> Media). CSS has no way to scope scroll-behavior to only
+   *some* scroll-into-view triggers, so the smooth scroll for pill/
+   back-to-top clicks is done explicitly in JS (see the inline <script> in
+   _layouts/home.html) via scrollIntoView({behavior:'smooth'}), leaving the
+   default (instant) scroll-behavior below to govern keyboard focus jumps. */
 html {
-    scroll-behavior: smooth;
+    scroll-behavior: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    /* Standard-practice guard: if scroll-behavior: smooth is ever
+       reintroduced here (or by a future rule), reduced-motion visitors
+       still get instant scrolling. The back-to-top control's own
+       show/hide + hover motion is disabled too — it's new in this same
+       change, so it starts out motion-safe. */
+    html {
+        scroll-behavior: auto;
+    }
+
+    .back-to-top {
+        transition: none;
+    }
+}
+
+/* issue #198 item 3 (companion to the JS focus handoff in _layouts/home.html):
+   activating a nav pill moves focus to the target section so keyboard Tab
+   resumes from there. That section is focused programmatically, not tabbed to,
+   so it must not paint a focus ring around the whole box -- the visitor did not
+   navigate to it by keyboard. Scoped tightly to the roving tabindex="-1" targets
+   so it can never suppress a real, user-initiated focus indicator elsewhere. */
+section[tabindex="-1"]:focus,
+body[tabindex="-1"]:focus {
+    outline: none;
 }
 
 body {
@@ -155,7 +192,14 @@ header .tagline {
     line-height: 1.85;
 }
 
-.highlight {
+/* issue #197: the bio's key phrases are marked up as **bold** in
+   _data/about.yml and rendered through markdownify, so the accent styling
+   the mockup calls `.highlight` now lands on the <strong> markdownify
+   produces. Both selectors share this one block rather than duplicating it
+   (or deleting `.highlight`, which would leave the mockup's class name
+   dead) — either markup path gets the same accent color/weight. */
+.highlight,
+.intro-text strong {
     color: #2d5a7b;
     font-weight: 600;
 }
@@ -500,6 +544,58 @@ header .tagline {
     fill: currentColor;
 }
 
+/* issue #198 item 1: floating back-to-top affordance for a long scroll (the
+   .intro-nav pills live only in the About card, so once a visitor is deep
+   in Media/Education there's otherwise no way back but manual scrolling).
+   Hidden by default — opacity/visibility/pointer-events all off, which also
+   removes it from the tab order — so a no-JS visitor never sees or tabs
+   into a dead control. The inline <script> in _layouts/home.html adds
+   `.is-visible` past a scroll threshold and reveals it into the tab order
+   at that point. Reuses the .contact-link color/hover/shadow idiom rather
+   than introducing a new visual language. */
+.back-to-top {
+    position: fixed;
+    right: 1.5rem;
+    bottom: 1.5rem;
+    z-index: 20;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    background: #2d5a7b;
+    color: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    text-decoration: none;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease, background 0.25s ease;
+}
+
+.back-to-top.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.back-to-top:hover {
+    background: #1a3a5c;
+    transform: translateY(-2px);
+}
+
+.back-to-top:focus-visible {
+    outline: 3px solid #5dd9e8;
+    outline-offset: 2px;
+}
+
+.back-to-top svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    fill: currentColor;
+}
+
 footer {
     text-align: center;
     padding: 2rem;
@@ -523,7 +619,21 @@ footer a:hover {
     }
 }
 
-@media (max-width: 768px) {
+/* issue #198 item 2: 767px (not 768px) so a 768px-wide viewport (iPad
+   portrait) lands on the >=768 tablet layout above rather than this
+   single-column phone layout. The 900px breakpoint above is unrelated and
+   deliberately untouched — it only collapses the expertise/media grids and
+   still applies on top of this one at narrower widths. */
+@media (max-width: 767px) {
+    /* issue #198 item 1: smaller + tucked further into the corner so it
+       stays clear of content on narrow viewports. */
+    .back-to-top {
+        right: 1rem;
+        bottom: 1rem;
+        width: 2.75rem;
+        height: 2.75rem;
+    }
+
     header h1 {
         font-size: 2rem;
         letter-spacing: 0.1em;
