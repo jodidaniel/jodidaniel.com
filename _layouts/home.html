@@ -7,6 +7,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Source+Sans+Pro:wght@300;400;600&display=swap" rel="stylesheet">
     {% seo %}
+    {%- comment -%}
+      cms-platform#325: the gem emits its favicon <link> from its own default
+      layout's <head>, which never runs here -- this site's layouts are
+      site-owned. The include is standalone by design for exactly this case, so
+      one line adopts it rather than the two consumers diverging on the
+      plumbing. Shadow assets/favicon.svg (or set cms.favicon_url) to brand it.
+    {%- endcomment -%}
+    {% include favicon.html %}
     <link rel="stylesheet" href="{{ '/assets/css/jodidaniel.css' | cachebust }}">
 </head>
 <body id="top">
