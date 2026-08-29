@@ -56,7 +56,9 @@
       # shadows the front-matter value, so {{ item.url }} renders /media/<slug>/
       # instead of the article link. See docs/CONTENT-MODEL.md.
       - { name: article_url, label: "Article URL", widget: string, pattern: ["^https?://.*", "Must be a valid http(s) URL"] }
-      - { name: pdf,      label: "PDF Copy", widget: file, required: false, hint: "Optional. Upload a PDF of the piece (an offprint, or a copy of a paywalled article). It appears as a download link on the item's own page, next to the Article URL." }
+      - { name: link_label, label: "Link Button Label", widget: string, required: false, hint: "Optional. Leave blank and a sensible label is picked automatically from Category (e.g. \"Read the brief\" for Policy & Advocacy, \"Listen to the episode\" for Podcasts & Interviews). Set this only to override that default for an unusual item." }
+      - { name: pdf,      label: "PDF Copy", widget: file, required: false, pattern: ['\.pdf$', 'Must be a PDF file (.pdf)'], hint: "Optional. Upload a PDF of the piece (an offprint, or a copy of a paywalled article). Must be a .pdf file. It appears as a download link on the item's own page, next to the Article URL." }
+      - { name: pdf_label, label: "PDF Button Label", widget: string, required: false, hint: "Optional. Leave blank to use the default \"Download PDF\". Set this only to override that default for an unusual item." }
       - { name: weight,   label: "Order within category", widget: number }
 
   - name: education

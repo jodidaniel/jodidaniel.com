@@ -29,7 +29,7 @@ as `site.<collection> | sort: 'weight'`:
 | `expertise`       | `_expertise/`       | `title`, `description`, `weight` |
 | `experience`      | `_experience/`      | `title`, `org`, `period`, `description`, `weight` |
 | `accomplishments` | `_accomplishments/` | `title`, `text`, `weight` |
-| `media`           | `_media/`           | `category`, `title`, `source`, `article_url`, `pdf` (optional), `weight` |
+| `media`           | `_media/`           | `category`, `title`, `source`, `article_url`, `link_label` (optional), `pdf` (optional), `pdf_label` (optional), `weight` |
 | `education`       | `_education/`       | `degree`, `field`, `school`, `weight` |
 
 Each item is a front-matter-only `.md` file slugged `{{weight}}-{{slug}}`
@@ -53,7 +53,9 @@ loss-free; keep new items flat (Decap writes `{{weight}}-{{slug}}.md` into
 `media` is the one folder collection with **`output: true`**. Each item
 publishes to `/media/<slug>/` via `_layouts/media.html`, and that page — not
 the third-party site — is what the home page's media list links to. It carries
-the item's optional archived **`pdf`** next to the outbound **`article_url`**.
+the item's optional archived **`pdf`** next to the outbound **`article_url`**,
+each with an optional per-item button-label override (`link_label`,
+`pdf_label`) — see "Outbound link label + PDF button label" below.
 
 This is not a styling preference; it is forced by a Jekyll trap that cost this
 site every single media link:
@@ -77,6 +79,68 @@ applies to any new field you add here — check the name against `DocumentDrop`
 (`url`, `content`, `output`, `path`, `relative_path`, `date`, `collection`,
 `excerpt`, `id`, `next`, `previous`) before using it.
 
+### Outbound link label + PDF button label (issues #194, #195)
+
+Before #194, `_layouts/media.html` hardcoded the outbound link's text as
+**"Read the article"** for every item, regardless of type — wrong for a
+podcast episode, a Supreme Court amicus brief PDF, or a conference talk, and a
+literal in the layout besides (never `/admin`-editable). The fix is a per-item
+optional override plus a category-derived default, the same shape as
+`media_by_category` below:
+
+- **`link_label`** (optional string). When an editor sets it, that exact text
+  is the button's label — for the unusual item the category default doesn't
+  fit. Left blank, `_layouts/media.html` derives the label from `category`:
+
+  | Category | Default label |
+  |---|---|
+  | Featured Articles | Read the article |
+  | Policy & Advocacy | Read the brief |
+  | Podcasts & Interviews | Listen to the episode |
+  | Speaking & Panels | About this talk |
+  | Press & News | Read the piece |
+  | (unrecognized/blank) | Read the article |
+
+  **This map is DUAL-MAINTAINED with the `category` select `options:` in
+  `admin/collections.site.yml`**, exactly like `media_by_category` in
+  `_layouts/home.html` — adding, renaming, or reordering a category means
+  editing the layout's `{%- case page.category -%}` block AND the seam's
+  `options:` list, or the new category silently falls back to "Read the
+  article" on its own page (the home page's grouped list would also drop it,
+  per the existing `media_by_category` rule above).
+- **`pdf_label`** (optional string). Same shape, for the PDF download button:
+  blank defaults to "Download PDF"; set it to override for an unusual item
+  (e.g. an exhibit, a transcript).
+
+`scripts/verify-build-artifacts.rb` asserts the built pages actually carry
+more than one distinct outbound-link label (not just the layout source) — the
+regression it guards is every page reverting to "Read the article" silently.
+
+**`pdf` must actually be a PDF (issue #195).** Before the fix, the `pdf` field
+accepted any file type — upload a `.txt` and the public page rendered a
+confident, fully-styled "DOWNLOAD PDF" button that handed the visitor a text
+file, with no warning at upload, selection, or publish. Two layers now guard
+it:
+
+- **Seam validation.** `admin/collections.site.yml`'s `pdf` field carries
+  `pattern: ['\.pdf$', 'Must be a PDF file (.pdf)']`. Decap's `file` widget
+  stores the uploaded/selected file's **path string** as the field value, and
+  string `pattern:` validation applies to that path — so a non-`.pdf` upload is
+  rejected in the editor before it can ever be saved. **Quoting matters**: the
+  regex must be **single-quoted** YAML (`'\.pdf$'`) — a double-quoted
+  `"\.pdf$"` is a YAML parse error (`\.` is not a recognized C-style escape in
+  a double-quoted scalar), so double quotes here don't just behave differently,
+  they fail to parse at all. Verify with a real YAML parser, not by eye:
+  `ruby -ryaml -e 'p YAML.safe_load(File.read("admin/collections.site.yml", encoding: "utf-8")).find { |c| c["name"] == "media" }["fields"].find { |f| f["name"] == "pdf" }["pattern"]'`
+  should print `["\\.pdf$", "Must be a PDF file (.pdf)"]` (Ruby's `inspect` of
+  the literal one-backslash string).
+- **Layout guard.** `_layouts/media.html` only renders the PDF download button
+  when the `pdf` value's last four characters, downcased, equal `.pdf`. This is
+  the belt to the seam pattern's braces — a value saved before the pattern
+  existed, or a hand-edited front-matter file, still can't render a lying
+  "download PDF" button for a non-PDF file. No `pdf` value still renders no
+  button, same as before.
+
 **PDF uploads use the site-wide media folder.** The `pdf` field is a plain
 Decap `file` widget with no per-field `media_folder`/`public_folder`. The
 platform's `config.base.yml` documents `public_folder == "/" + media_folder` as
@@ -99,12 +163,19 @@ bundle exec jekyll build && ruby scripts/verify-build-artifacts.rb
 # revert both when done
 ```
 
-What that guard does **not** cover by default: the two PDF assertions in
-`verify-build-artifacts.rb` (`links to its PDF`, `is published to _site`) fire
-only for entries that actually carry a `pdf:`. No entry does yet — the widget
-shipped before any editor used it — so they are vacuous, and the script prints a
-`note` saying so rather than letting a green run imply coverage it lacks. The
-first real upload arms them.
+What that guard does **not** cover by default: the PDF assertions in
+`verify-build-artifacts.rb` that key off an entry's own `pdf:` value (`links to
+its PDF`, `is published to _site`, and the issue #195 `rendered PDF href ends
+in .pdf` check) fire only for entries that actually carry a `pdf:`. No entry
+does yet — the widget shipped before any editor used it — so they are vacuous,
+and the script prints a `note` saying so rather than letting a green run imply
+coverage it lacks. The first real upload arms them. Two OTHER assertions the
+same script added for issue #194 are **not** conditional on a `pdf:` — they
+scan every built, ungated `/media/<slug>/` page's rendered outbound-link text
+and fail if fewer than two distinct labels appear (or if all of them say "Read
+the article"), because the catalogue already has entries in more than one
+category (`Podcasts & Interviews`, `Policy & Advocacy`, …), so that guard is
+armed today, not waiting on a future upload.
 
 **Gating.** `_layouts/media.html` honours `site_live` exactly as `home.html`
 does: while the gate is closed an item page renders only the coming-soon shell,
