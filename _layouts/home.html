@@ -9,7 +9,7 @@
     {% seo %}
     <link rel="stylesheet" href="{{ '/assets/css/jodidaniel.css' | cachebust }}">
 </head>
-<body>
+<body id="top">
     {%- assign settings = site.data.settings -%}
     {%- assign live = settings.site_live -%}
     {%- comment -%}
@@ -62,8 +62,17 @@
                     {%- if about.intro_heading and about.intro_heading != "" -%}
                     <h2>{{ about.intro_heading }}</h2>
                     {%- endif -%}
+                    {%- comment -%}
+                      issue #197: markdownify (not the raw {{ p }} this used to
+                      be) so **bold** in the /admin-edited bio renders as
+                      <strong>, styled via .intro-text strong in
+                      jodidaniel.css to match the mockup's key-phrase
+                      highlight. markdownify already wraps a paragraph-shaped
+                      string in its own <p>...</p> — do NOT add an outer <p>
+                      here or every bio paragraph doubles up.
+                    {%- endcomment -%}
                     {%- for p in about.bio -%}
-                    <p>{{ p }}</p>
+                    {{ p | markdownify }}
                     {%- endfor -%}
                 </div>
             </div>
@@ -229,6 +238,73 @@
             </div>
         </section>
         {%- endif -%}
+
+        {%- comment -%}
+          issue #198 item 1: floating back-to-top affordance. Only makes
+          sense on the long, full bio page, so it lives inside this same
+          `live` gate alongside the sections it scrolls between.
+
+          No-JS fallback is "hidden entirely": the CSS default
+          (opacity:0; visibility:hidden; pointer-events:none) never shows
+          it, so a no-JS visitor sees no dead control and nothing to
+          stumble a screen reader/keyboard user into (visibility:hidden
+          also removes it from the tab order). `href="#top"` is kept as a
+          real, working anchor regardless — a harmless no-op while hidden,
+          and a correct plain jump to <body id="top"> above if it's ever
+          exposed without the script running.
+        {%- endcomment -%}
+        <a href="#top" id="back-to-top" class="back-to-top" aria-label="{{ settings.back_to_top_label | default: 'Back to top' }}">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.59 5.58L20 12l-8-8-8 8z"/></svg>
+        </a>
+        <script>
+        (function () {
+            {%- comment -%}
+              issue #198 items 1 + 3, one small script: (a) reveals
+              #back-to-top past a scroll threshold, and (b) gives it + the
+              .intro-nav pill links an explicit smooth scroll, since CSS
+              scroll-behavior can't be scoped to "link clicks only" — it
+              also governs the browser's own keyboard-Tab scroll-into-view,
+              which is exactly what jodidaniel.css's removal of
+              `scroll-behavior: smooth` from <html> fixes. Both respect
+              prefers-reduced-motion.
+            {%- endcomment -%}
+            var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var backToTop = document.getElementById('back-to-top');
+            var links = document.querySelectorAll('.intro-nav a[href^="#"]');
+
+            function smoothScrollTo(e) {
+                var hash = this.getAttribute('href') || '';
+                if (hash.charAt(0) !== '#' || hash.length < 2) { return; }
+                var target = document.getElementById(hash.slice(1));
+                if (!target) { return; }
+                e.preventDefault();
+                target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+                if (window.history && window.history.pushState) { window.history.pushState(null, '', hash); }
+                // issue #198 item 3 lists "Enter-then-Tab continues from the jumped
+                // section" as a TESTED POSITIVE to preserve. Native fragment
+                // navigation is what sets the sequential focus navigation starting
+                // point, and preventDefault() above suppresses it -- so without the
+                // next two lines a keyboard user who activates a nav pill would find
+                // Tab resuming from the pill, not from the section they jumped to.
+                // preventScroll keeps focus() from fighting the smooth scroll.
+                if (!target.hasAttribute('tabindex')) { target.setAttribute('tabindex', '-1'); }
+                target.focus({ preventScroll: true });
+            }
+
+            links.forEach(function (link) { link.addEventListener('click', smoothScrollTo); });
+
+            if (backToTop) {
+                backToTop.addEventListener('click', smoothScrollTo);
+
+                var SCROLL_THRESHOLD = 600;
+                var toggleVisibility = function () {
+                    backToTop.classList.toggle('is-visible', window.scrollY > SCROLL_THRESHOLD);
+                };
+                window.addEventListener('scroll', toggleVisibility, { passive: true });
+                toggleVisibility();
+            }
+        })();
+        </script>
         {%- endif -%}{%- comment -%} end: full-site sections (site_live) {%- endcomment -%}
 
         {%- if live -%}

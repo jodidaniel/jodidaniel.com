@@ -9,6 +9,11 @@ coming_soon:
 footer:
   copyright: "© 2026 Jodi Daniel. All rights reserved."
 
+# issue #198 item 1: accessible label for the floating back-to-top button
+# (an aria-label, since the button is icon-only) — kept /admin-editable per
+# the site's "every visible string" rule rather than hardcoded in the layout.
+back_to_top_label: "Back to top"
+
 section_headings:
   expertise_heading: "Areas of Expertise"
   experience_heading: "Professional Experience"
