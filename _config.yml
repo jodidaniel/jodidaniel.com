@@ -1,14 +1,7 @@
 title: Jodi Daniel
-# COMING-SOON SEO (go-live content policy): while the site is gated
-# (`site_live: false` in _data/settings.yml), keep this description neutral so
-# {% seo %} does not leak the marketing blurb in <meta>/og:description/JSON-LD
-# even though the full copy is present in the per-section data + collections.
-# GO-LIVE = flip `site_live: true` in _data/settings.yml AND restore the real
-# description here:
-#   "Jodi Daniel — nationally recognized leader in digital health law and
-#    policy. Regulatory strategy, health data privacy, FDA and telehealth
-#    counsel for healthcare organizations and technology innovators."
-description: "Jodi Daniel — site coming soon."
+# GO-LIVE SEO (live public description): the site is live (`site_live: true` in
+# _data/settings.yml) and this description drives {% seo %} meta tags.
+description: "Jodi Daniel — nationally recognized leader in digital health law and policy. Regulatory strategy, health data privacy, FDA and telehealth counsel for healthcare organizations and technology innovators."
 url: "https://jodidaniel.com"
 baseurl: ""
 author:

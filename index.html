@@ -1,8 +1,14 @@
 ---
 layout: home
-# PLACEHOLDER (go-live content policy): no page title is set, so {% seo %}
-# renders the neutral site title ("Jodi Daniel") in <title>/og:title/JSON-LD —
-# no marketing claim is served until the boss approves the copy. The real
-# title ("Jodi Daniel | Digital Health Law & Policy Leader") ships with the
-# content PR (cms/site_content/home).
+# GO-LIVE (content policy): the real page title ships now that `site_live: true`.
+#
+# NOTE the value is the ROLE ONLY, deliberately. {% seo %} composes the tab title
+# as "<page.title> | <site.title>", and site.title is already "Jodi Daniel" — so
+# this renders "Digital Health Law & Policy Leader | Jodi Daniel". Setting the
+# full "Jodi Daniel | Digital Health Law & Policy Leader" here instead renders
+# "Jodi Daniel Digital Health Law & Policy Leader | Jodi Daniel": jekyll-seo-tag
+# strips the "|" out of a page title and then appends the site title anyway, so
+# the name duplicates and the separator vanishes. Measured on the built _site.
+# _config.yml carries the matching description; the gate is _data/settings.yml.
+title: "Digital Health Law & Policy Leader"
 ---
