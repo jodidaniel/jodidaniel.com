@@ -26,6 +26,48 @@ that area.
 - Tests must be deterministic — no sleeps, no network, no reliance on
   wall-clock time.
 
+## Anything you name gets its link
+
+Any noun the reader might want to open gets its URL in the same sentence — the
+one who wrote the sentence is the one holding the id. It covers three shapes,
+and the rule keeps being applied to the first while the other two slip:
+
+- **What you hand over**: an approval, a PR to merge, a red run, a setting to
+  flip, a dashboard to read. (2026-08-27: a session reported jodidaniel.com#176
+  as waiting on a human approval across three turns, each time naming no
+  location. The reply was "What human approval? Link me.")
+- **What YOU are waiting on**: "waiting on CI", "the sync is running", "once the
+  verifier finishes". Link it every time you name it, not once when you start it
+  and never again. A status update whose nouns cannot be clicked has handed over
+  a feeling of progress and no way to check it.
+- **What you cite as already DONE**: "tracked in the issue", "the changelog
+  records it", "see the ADR". Evidence is the noun that most needs a link — its
+  whole job is to let someone confirm you did what you say. (2026-08-29: a
+  session closed a remediation with "documented in the issue, the release
+  changelog" — three nouns, no links, no statement of what the item WAS. The
+  reply was "What is the item/blocker? Link to it please.")
+
+Four rules about the link itself:
+
+- **Link the surface that decides, not its parent.** A required environment
+  review lives on its own job page, `.../actions/runs/<run_id>/job/<job_id>`;
+  the PR only shows it pending. Resolve the run `waiting` on the CURRENT head —
+  one carried from an earlier head governs nothing. Where there are two surfaces
+  (the regression gate is approvable from Actions *and* from `/admin/reviews/`),
+  give both and say which you verified.
+- **A link is not a description.** "#329's blocker" still costs the reader a tab,
+  which relocates the cost rather than paying it; one clause of identification
+  travels with the link. A bare `repo#123` autolinks only inside that repo's own
+  threads — in chat, another repo's issue, an email or a doc it is dead text, so
+  cross-repo references get the full URL.
+- **No URL? Say so, and give what it does have.** A local task, a subagent, a
+  file on a machine only you can see: "No link — local task `abc123`, output at
+  `/tmp/…`" satisfies the rule. "I'm waiting on the verifier" does not, and is
+  worse than silence — it reads as something the operator could go and look at.
+- **Stop naming it once it stops blocking.** A check-in on a PR that has merged,
+  a poll for a run that finished — cancel it and say so. Naming a blocker that no
+  longer blocks is the same defect pointed at the past.
+
 ## Finding your unknowns
 
 Output quality on a non-trivial task is bounded by how well the ambiguities got
@@ -129,6 +171,28 @@ email addresses and their correspondents' into a public Actions log.)
 - **Commit with the GitHub `…@users.noreply.github.com` identity** on public
   repos so a real email is not baked into commit author/committer metadata.
 
+## Network allowlists live in `_agent-guidance/docs/reference/`
+
+Two egress allowlists are kept there as **reference copies**, each with a
+sidecar changelog carrying the per-domain justification an allowlist line has
+no room for. Neither is loaded by anything — read them when you are changing
+one, and add a changelog entry when you do.
+
+- `network-allowlist-claude-environments.txt` — the domain list in force in the
+  Claude Code cloud environment named `My Whitelist`. **In force**; the
+  authoritative copy is the environment dialog at claude.ai/code, and this file
+  tracks it.
+- `network-allowlist-github-runners.txt` — a **proposed** list for CI. Not
+  enforced anywhere and not enforceable on a standard runner: GitHub-hosted
+  runners have unrestricted egress, and roadmap #821 for native outbound
+  control is closed as not planned.
+
+Each `.txt` has a `.CHANGELOG.md` beside it whose header states what an entry
+must carry. Two traps both files exist to record: a `*.example.com` line does
+**not** match the apex `example.com`, and the Claude environment's "also
+include default list of common package managers" checkbox silently adds ~200
+more domains, so a line that looks missing may be covered by it.
+
 ## Automation vs branch protection
 
 Fleet repos enforce PR-only default branches via ruleset, managed as code in
@@ -180,23 +244,45 @@ not say which is which. Establish it before you reach for one:
 - **`mcp__github__*` — session-provisioned.** It does NOT appear in
   `ListConnectors`; the remote environment supplies it and the session's own
   system prompt points at it. It is the **only** one with GitHub Actions tools
-  (`actions_list`, `actions_get`, `actions_run_trigger`), CI introspection
-  (`get_check_run`, `get_job_logs`), auto-merge control, and review-thread
-  resolution. Its reach is the session's attached repositories; `add_repo`
-  widens it mid-session.
-- **`mcp__b26ebb34-…__*` — the claude.ai org connector `github-mcp`.** It lists
+  (`actions_list`, `actions_get`, `actions_run_trigger`), workflow-run and
+  job-log introspection (`get_check_run`, `get_job_logs`), auto-merge control,
+  and review-thread resolution. Read that as the ACTIONS side specifically, not
+  as "all CI reads" — the next bullet is where a pull request's own check runs
+  live. Its reach is the session's attached repositories; `add_repo` widens it
+  mid-session.
+- **`mcp__github-mcp__*` — the claude.ai org connector `github-mcp`.** It lists
   in `ListConnectors` as `connected: true`. Its tool set is a **strict subset**
   of the above: same reads, same PR and issue writes, same `merge_pull_request`,
   `push_files` and `delete_file` — and no Actions, no job logs, no auto-merge,
   no review threads. Its reach comes from a GitHub App installation allowlist
-  that is INDEPENDENT of the session's attached repos.
+  that is INDEPENDENT of the session's attached repos. **Probe for it by
+  connector NAME, never by that prefix from memory.** This file named it
+  `mcp__b26ebb34-…__*` until 2026-08-28, when a live session measured it as
+  `mcp__github-mcp__*`; a run that searches its tools for the remembered
+  literal matches nothing, concludes "no connector present", and stands down
+  with a fully working one sitting right there. The prefix has moved once
+  already — assume it can move again, and probe both forms by name.
 
 Three consequences, and the first is why this section sits where it does:
 
-- **Everything that verifies CI is `mcp__github__`-only.** Dispatching a run,
-  reading a rollup, pulling a failed job's log — the org connector can do none
-  of it. A session holding only `github-mcp` cannot follow the rule below at
-  all: it can merge a pull request but it cannot check one.
+- **The CI boundary runs through the middle of the org connector, not around
+  it.** It CAN check a pull request: `pull_request_read` accepts
+  `method: "get_check_runs"` (the head commit's check runs, with their
+  conclusions) and `method: "get_status"` (the combined commit status).
+  Measured 2026-08-28 against `_agent-guidance` #83 — four check runs came
+  back, `success` and `skipped`. What it genuinely lacks is the **Actions**
+  side: no `actions_list` / `actions_get` / `actions_run_trigger`, no
+  `get_check_run`, no `get_job_logs` — so it cannot dispatch a workflow, read
+  a workflow RUN, or pull a failed job's log — and with no
+  `enable_pr_auto_merge` a merge under it is synchronous (check, then merge,
+  in the same run) rather than armed and walked away from. Read BOTH methods,
+  for the reason `"The watch finished" is not "CI passed"` gives below: #83
+  answered `get_status` with `pending` over zero statuses at the same moment
+  every check run on it was green, so either method read alone misreports.
+  This bullet used to say the org connector "can merge a pull request but it
+  cannot check one" — wrong, and wrong in the expensive direction, because it
+  tells an org-connector-only session that it must not merge and so disables
+  a capability the operator deliberately granted it.
 - **Fewer tools is not less dangerous.** Both connectors merge, push and
   delete. The subset one is the connector whose reach you cannot infer from the
   session's repo list, so a write through it can land somewhere the session was
@@ -274,6 +360,18 @@ circumstances. `repos.yml` also said `lock: committed` in plain English, one
   one owner — hosted sessions refuse cross-owner repo attachment — so "I cannot
   see it" and "it does not exist" have to stay separate sentences. Say which
   one you mean, and say what you checked with.
+- **The DENOMINATOR is the part that lies.** Enumerating what to verify from
+  whatever happens to be checked out locally answers a narrower question than
+  the one you asked, and does it in both directions at once. Measured
+  2026-08-29 while verifying an AGENTS.md sync: three local checkouts were
+  repos DELETED from GitHub, counted as consumers and reported as missing the
+  text (false RED), while a real consumer that session had never attached was
+  absent from the set entirely — so the run printed `ALL PROPAGATED` over 17 of
+  18 (false GREEN). The false green is the dangerous half: a clean verdict over
+  an incomplete list, with nothing on screen to prompt a second look. It is the
+  same defect `repos.yml`'s `cron_coverage` block exists to prevent for the
+  cron audit (issue #37). Take the denominator from a registry or from the
+  remote — never from the disk — and say which one you used.
 
 ## "The watch finished" is not "CI passed"
 
@@ -301,6 +399,50 @@ e2e and lint were FAILURE while the session reported CI green and moved on.)
   filter on only one and the other's failures read as clean.
 - Treat "watch done" as "now verify", never as "passed". Don't launch a watch
   and go passive without a definite verify-the-rollup step on resume.
+
+### A pipe into `grep -q` is a race, and one passing test proves nothing
+
+`echo "$big" | grep -q` under `pipefail` is the same trap with a timer on it.
+`grep -q` exits at the first match; once the payload passes the 64 KiB pipe
+buffer the writer still has bytes to write, takes SIGPIPE, and `pipefail` turns
+141 into a false negative — a marker that IS present reads as absent.
+
+It defeated its own investigation for a week (issue #81), because the disproof
+was one probe per size. Twenty trials per size against the real file: 48 kB
+0/20, 56 kB 0/20, 64 kB 0/20, 72 kB 2/20, 95 kB 18/20. At 95 kB a single shot
+passes about one time in ten, which is exactly what that issue recorded as
+"passed at every size". In production it presented as the largest `AGENTS.md`
+in the fleet, and only that one, reporting false drift.
+
+- **Feed the data as an argument or a here-string, never through a pipe** into
+  a command that exits early: `grep -qxF -- "$m" <<<"$s"`, or `grep -qxF -- "$m"
+  file`, or pure bash `[[ $'\n'"$s"$'\n' == *$'\n'"$m"$'\n'* ]]`.
+- **A size-dependent bug needs trials, not a probe.** If what you are clearing
+  could be a race, one green run is not evidence — say how many trials you ran.
+- The same shape is safe when the value is captured inside `$( ... || true )`,
+  because the status is discarded. That is correct by accident, so say so where
+  you find it rather than leaving the next reader to re-derive it.
+
+### `gh api ... --jq` on an HTTP error prints the raw error body, not a filtered result
+
+On a non-2xx response, `gh api` skips the `--jq` filter entirely and writes the
+API's raw error JSON to **stdout** — not stderr — while still exiting non-zero.
+A caller that does `out=$(gh api ... --jq '.foo') || true` to tolerate a
+missing resource then captures that raw error body instead of an empty string:
+the fallback swallows the exit code, not the payload it was meant to guard
+against.
+
+This has already been independently rediscovered twice, in two different
+repos, which is the clearest signal a rule belongs here rather than in either
+repo alone: it once silently broke `sync.sh`'s `default_sections` (recorded in
+`agentskills`), and `_agent-guidance`'s own `drift-report.sh` documents the
+same shape in a code comment written to tell a real 404 apart from an API
+error.
+
+- **Discard output on failure explicitly, never with a bare `|| true`:**
+  `out=$(gh api ... --jq '.foo') || out=""`.
+- The exit code is not enough on its own — `|| true` clears the *status* but
+  leaves `$out` holding whatever `gh api` printed, error body included.
 
 ## A successful `git push` does not mean your commit exists
 
@@ -340,6 +482,18 @@ commit never happened, `git push -u` reported a new branch, and
   exists for an emergency, and a missing binary in a container you control is
   not one — a release binary is one `curl` away, and CI scans the PR either
   way, so bypassing locally only moves the finding later.
+- **A push can also carry the WRONG ref, and the two checks above both pass.**
+  `git push -u origin <name>` pushes the LOCAL BRANCH of that name, which need
+  not be the branch you are on. If one already exists — a stale leftover from an
+  earlier session — your commit stays where you made it and the push updates
+  something else, successfully. (Measured 2026-08-29 in this repo: `checkout -b`
+  failed on a dirty tree, its fallback `checkout` failed too, so HEAD never left
+  `main`; the commit landed there, `push -u origin claude/…` pushed a stale
+  local branch of that name, and printed the ordinary success. `git log
+  --oneline -1` showed the commit and `git status --short` was clean — both true,
+  both measuring the wrong thing.) The only check that settles it names the
+  commit AND the remote branch:
+  `git merge-base --is-ancestor <sha> origin/<branch>`. Run it after every push.
 
 ## Dependency updates
 
@@ -528,6 +682,35 @@ ref for review, not the setting, to catch.
   time. Note that a "you have uncommitted changes, please commit and push" stop
   hook cannot see that a subagent holds the tree, so it will advise exactly this
   mistake; say why you are declining rather than complying by reflex.
+- **A subagent that has REPORTED can still be holding the tree.** The rule
+  above is about one that is still working; this is the half that surprises
+  people. The Agent or Workflow call returns when the agent returns, and its
+  BACKGROUND CHILDREN are not reaped with it — they keep running, in your
+  checkout, writing your files. Measured 2026-08-29 in `_agent-guidance`,
+  twice in one session, both after the workflow had printed its result: one
+  orphan was looping the test suite, which writes its report into the repo
+  root, so two runs clobbered the same artifact and a 999/0 tree reported
+  985/14 — fourteen failures in code nobody had touched. The other was
+  mutation-testing a source file: a guard I had restored and verified by
+  checksum was gone one command later, and the run in between blamed my
+  change for the orphan's mutation. The reviewing agent hit the same
+  collision from the other side and could not name it — it reported "the old
+  bytes" executing in freshly spawned processes while `md5sum` on that path
+  across 1779 samples never once showed the old content.
+  - **Look for descendants before trusting a long run**
+    (`ps -eo pid,etimes,cmd | grep '[y]our-command'`). A result arriving is
+    not evidence the processes behind it are gone.
+  - **Fingerprint the inputs across the run** — `md5sum` the files under test
+    before and after. If they differ, the run measured something you cannot
+    name and is not evidence, however green. Two lines, and it is the only
+    thing that separates a real regression from a race.
+  - **A shared mutable path is what turns a race into a wrong verdict**, so
+    prefer a per-run output path over a well-known one. The false RED is
+    loud; its false-GREEN twin — a run whose script never executed,
+    certifying the previous run's artifact — is silent.
+  - **Kill orphans rather than working around them, and say that you did.** A
+    result obtained after killing a competing writer is a different
+    measurement from one obtained before it.
 - **A subagent that goes quiet is not working — check activity, not the clock.**
   Its transcript file's mtime is the real signal; a run journal only writes on
   start and finish, so silence there is expected and proves nothing. Decide the
@@ -551,6 +734,17 @@ ref for review, not the setting, to catch.
 - Supply a throwaway credential, or scope the test to what runs
   unauthenticated. If it genuinely cannot run without a real one, that is the
   operator's call — not a gap for the subagent to close on its own initiative.
+- **A tree you made to break something in can still reach production, and the
+  obvious fix is worse than the problem in a worktree.** `cp -a` copies
+  `.git/config`, so a scratch copy inherits `origin` — measured, 45 such copies
+  in one container, 44 of which were never mutated, and the one that was pushed
+  14 commits to a real default branch. But `git remote remove origin` inside a
+  `git worktree` strips the PARENT checkout's remote, and `git config --local`
+  there rewrites the parent's identity (both measured), and the Agent tool's
+  `isolation: 'worktree'` means subagents land in one routinely. Before
+  disarming anything, run **`/adam:disarm-inherited-reach`** — it carries the
+  standalone-vs-worktree test, the reach paths a remote removal does not close,
+  and why no in-code guard can substitute.
 
 ## Skills ecosystem
 
@@ -562,6 +756,14 @@ ref for review, not the setting, to catch.
   `/adam:<skill>` (e.g. `/adam:finding-unknowns`).
 - Local machines get the marketplace plus per-agent symlinks via that repo's
   `setup.sh`.
+- **A `git push` that suddenly fails in EVERY repo is one repo's problem.**
+  `setup.sh` registers a GLOBAL sync-skills pre-push hook, so after a bundle
+  restructure a stale one keeps pointing at the old plugin path and refuses
+  every push from every repo until it is re-registered. The cause is recorded
+  in `agentskills`' own guidance, which is the right place for it and the
+  wrong place to find it: the symptom shows up in repos whose sessions never
+  open that file. Re-run `bash setup.sh` from the registry checkout on the
+  machine; nothing in the repo you were pushing from is broken.
 - Cloud/ephemeral sessions still get **no** plugins from repo-declared
   settings — that Claude Code limitation (agentskills' `docs/decisions/0001`)
   is unchanged. What changed is that it now has a fix: a repo carrying its own
