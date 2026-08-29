@@ -29,18 +29,24 @@ npx decap-server                                                  # admin backen
 # admin: http://127.0.0.1:4000/admin/index-local.html
 ```
 
-Gotchas measured while setting this up (2026-08-29, platform v0.1.90):
+Gotchas measured while setting this up (2026-08-29, platform v0.1.90),
+**both since fixed upstream** — re-measured on v0.1.91-rc.1:
 
-- **Set a UTF-8 locale** (`LC_ALL=C.UTF-8`). Under a POSIX/C locale the
-  theme gem's Decap render hook crashes with `invalid byte sequence in
-  US-ASCII` — the cms-platform issue for the script render path (#213) never
-  covered the gem-hook path.
-- **The local admin renders with ZERO collections on this site** until the
-  gem's `theme/admin/config-local.base.yml` gains the
-  `# __SITE_COLLECTIONS__` splice marker that `config.base.yml` already has
-  (patch it in `vendor/bundle/.../theme/admin/config-local.base.yml` under
-  `collections:`, then rebuild). Tracked upstream in cms-platform; delete
-  this note once the platform fix ships.
+- ~~Set a UTF-8 locale~~ — **no longer required.** Under a POSIX/C locale the
+  gem's Decap render hook used to crash with `invalid byte sequence in
+  US-ASCII` (cms-platform#213 fixed the script render path and never covered
+  the gem-hook path). cms-platform#327 pinned the hook's reads to UTF-8, and
+  this repo's `scripts/verify-build-artifacts.rb` was fixed the same way.
+  Re-measured with `LANG`/`LC_ALL` unset: build exits 0, no encoding error.
+  Testing a ref older than platform v0.1.91 still wants `LC_ALL=C.UTF-8`.
+- ~~Patch the gem to get collections in the local admin~~ — **no longer
+  required.** `/admin/index-local.html` used to render with ZERO collections
+  on this site until the gem's `config-local.base.yml` gained the
+  `# __SITE_COLLECTIONS__` splice marker; cms-platform#327 added it. Measured
+  on v0.1.91-rc.1: the rendered `config-local.yml` is 220 lines and declares
+  all 9 collections (was 38 lines ending in an empty `collections:`).
+  **Do not hand-patch `vendor/bundle/` for this any more** — if collections
+  are missing, check the pinned platform_ref before reaching for a patch.
 - The local backend is decap-server in **simple mode**: no editorial
   workflow (Draft/Review/Ready) — a Save applies immediately and the watcher
   rebuilds the site in ~2–10s. Prod behavior differs there; everything else
