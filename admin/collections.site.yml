@@ -109,8 +109,26 @@
             widget: list
             summary: "{{fields.label}}"
             fields:
-              - { name: label,  label: "Label", widget: string }
-              - { name: anchor, label: "Anchor (section id, no #)", widget: string }
+              - { name: label, label: "Label", widget: string }
+              # issue #196: `anchor` used to be a free-text string, so a typo
+              # (e.g. "presss" instead of "media") saved silently -- the
+              # pill's href changed the URL hash and nothing else happened,
+              # with no error anywhere to explain why. A `select` over the
+              # real destinations makes a bad anchor impossible to save.
+              #
+              # Options are the six sections in _layouts/home.html this nav
+              # can actually jump to. `about` is deliberately EXCLUDED: this
+              # nav list renders *inside* the About card, so a pill pointing
+              # at its own container isn't a meaningful destination.
+              #
+              # DUAL-MAINTAINED with `_layouts/home.html` -- exactly like
+              # `media_by_category` there vs. the media `category` select
+              # `options:` above (see docs/CONTENT-MODEL.md): adding,
+              # removing, or renaming a `<section id="...">` in the layout
+              # means editing this options list too, or the new/renamed
+              # section becomes unreachable from the nav picker with no
+              # build error.
+              - { name: anchor, label: "Anchor (destination section)", widget: select, options: ["expertise", "experience", "accomplishments", "media", "education", "contact"], hint: "Which section this pill jumps to when clicked. This is NOT the same as Label above -- Label is the visible button text; changing Label alone will not change where the pill goes." }
 
   - name: site_contact
     label: "Contact"
@@ -155,6 +173,7 @@
             widget: object
             fields:
               - { name: copyright, label: "Copyright", widget: string }
+          - { label: "Back to Top Button Label", name: "back_to_top_label", widget: "string", hint: "Accessible label for the floating back-to-top button (screen readers only; it's an icon)." }
           - name: section_headings
             label: "Section Headings"
             widget: object

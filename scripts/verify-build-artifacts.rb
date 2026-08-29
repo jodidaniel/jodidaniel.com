@@ -129,6 +129,42 @@ media_src.each do |src|
   end
 end
 
+puts "== issue #196: About nav anchors must resolve to a real section id =="
+# `admin/collections.site.yml` turned `anchor` from a free-text string into a
+# `select` over the destination sections, which stops a NEW typo through the
+# UI. It does NOT catch a bad anchor already committed, one introduced by a
+# direct file edit, or a section id renamed in _layouts/home.html while
+# _data/about.yml still names the old one -- the more likely real-world
+# break. So this asserts the BUILT artifact, not the source: for every entry
+# in _data/about.yml's `nav`, the built home page must contain a real
+# `<section id="...">` matching that entry's `anchor`. Parsed with the `yaml`
+# stdlib (AGENTS.md) -- never a regex/line-scan over the data file.
+about_yaml = YAML.safe_load(read(File.join(__dir__, "..", "_data", "about.yml")) || "") || {}
+nav_entries = about_yaml["nav"].to_a
+check(failures, "_data/about.yml has nav entries to check (issue #196)") { !nav_entries.empty? }
+
+home_html_for_nav = read(File.join(SITE, "index.html"))
+built_section_ids = home_html_for_nav.to_s.scan(/<section\s+id="([a-z-]+)"/).flatten
+
+if built_section_ids.empty?
+  # Vacuous while site_live is false: the gate (_layouts/home.html) hides
+  # every section, so the built page has nothing to check anchors against.
+  # Same posture as the PDF-checks note below -- say so rather than let a
+  # pass here imply coverage it doesn't have.
+  puts "  note site_live is false (or no sections rendered) -- nav-anchor id checks did NOT"
+  puts "       run. Flip site_live: true and rebuild to arm them."
+else
+  nav_entries.each do |entry|
+    anchor = entry.is_a?(Hash) ? entry["anchor"].to_s : ""
+    label = entry.is_a?(Hash) ? entry["label"].to_s : ""
+    check(
+      failures,
+      "About nav entry #{label.inspect} (anchor #{anchor.inspect}) resolves to a built " \
+      "section id -- valid ids: #{built_section_ids.sort.inspect}"
+    ) { built_section_ids.include?(anchor) }
+  end
+end
+
 puts "== issues #194 / #195: admin seam (link_label, pdf_label, .pdf pattern) =="
 # Parsed with the `yaml` stdlib, never a regex/line-scan (AGENTS.md) — a regex
 # over this flow-mapping seam can't tell `pattern:` apart from `hint:` text

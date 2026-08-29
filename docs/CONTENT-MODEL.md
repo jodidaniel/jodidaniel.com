@@ -12,10 +12,47 @@ data file:
 | `_data/header.yml`   | `name`, `tagline`                              | **Header / Hero** (`site_header`) |
 | `_data/about.yml`    | `photo`, `intro_heading`, `bio[]`, `nav[]`     | **About** (`site_about`) |
 | `_data/contact.yml`  | `heading`, `intro`, `links[]`                  | **Contact** (`site_contact`) |
-| `_data/settings.yml` | `site_live` GATE, `coming_soon`, `footer`, `section_headings` | **Site Settings** (`site_settings`) |
+| `_data/settings.yml` | `site_live` GATE, `coming_soon`, `footer`, `back_to_top_label`, `section_headings` | **Site Settings** (`site_settings`) |
 
 The layout reads these as `site.data.header` / `.about` / `.contact` /
 `.settings`.
+
+### About nav anchors are a closed set (issue #196)
+
+`_data/about.yml`'s `nav[]` pairs a `label` (the pill's visible text) with an
+`anchor` (which section the pill jumps to) — two fields that look related but
+aren't linked to each other at all. Before issue #196 `anchor` was free-text,
+so a typo (e.g. `presss` instead of `media`) saved silently: the pill's `href`
+changed the URL hash and nothing else happened, with no error anywhere to
+explain why. The owner's experienced symptom was "I renamed a nav label and
+now the button is dead."
+
+`admin/collections.site.yml` now makes `anchor` a `select` over the six
+sections in `_layouts/home.html` this nav can actually jump to. `about` is
+deliberately excluded from the options: the nav list renders *inside* the
+About card itself, so a pill pointing at its own container isn't a meaningful
+destination.
+
+**This options list is DUAL-MAINTAINED with `_layouts/home.html`**, exactly
+like `media_by_category` there vs. the media `category` select `options:`
+(see "Outbound link label + PDF button label" below): adding, removing, or
+renaming a `<section id="...">` in the layout means editing this options list
+too, or the new/renamed section becomes unreachable from the nav picker with
+no build error.
+
+A `select` only stops a *new* typo made through the UI. It does not catch a
+bad anchor already committed, one introduced by a direct file edit, or a
+section id renamed in the layout while `_data/about.yml` still names the old
+one — the more likely real-world break, and the one a `select` alone can't
+close. `scripts/verify-build-artifacts.rb` covers that gap: for every entry
+in `_data/about.yml`'s `nav`, the *built* home page must contain a real
+`<section id="...">` matching that entry's `anchor` — checked against
+`_site/index.html`, not the layout source — so a rename that silently drifts
+the two apart fails the build instead of shipping a dead pill. That check is
+vacuous while `site_live: false` (the gate hides every section, so there is
+nothing built to check anchors against); it prints a `note` saying so rather
+than letting a pass imply coverage it doesn't have — the same conditional
+posture as the PDF-upload checks documented further down in this file.
 
 ### Repeating sections → folder collections (one file per item, ordered by `weight`)
 
