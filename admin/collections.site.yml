@@ -84,6 +84,22 @@
       # is not merely unlinked, it is not on the website to be found. Tick it
       # only for a document we may lawfully host (a US-government work, our own
       # writing, or something the publisher has cleared).
+      #
+      # The field is named `pdf_archive_file`, and the avoided word is a
+      # constraint rather than a preference: it must not contain "key".
+      # gitleaks' `generic-api-key` rule fires on a KEYWORD next to a
+      # high-entropy value, and that word is on its keyword list -- so the
+      # earlier name, paired with a long hyphenated file name, read to the
+      # scanner as a leaked credential. Measured, not theorised: on the pinned
+      # 8.30.1 with this repo's own `.gitleaks.toml`, three of these eight
+      # entries tripped it and reddened `scan / scan`. `secrets-scan.yml` reads
+      # FULL history on push and on the weekly sweep, and history is immutable,
+      # so such a name reaching `main` reddens every future push to `main`
+      # rather than one PR. The scanner's keyword list is short and ordinary
+      # (access, auth, api, credential, creds, passwd, password, secret, token,
+      # and the one above) -- check a new field name against it before
+      # committing. Renaming is the fix at source; an allowlist entry is not,
+      # for the reasons the top of `.gitleaks.toml` sets out.
       - { name: pdf_archive_file, label: "Archived PDF (file name in the private archive)", widget: string, required: false, pattern: ['\.pdf$', 'Must be a PDF file name (.pdf)'], hint: "Optional. The file name of this item's PDF in the private media archive, e.g. \"example-article.pdf\". Leave blank if there is no archived copy. Uploading a new PDF into the archive is done by the site maintainer, not from here." }
       - { name: pdf_public, label: "Publish this PDF on the public website", widget: boolean, required: false, default: false, hint: "Leave OFF unless you know we are permitted to republish this document -- e.g. it is a US-government work, something Jodi wrote and holds the rights to, or the publisher has given permission. While OFF, the PDF stays in the private archive: no download button appears and the file is not deployed to the website at all." }
       - { name: pdf_label, label: "PDF Button Label", widget: string, required: false, hint: "Optional. Leave blank to use the default \"Download PDF\". Set this only to override that default for an unusual item. Only ever seen when \"Publish this PDF on the public website\" is ticked." }
