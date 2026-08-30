@@ -408,7 +408,7 @@ know what to do without calling her son?
 **Instance**:
 - Public site: `http://127.0.0.1:4004/`
 - Admin: `http://127.0.0.1:4004/admin/index-local.html`
-- Fixture files for uploads: `fixtures/test-photo.jpg`, `fixtures/sample.pdf`
+- Fixture files for uploads: `fixtures/test-photo.jpg`
   in your instance directory.
 - Remember (protocol): after Save, the public site rebuilds in ~2–10s —
   reload the public tab to check your change. Keep TWO tabs like a real
@@ -452,12 +452,14 @@ know what to do without calling her son?
 8. **Edit a media item + validation**: Media Items → open the FDA
    generative-AI entry. Change the Article URL to `not a url` and try to
    save — what stops you, and is the message understandable? Fix it back to
-   what it was (retype it carefully from what's shown). Then upload a PDF
-   into "PDF Copy" (use `fixtures/sample.pdf` via the real upload control).
-   Save. On the public site: find that item in Publications & Media, open
-   its page — is the PDF now offered? Click the PDF action: does the file
-   open/download and is it your file? Then REMOVE the PDF from the entry
-   (find how), save, verify the page no longer offers it.
+   what it was (retype it carefully from what's shown). Then look at the
+   "Archived PDF" and "Publish this PDF on the public website" fields. With
+   the box UNTICKED, save and open the item's public page: is there any
+   trace of the PDF? Now tick the box, save, and look again — does a
+   download button appear, and does its label read sensibly for this item?
+   (The file itself only reaches the website once a deploy publishes it out
+   of the private archive, so on a local instance expect the link to 404 —
+   note whether anything warns you about that.) Untick the box and save.
 9. **Change the photo**: About → Profile Photo → replace with
    `fixtures/test-photo.jpg` through the UI (media library flow). Save,
    verify on site (even if the image is the same picture, verify the flow
@@ -504,8 +506,8 @@ corner, pastes real-world text, and makes the mistakes busy people make.
 **Instance**:
 - Public site: `http://127.0.0.1:4005/`
 - Admin: `http://127.0.0.1:4005/admin/index-local.html`
-- Fixtures: `fixtures/test-photo.jpg`, `fixtures/sample.pdf`,
-  `fixtures/not-a-pdf.txt` in your instance directory.
+- Fixtures: `fixtures/test-photo.jpg` in your instance directory. (The PDF
+  fixtures the old item 8 used are gone with the upload control it probed.)
 - Two tabs (admin + site); site rebuilds ~2–10s after save.
 - Viewport 1440×900 unless stated.
 
@@ -544,11 +546,21 @@ corner, pastes real-world text, and makes the mistakes busy people make.
 7. **Category select**: In a Media item, open the Category dropdown; can
    Jodi add a category of her own from here, or only pick? (Just observe
    and judge; don't force anything.) Is the fixed list what she'd expect?
-8. **Wrong file type**: On a media entry's "PDF Copy" field, upload
-   `fixtures/not-a-pdf.txt` through the real control. Does anything stop or
-   warn you? If it uploads: save, open the item's public page — what does
-   the PDF action offer now? Judge how bad that failure mode is for a real
-   owner. Then remove the file from the entry, save, verify the page.
+8. **The PDF permission gate**: Open a media entry that has an "Archived
+   PDF" file name filled in (e.g. `1-fda-amicus.pdf`) and leave "Publish
+   this PDF on the public website" UNTICKED. Save; open the item's public
+   page — is there any sign of the PDF at all? (There should be none: no
+   button, and no PDF file name anywhere in the page source.) Now, WITHOUT
+   ticking anything, answer as Jodi: from the field label and hint alone,
+   can you tell what ticking that box would do, and who is supposed to
+   decide? Then type `notes.txt` into the Archived PDF field and try to
+   save — does anything stop you, and does the message explain why? Restore
+   the original file name and leave the box unticked.
+
+   (This replaces an older "upload a .txt through the PDF Copy control"
+   probe. There is no upload control any more: the PDF bytes live in a
+   private S3 archive, never in this public repo, and the field names an
+   object there. See docs/CONTENT-MODEL.md, "Archived PDFs".)
 9. **Number-field mischief**: Set an Education entry's Order to `0`, save,
    observe placement on site; then try clearing the Order field entirely
    and saving — does the admin allow it, and what happens on the site's

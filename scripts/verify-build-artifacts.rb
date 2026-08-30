@@ -250,14 +250,25 @@ media_seam_fields = (media_seam && media_seam["fields"]).to_a.each_with_object({
   h[f["name"]] = f if f.is_a?(Hash)
 end
 
-pdf_field = media_seam_fields["pdf"]
-check(failures, "admin seam's `pdf` field offers a file upload") do
-  pdf_field && pdf_field["widget"] == "file"
+# The PDF BYTES must never enter this repo. jodidaniel.com is PUBLIC, so a
+# committed PDF of a third-party article is world-readable at
+# raw.githubusercontent.com regardless of what the site renders — and git
+# history is immutable, so a later `git rm` does not take it back. The archive
+# is private S3; the seam names an OBJECT in it. A `file`/`image` widget here
+# would quietly restore the repo-upload path, so assert its absence, not just
+# the new field's presence. See docs/CONTENT-MODEL.md, "Archived PDFs".
+pdf_field = media_seam_fields["pdf_archive_file"]
+check(failures, "admin seam names the archived PDF and offers NO repo upload") do
+  pdf_field && pdf_field["widget"] == "string" && media_seam_fields["pdf"].nil?
 end
-check(failures, "admin seam's `pdf` field validates a `.pdf` suffix (issue #195)") do
+check(failures, "admin seam's `pdf_archive_file` validates a `.pdf` suffix (issue #195)") do
   pattern = pdf_field && pdf_field["pattern"]
   pattern.is_a?(Array) && pattern.length == 2 && pattern[0].is_a?(String) &&
     pattern[0].include?(".pdf$") && !pattern[1].to_s.empty?
+end
+check(failures, "admin seam offers the `pdf_public` gate, defaulting to OFF") do
+  f = media_seam_fields["pdf_public"]
+  !f.nil? && f["widget"] == "boolean" && f["default"] == false
 end
 
 check(failures, "admin seam offers `link_label` on media entries, and it's optional (issue #194)") do
@@ -296,7 +307,8 @@ end
 # risking the two maps drifting apart while still agreeing with each other.
 ARTICLE_LABEL_RE = /M11\.99 2C6\.47 2 2 6\.48 2 12s4\.47.*?<\/svg>\s*([^<]+?)\s*<\/a>/m
 PDF_HREF_RE = /href="([^"]+)"[^>]*>\s*<svg[^>]*><path d="M19 3H5c-1\.1/m
-pdf_checks = 0
+pdf_public_checks = 0
+pdf_gated_checks = 0
 article_labels = {} # slug => rendered label text, ungated pages only
 media_src.each do |src|
   slug = File.basename(src, ".md")
@@ -305,7 +317,10 @@ media_src.each do |src|
   gated = page.include?("noindex,nofollow")
   src_fm = read(src)
   article = src_fm[/^article_url:\s*"?([^"\n]+)"?/, 1].to_s.strip
-  pdf = src_fm[/^pdf:\s*"?([^"\n]+)"?/, 1].to_s.strip
+  pdf_key = src_fm[/^pdf_archive_file:\s*"?([^"\n]+?)"?\s*$/, 1].to_s.strip
+  # Only a literal `true` opens the gate; anything else (absent, false,
+  # "false", empty) keeps it shut — mirrors the layout's `== true` test.
+  pdf_public = src_fm[/^pdf_public:\s*(\S+)\s*$/, 1].to_s.strip == "true"
   if gated
     # Gate closed: the item page must be the coming-soon shell only.
     check(failures, "/media/#{slug}/ leaks no bio content while gated") do
@@ -317,21 +332,42 @@ media_src.each do |src|
     end
     label = page[ARTICLE_LABEL_RE, 1]
     article_labels[slug] = label unless article.empty?
-    unless pdf.empty?
-      pdf_checks += 1
-      check(failures, "/media/#{slug}/ links to its PDF (#{pdf})") { page.include?(pdf) }
-      check(failures, "PDF #{pdf} is published to _site") do
-        File.exist?(File.join(SITE, pdf.sub(%r{\A/}, "")))
-      end
-      # Issue #195, belt half: the entry's front matter carries a `pdf:`, so
-      # the layout's has_pdf guard should have let the button through — and
-      # the href it rendered (not just the front-matter string) must still
-      # end in `.pdf`. This is what would catch the guard regressing (e.g.
-      # someone loosening the suffix check) even if the seam pattern above
-      # still blocks new saves.
-      check(failures, "/media/#{slug}/'s rendered PDF href ends in .pdf") do
-        href = page[PDF_HREF_RE, 1]
-        !href.nil? && href.downcase.end_with?(".pdf")
+    unless pdf_key.empty?
+      if pdf_public
+        pdf_public_checks += 1
+        href = "/media-pdfs/#{pdf_key}"
+        check(failures, "/media/#{slug}/ links to its published PDF (#{href})") do
+          page.include?(href)
+        end
+        # Issue #195, belt half: the gate is open, so the layout's has_pdf
+        # guard let the button through — and the href it RENDERED (not just the
+        # front-matter string) must still end in `.pdf`. This catches the guard
+        # regressing even if the seam pattern still blocks new saves.
+        check(failures, "/media/#{slug}/'s rendered PDF href ends in .pdf") do
+          h = page[PDF_HREF_RE, 1]
+          !h.nil? && h.downcase.end_with?(".pdf")
+        end
+        # Ticking the box renders a download button; if nothing put the file
+        # under _site/media-pdfs/ the button is a confident 404. The publish
+        # step that copies an opted-in object out of the private archive is
+        # platform-side (cms-platform), so until a site's deploy runs it this
+        # assertion is what stops the box being ticked into a broken link
+        # rather than a working download.
+        check(failures, "published PDF #{href} exists in _site") do
+          File.exist?(File.join(SITE, "media-pdfs", pdf_key))
+        end
+      else
+        pdf_gated_checks += 1
+        # THE assertion this feature turns on. An archived PDF that has not
+        # been cleared for republication must leave NO trace on the public
+        # page: no button, no href, and not even the file name in a comment or
+        # a JSON-LD blob. Asserting only "no button" would pass a page that
+        # still leaked a guessable URL, which is the failure this gate exists
+        # to prevent.
+        check(failures, "/media/#{slug}/ withholds its ungated PDF (#{pdf_key})") do
+          !page.include?("/media-pdfs/") && !page.include?(pdf_key) &&
+            page[PDF_HREF_RE, 1].nil?
+        end
       end
     end
   end
@@ -368,20 +404,37 @@ else
   end
 end
 
-# The two PDF assertions above are CONDITIONAL — they fire only for an entry
-# that actually carries a `pdf:`, and only while the gate is open. With none
-# (the state today: the widget shipped before any editor used it) they are
-# vacuous, and "All build-artifact assertions passed" would imply a coverage
-# this script did not have. That is the failure mode AGENTS.md names as a green
-# light wired to nothing, so say it out loud instead. Not a failure: an empty
-# PDF set is a legitimate content state, and the first real upload arms them.
-if pdf_checks.zero?
-  puts "  note no media entry carries a `pdf:` yet, so the PDF link/publish assertions"
-  puts "       did NOT run. A pass here is not evidence the PDF chain works — see"
-  puts "       docs/CONTENT-MODEL.md for the build probe that verified it, and how"
-  puts "       to re-run it."
+# The PDF assertions above are CONDITIONAL on an entry carrying a
+# `pdf_archive_file`, and they split two ways. Say which half actually ran:
+# "All build-artifact assertions passed" over zero of either is the green light
+# wired to nothing that AGENTS.md warns about. Neither zero is a FAILURE — a
+# catalogue with no archived PDFs, or none yet cleared for republication, are
+# both legitimate content states — but the coverage claim has to be honest.
+if pdf_gated_checks.zero? && pdf_public_checks.zero?
+  puts "  note no media entry carries a `pdf_archive_file`, so NEITHER the withhold"
+  puts "       assertion nor the publish assertion ran. A pass here is not evidence"
+  puts "       the PDF chain works — see docs/CONTENT-MODEL.md, \"Archived PDFs\"."
 else
-  puts "  ok   PDF assertions exercised on #{pdf_checks} media entr#{pdf_checks == 1 ? 'y' : 'ies'}"
+  puts "  ok   PDF gate exercised: #{pdf_gated_checks} withheld, #{pdf_public_checks} published"
+  if pdf_public_checks.zero?
+    puts "  note no entry has `pdf_public: true`, so the PUBLISH half did not run."
+    puts "       The withhold half (the default, and the security-relevant one) did."
+  end
+end
+
+# Repo-wide, and deliberately not scoped to _media: the invariant is that PDF
+# BYTES never land in this PUBLIC repo at all, from any path — an editor upload,
+# a hand-copied offprint, a well-meaning `assets/` commit. _site is excluded
+# because a build legitimately materialises opted-in PDFs there; it is never
+# committed (.gitignore).
+pdf_bytes_in_repo = Dir.glob(File.join(__dir__, "..", "**", "*.pdf"), File::FNM_CASEFOLD)
+                       .map { |f| File.expand_path(f) }
+                       .reject { |f| f =~ %r{/(_site|\.git|\.cms-platform|node_modules|vendor|e2e)/} }
+check(failures, "no PDF bytes are committed to this public repo") do
+  pdf_bytes_in_repo.empty?
+end
+unless pdf_bytes_in_repo.empty?
+  pdf_bytes_in_repo.first(5).each { |f| puts "       stray PDF: #{f}" }
 end
 
 puts "== Media: authored vs. appearances are separated =="

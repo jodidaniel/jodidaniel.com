@@ -5,5 +5,7 @@ source: "U.S. Senate, Subcommittee on Federal Financial Management, Government I
 date_display: "June 2006"
 article_url: "https://www.govinfo.gov/content/pkg/CHRG-109shrg29506/pdf/CHRG-109shrg29506.pdf"
 link_label: "Read the hearing record"
+pdf_archive_file: "8-senate-testimony-health-it.pdf"
+pdf_public: false
 weight: 2
 ---

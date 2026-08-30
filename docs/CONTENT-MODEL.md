@@ -68,7 +68,7 @@ below.
 | `expertise`       | `_expertise/`       | `title`, `description`, `weight` |
 | `experience`      | `_experience/`      | `title`, `org`, `period`, `description`, `weight` |
 | `accomplishments` | `_accomplishments/` | `title`, `text`, `weight` |
-| `media`           | `_media/`           | `category`, `title`, `source`, `date_display` (optional), `article_url`, `link_label` (optional), `pdf` (optional), `pdf_label` (optional), `weight` |
+| `media`           | `_media/`           | `category`, `title`, `source`, `date_display` (optional), `article_url`, `link_label` (optional), `pdf_archive_file` (optional), `pdf_public` (default `false`), `pdf_label` (optional), `weight` |
 | `education`       | `_education/`       | `degree`, `field`, `school`, `weight` |
 | `events`          | `_events/`          | `title`, `org`, `start_date`, `date_display`, `location`, `session` (optional), `event_url` (optional) |
 
@@ -101,7 +101,7 @@ each forced by what the section actually needs:
   `pattern: ['^\d{4}-\d{2}-\d{2}$', ...]` on that field must also stay
   **single-quoted YAML** — `\d` inside a double-quoted scalar is not a
   recognized escape and is a YAML parse error, not merely a different regex
-  (same trap the media `pdf` field's pattern already documents further
+  (same trap the media `pdf_archive_file` field's pattern already documents further
   down).
 - **The outbound field is `event_url`, never `url`.** Same DocumentDrop
   shadow as `_media`'s `article_url` (see "Media items are real pages"
@@ -272,66 +272,99 @@ optional override plus a category-derived default, the same shape as
 more than one distinct outbound-link label (not just the layout source) — the
 regression it guards is every page reverting to "Read the article" silently.
 
-**`pdf` must actually be a PDF (issue #195).** Before the fix, the `pdf` field
-accepted any file type — upload a `.txt` and the public page rendered a
-confident, fully-styled "DOWNLOAD PDF" button that handed the visitor a text
-file, with no warning at upload, selection, or publish. Two layers now guard
-it:
+### Archived PDFs — a private archive and an explicit permission gate
 
-- **Seam validation.** `admin/collections.site.yml`'s `pdf` field carries
-  `pattern: ['\.pdf$', 'Must be a PDF file (.pdf)']`. Decap's `file` widget
-  stores the uploaded/selected file's **path string** as the field value, and
-  string `pattern:` validation applies to that path — so a non-`.pdf` upload is
-  rejected in the editor before it can ever be saved. **Quoting matters**: the
-  regex must be **single-quoted** YAML (`'\.pdf$'`) — a double-quoted
-  `"\.pdf$"` is a YAML parse error (`\.` is not a recognized C-style escape in
-  a double-quoted scalar), so double quotes here don't just behave differently,
-  they fail to parse at all. Verify with a real YAML parser, not by eye:
-  `ruby -ryaml -e 'p YAML.safe_load(File.read("admin/collections.site.yml", encoding: "utf-8")).find { |c| c["name"] == "media" }["fields"].find { |f| f["name"] == "pdf" }["pattern"]'`
-  should print `["\\.pdf$", "Must be a PDF file (.pdf)"]` (Ruby's `inspect` of
-  the literal one-backslash string).
-- **Layout guard.** `_layouts/media.html` only renders the PDF download button
-  when the `pdf` value's last four characters, downcased, equal `.pdf`. This is
-  the belt to the seam pattern's braces — a value saved before the pattern
-  existed, or a hand-edited front-matter file, still can't render a lying
-  "download PDF" button for a non-PDF file. No `pdf` value still renders no
-  button, same as before.
+Most `_media` items link to something published elsewhere, and an archived PDF
+copy is useful (links rot; some pieces are hard to find later). But a PDF of
+someone else's article is someone else's copyright, so publishing one is a
+decision a person has to make item by item — not a side effect of uploading a
+file. Three rules encode that.
 
-**PDF uploads use the site-wide media folder.** The `pdf` field is a plain
-Decap `file` widget with no per-field `media_folder`/`public_folder`. The
-platform's `config.base.yml` documents `public_folder == "/" + media_folder` as
-an invariant enforced by `e2e/cms-config.spec.js` — Decap appends only the
-uploaded basename to `public_folder` and does not mirror subdirectories into the
-URL, so a per-field override reintroduces the broken-path / "Copy Path" bug.
-Uploads land in `assets/images/uploads/` alongside the profile photo.
+**1. The PDF bytes never enter this repo.** `jodidaniel.com` is a PUBLIC GitHub
+repository. A committed PDF is world-readable at `raw.githubusercontent.com`
+regardless of what the website chooses to render, and git history is immutable —
+a later `git rm` fixes the working tree and nothing else. So the archive is a
+**private S3 bucket** with public access blocked, and the repo carries only a
+*name*:
 
-**The chain is verified by build — and its guard is conditional.** `pdf` is not
-shadowed by `DocumentDrop`; that is measured, not inferred from the list above.
-Adding `pdf: /assets/images/uploads/<file>.pdf` to a `_media/*.md` and building
-renders the "Download PDF" link at exactly that href, and Jekyll copies the file
-to `_site/assets/images/uploads/` (it is a plain static asset — no `exclude:`
-entry touches it). To re-run that probe:
+- **`pdf_archive_file`** (optional string) — the object's file name in the
+  archive, e.g. `"1-fda-amicus.pdf"`. It is NOT a site path and NOT a URL.
+  Seam-validated with `pattern: ['\.pdf$', …]`.
+- **`pdf_public`** (boolean, default `false`) — the permission gate.
+- **`pdf_label`** (optional string) — button text; only ever seen when the gate
+  is open.
+
+`scripts/media-archive.sh` puts, gets, lists, presigns and audits archive
+objects; `scripts/archive-article-pdf.py` renders a provenance-stamped PDF from
+an article URL. Neither writes into this repo, and
+`verify-build-artifacts.rb` asserts repo-wide that **no `.pdf` is committed** —
+so restoring the old upload path fails the build rather than quietly leaking.
+
+> The seam deliberately offers a **string**, not Decap's `file` widget. A `file`
+> widget uploads into `media_folder` — which is committed and published — which
+> is precisely the leak this design exists to prevent. The verifier asserts the
+> old `pdf` field is *absent*, not merely that the new one is present.
+
+**2. Default is withhold, and withhold means absent, not unlinked.** With
+`pdf_public` false (or missing), `_layouts/media.html` renders no download
+button, and the deploy never copies the object out of the private archive — so
+the PDF is not on the website to be found. Hiding a link to a file that is
+nonetheless sitting at a guessable URL is not a permission gate; this is why the
+verifier's withhold assertion checks that the built page contains no
+`/media-pdfs/` href **and not even the file name**, rather than just checking
+that no button rendered.
+
+**3. Opening the gate is an editor's explicit act.** Ticking *"Publish this PDF
+on the public website"* in `/admin` is the whole opt-in. The hint tells the
+editor what the box means: tick it for a US-government work, for something Jodi
+wrote and holds the rights to, or where the publisher has cleared it.
+
+The href is **derived, never authored** — `/media-pdfs/<pdf_archive_file>` — so
+an editor cannot type a URL that bypasses the gate.
+
+**Suffix guard (issue #195).** Before the original fix, the field accepted any
+file type and the page rendered a confident "DOWNLOAD PDF" button that handed
+the visitor a text file. Two layers still guard it: the seam `pattern:`
+(rejecting a non-`.pdf` value at save time) and the layout, which renders the
+button only when the key's last four characters, downcased, equal `.pdf`.
+**Quoting matters**: the regex must be **single-quoted** YAML (`'\.pdf$'`) — a
+double-quoted `"\.pdf$"` is a YAML parse *error*, not merely a different regex.
+Verify with a real parser, never by eye:
 
 ```sh
-cp any.pdf assets/images/uploads/probe.pdf   # bytes are irrelevant to the build
-# add `pdf: /assets/images/uploads/probe.pdf` to one _media/*.md, then:
-bundle exec jekyll build && ruby scripts/verify-build-artifacts.rb
-# revert both when done
+ruby -ryaml -e 'p YAML.safe_load(File.read("admin/collections.site.yml", encoding: "utf-8")).find { |c| c["name"] == "media" }["fields"].find { |f| f["name"] == "pdf_archive_file" }["pattern"]'
+# => ["\\.pdf$", "Must be a PDF file name (.pdf)"]
 ```
 
-What that guard does **not** cover by default: the PDF assertions in
-`verify-build-artifacts.rb` that key off an entry's own `pdf:` value (`links to
-its PDF`, `is published to _site`, and the issue #195 `rendered PDF href ends
-in .pdf` check) fire only for entries that actually carry a `pdf:`. No entry
-does yet — the widget shipped before any editor used it — so they are vacuous,
-and the script prints a `note` saying so rather than letting a green run imply
-coverage it lacks. The first real upload arms them. Two OTHER assertions the
-same script added for issue #194 are **not** conditional on a `pdf:` — they
-scan every built, ungated `/media/<slug>/` page's rendered outbound-link text
-and fail if fewer than two distinct labels appear (or if all of them say "Read
-the article"), because the catalogue already has entries in more than one
-category (`Podcasts & Interviews`, `Policy & Advocacy`, …), so that guard is
-armed today, not waiting on a future upload.
+**What the build verifies, and what it cannot.** `verify-build-artifacts.rb`
+splits the PDF assertions two ways and reports which half ran, because "All
+assertions passed" over zero of both would be a green light wired to nothing:
+
+| entry state | assertion |
+|---|---|
+| key, `pdf_public: false` | page carries no `/media-pdfs/` href and no file name |
+| key, `pdf_public: true`  | page links `/media-pdfs/<key>`, href ends `.pdf`, **and the file exists in `_site`** |
+| no key | nothing (a legitimate content state) |
+
+That last publish-side row is why a ticked box currently **fails** the build:
+the step that copies an opted-in object out of the private archive into the
+deploy is platform-side (`cms-platform`) and is not wired up yet. That is
+deliberate — better a loud red than a "Download PDF" button that 404s. Both
+halves were proven able to fail: flipping one entry to `pdf_public: true` fails
+the `_site` existence check, and removing the `pdf_public` test from the layout
+fails all eight withhold assertions.
+
+**Adding an archived PDF, end to end.**
+
+```sh
+# 1. render it (or obtain the publisher's own PDF)
+python3 scripts/archive-article-pdf.py /tmp/out worklist.json
+# 2. check it is not a paywall stub — under ~800 chars of body is not an archive
+# 3. upload to the PRIVATE archive (never into this repo)
+bash scripts/media-archive.sh put /tmp/out/<slug>.pdf
+# 4. in /admin, set "Archived PDF" to <slug>.pdf; leave the publish box UNTICKED
+#    unless we may lawfully republish it
+```
 
 **Gating.** `_layouts/media.html` honours `site_live` exactly as `home.html`
 does: while the gate is closed an item page renders only the coming-soon shell,
