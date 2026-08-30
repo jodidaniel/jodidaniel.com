@@ -104,6 +104,14 @@ exclude:
   - infrastructure
   - oauth-proxy
   - scripts
+  # Internal engineering docs. Jekyll copies any directory it is not told to
+  # exclude, so without this line docs/CONTENT-MODEL.md, CI-AND-PLATFORM.md and
+  # UI-EXPLORATORY-TESTING.md are served verbatim from https://<apex>/docs/ —
+  # measured, not theorised. They are notes for whoever maintains the site, not
+  # site content, and CONTENT-MODEL.md now describes the private media archive
+  # and how its access gate works, which is precisely the wrong thing to hand a
+  # stranger. (`scripts` above was already excluded for the same reason.)
+  - docs
   - README.md
   - "*.env"
   # The single-page mockup is kept in the repo as the design reference for the
