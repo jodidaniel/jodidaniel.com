@@ -112,6 +112,13 @@ exclude:
   # and how its access gate works, which is precisely the wrong thing to hand a
   # stranger. (`scripts` above was already excluded for the same reason.)
   - docs
+  # Same leak, root-level: Jekyll copies any root file it is not told to
+  # exclude, so AGENTS.md (and CLAUDE.md, which is one `@AGENTS.md` line) were
+  # served from https://<apex>/AGENTS.md — measured 200 on prod. They are the
+  # maintainer's notes, and post-`docs` exclusion they are the remaining copy
+  # that describes the private media archive and its gate.
+  - AGENTS.md
+  - CLAUDE.md
   - README.md
   - "*.env"
   # The single-page mockup is kept in the repo as the design reference for the

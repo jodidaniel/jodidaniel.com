@@ -453,6 +453,29 @@ unless pdf_bytes_in_repo.empty?
   pdf_bytes_in_repo.first(5).each { |f| puts "       stray PDF: #{f}" }
 end
 
+puts
+puts "== Internal engineering notes are not served =="
+# Jekyll COPIES anything it is not told to exclude, so a maintainer file added
+# at the repo root or in a new directory is published by default — the failure
+# is silent, and it is a leak of the wrong kind of detail (CONTENT-MODEL.md and
+# AGENTS.md both describe the private media archive and how its gate works).
+# Both were measured serving 200 from prod before `_config.yml` excluded them.
+# Assert on the BUILT tree rather than on the exclude list: the invariant is
+# "not published", and a future rename would leave an exclude-list check green
+# while the file went back to being served.
+INTERNAL_DOCS = %w[AGENTS.md CLAUDE.md README.md docs].freeze
+INTERNAL_DOCS.each do |name|
+  check(failures, "#{name} is NOT published to _site") do
+    !File.exist?(File.join(SITE, name))
+  end
+end
+# The catch-all: any OTHER markdown at the built root is almost certainly a
+# maintainer note that slipped in. `.md` under _media/ etc. is rendered to HTML,
+# so a surviving .md file here is a static copy, never a page.
+stray_md = Dir.glob(File.join(SITE, "*.md")).map { |f| File.basename(f) }
+check(failures, "no stray markdown is published at the site root") { stray_md.empty? }
+stray_md.first(5).each { |f| puts "       stray markdown: /#{f}" }
+
 puts "== Media: authored vs. appearances are separated =="
 # The owner's request: separate media appearances/articles she is quoted in
 # from things she authored/co-authored. The old flat five-category list mixed
