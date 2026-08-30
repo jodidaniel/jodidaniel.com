@@ -593,6 +593,20 @@ header .tagline {
     margin-top: 0.15rem;
 }
 
+/* Group label ABOVE each .media-grid inside #media -- the owner's split of
+   authored work from appearances/coverage (see _layouts/home.html's
+   media_authored_cats/media_coverage_cats). One step below .section-title
+   (the section's own heading) and one step above each category's own h3, so
+   the hierarchy reads: section title, group label, category label. */
+.media-group-heading {
+    display: block;
+    font-family: 'Raleway', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #1a3a5c;
+    margin: 1.75rem 0 0.75rem;
+}
+
 /* Per-item media page (/media/<slug>/) — the target of every entry in the
    media list above. Reuses .container / .section-title / .contact-link so the
    detail page reads as the same document as the home page. */

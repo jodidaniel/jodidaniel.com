@@ -266,9 +266,9 @@ end
 # a conference talk all rendered the same wrong verb. Assert the category
 # default actually reached the built HTML, not just the layout source: at
 # least one non-default label must appear, and (since the catalogue carries
-# at least one `Podcasts & Interviews` and one `Policy & Advocacy` entry —
-# see _media/1-ai-health-care-hipaa.md and _media/1-fda-amicus.md) at least
-# two DISTINCT labels must appear across the built, ungated pages.
+# at least one `Podcasts & Interviews` and one `Briefs, Testimony & Reports`
+# entry — see _media/1-ai-health-care-hipaa.md and _media/1-fda-amicus.md) at
+# least two DISTINCT labels must appear across the built, ungated pages.
 distinct_labels = article_labels.values.compact.uniq
 check(failures, "built media pages render more than one outbound-link label (issue #194)") do
   !article_labels.empty? && distinct_labels.length >= 2
@@ -291,6 +291,123 @@ if pdf_checks.zero?
   puts "       to re-run it."
 else
   puts "  ok   PDF assertions exercised on #{pdf_checks} media entr#{pdf_checks == 1 ? 'y' : 'ies'}"
+end
+
+puts "== Media: authored vs. appearances are separated =="
+# The owner's request: separate media appearances/articles she is quoted in
+# from things she authored/co-authored. The old flat five-category list mixed
+# the two — Featured Articles held both a blog she writes AND an interview
+# where a reporter quotes her, which read as if she'd written the interview.
+# The five categories now live in two GROUPS (media_authored_cats /
+# media_coverage_cats in _layouts/home.html) and are dual-maintained across
+# THREE places: this seam's `category` options, those two lists in
+# _layouts/home.html, and the `{% case page.category %}` default-label map in
+# _layouts/media.html. Each leg below guards one of the three; the last group
+# guards the actual invariant the owner asked for.
+KNOWN_MEDIA_CATEGORIES = [
+  "Articles & Commentary",
+  "Briefs, Testimony & Reports",
+  "Talks & Panels",
+  "Podcasts & Interviews",
+  "Press Coverage",
+].freeze
+
+# Leg 0: every _media/*.md's `category` is one of the five known values.
+# Parsed with the `yaml` stdlib (AGENTS.md), never a regex/line-scan.
+media_category_by_slug = {}
+media_title_by_slug = {}
+media_src.each do |src|
+  slug = File.basename(src, ".md")
+  raw = read(src)
+  fm_match = raw && raw.match(/\A---\s*\n(.*?)\n---\s*\n?/m)
+  fm = fm_match && YAML.safe_load(fm_match[1])
+  fm = {} unless fm.is_a?(Hash)
+  category = fm["category"]
+  media_category_by_slug[slug] = category
+  media_title_by_slug[slug] = fm["title"].to_s
+  check(failures, "_media/#{slug}.md category #{category.inspect} is one of the five known values") do
+    KNOWN_MEDIA_CATEGORIES.include?(category)
+  end
+end
+
+# Leg 1 (the seam) vs leg 2 (the layout): the seam's `category` options must
+# equal the UNION of _layouts/home.html's two category lists. The seam is
+# parsed with YAML (reuses `media_seam_fields`, already parsed above); the
+# layout is Liquid, not YAML, so its two lists are read by extracting the
+# literal `split: "|"` string — the same text-level technique this script
+# already uses elsewhere (ARTICLE_LABEL_RE, PDF_HREF_RE) to read templated
+# content that isn't itself a structured format.
+home_layout_src = read(File.join(__dir__, "..", "_layouts", "home.html"))
+authored_cats_literal = home_layout_src && home_layout_src[/assign media_authored_cats = "([^"]*)" \| split: "\|"/, 1]
+coverage_cats_literal = home_layout_src && home_layout_src[/assign media_coverage_cats = "([^"]*)" \| split: "\|"/, 1]
+check(failures, "_layouts/home.html defines media_authored_cats and media_coverage_cats") do
+  !authored_cats_literal.nil? && !coverage_cats_literal.nil?
+end
+authored_categories = authored_cats_literal.to_s.split("|")
+coverage_categories = coverage_cats_literal.to_s.split("|")
+layout_categories = (authored_categories + coverage_categories).sort
+
+seam_category_field = media_seam_fields["category"]
+seam_category_options = (seam_category_field && seam_category_field["options"]).to_a.sort
+check(
+  failures,
+  "seam's category options == union of _layouts/home.html's two category lists -- " \
+  "seam has #{seam_category_options.inspect}, layout has #{layout_categories.inspect}"
+) { seam_category_options == layout_categories }
+
+# Leg 3: _layouts/media.html's `{% case page.category %}` has a `when` for
+# each of the five — this is the leg with no other guard today (the #194
+# label map there was never cross-checked against anything until now).
+media_layout_src = read(File.join(__dir__, "..", "_layouts", "media.html"))
+media_layout_whens = media_layout_src.to_s.scan(/when "([^"]+)"/).flatten
+KNOWN_MEDIA_CATEGORIES.each do |cat|
+  check(failures, "_layouts/media.html's {% case page.category %} has a `when \"#{cat}\"`") do
+    media_layout_whens.include?(cat)
+  end
+end
+
+# The actual invariant the owner asked for: on the built home page, both
+# group headings render, and every authored-group item's title appears
+# BEFORE every coverage-group item's title. Vacuous while site_live is
+# false (the gate hides the whole Media section) — same conditional posture
+# as the other gated checks in this file (note, not a failure).
+if home_html.to_s.include?('<section id="media"')
+  settings_yaml_for_media = YAML.safe_load(read(File.join(__dir__, "..", "_data", "settings.yml")) || "") || {}
+  authored_heading = settings_yaml_for_media.dig("section_headings", "media_authored_heading").to_s
+  coverage_heading = settings_yaml_for_media.dig("section_headings", "media_coverage_heading").to_s
+
+  check(failures, "built home page includes the authored-group heading #{authored_heading.inspect}") do
+    !authored_heading.empty? && home_html.include?(authored_heading)
+  end
+  check(failures, "built home page includes the coverage-group heading #{coverage_heading.inspect}") do
+    !coverage_heading.empty? && home_html.include?(coverage_heading)
+  end
+
+  authored_indices = media_category_by_slug.filter_map do |slug, cat|
+    next unless authored_categories.include?(cat)
+    title = media_title_by_slug[slug]
+    home_html.index(title) if title && !title.empty?
+  end
+  coverage_indices = media_category_by_slug.filter_map do |slug, cat|
+    next unless coverage_categories.include?(cat)
+    title = media_title_by_slug[slug]
+    home_html.index(title) if title && !title.empty?
+  end
+
+  check(failures, "built home page has both authored-group and coverage-group items to order") do
+    !authored_indices.empty? && !coverage_indices.empty?
+  end
+  check(
+    failures,
+    "every authored-group item title appears BEFORE every coverage-group item title -- " \
+    "authored max index #{authored_indices.max.inspect}, coverage min index #{coverage_indices.min.inspect}"
+  ) do
+    !authored_indices.empty? && !coverage_indices.empty? && authored_indices.max < coverage_indices.min
+  end
+else
+  puts "  note site_live is false (or no <section id=\"media\"> rendered) -- the authored-vs-"
+  puts "       coverage heading/ordering checks did NOT run. Flip site_live: true and rebuild"
+  puts "       to arm them."
 end
 
 puts "== Upcoming Events (Jodi 2026-08-30 feedback) =="

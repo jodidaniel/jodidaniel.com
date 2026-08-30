@@ -127,10 +127,37 @@ pushes the nav pills further down the page, which is exactly what
 `measure-fold.js` (see the CSS above-the-fold tuning it drove) exists to
 catch before it ships. Keep it to roughly one sentence.
 
-**Media is special**: items carry a `category`
-(Featured Articles / Policy & Advocacy / Podcasts & Interviews /
-Speaking & Panels / Press & News). The home layout groups all `site.media`
-items by that `category` field and renders a per-category block with an icon.
+**Media is special**: items carry a `category`, and the five categories live
+in **two GROUPS** — the owner's request to separate media appearances/
+articles she is quoted in from things she authored/co-authored:
+
+| Group | Categories |
+|---|---|
+| Authored (her own words, written or formally delivered) | Articles & Commentary; Briefs, Testimony & Reports |
+| Appearances & coverage (she spoke, or someone wrote about her) | Talks & Panels; Podcasts & Interviews; Press Coverage |
+
+The old flat five-category list (Featured Articles / Policy & Advocacy /
+Podcasts & Interviews / Speaking & Panels / Press & News) mixed the two —
+`Featured Articles` held both a blog she writes AND an interview where a
+reporter quotes her, which read as if she'd written the interview.
+
+The home layout groups all `site.media` items by `category`, renders a
+per-category block with an icon (same as before the split), and now wraps
+each GROUP's category blocks in their own `.media-grid` under a group
+heading — Group A renders before Group B, so authored work always lists
+above appearances/coverage.
+
+**Re-filing an item into the new taxonomy means changing `category` (and
+sometimes `weight`), never the filename.** Item files are slugged
+`{{weight}}-{{slug}}.md` at creation time, but the slug is not re-derived
+when `weight` changes later — **renaming a `_media/*.md` file breaks the
+live URL it already publishes at** (see "Media items are real pages" below),
+so the split above was done by editing front matter only. The result: a
+file's numeric prefix no longer necessarily matches its current `weight` —
+this already had precedent before the split
+(`1-fda-introduces-….md` has always carried `weight: 0`) and is expected,
+not a bug to "fix" by renaming.
+
 **Media item `.md` files live FLAT in `_media/` (no subdirectories).** They
 used to be organized into category subfolders (`_media/policy/` etc.), but a
 Decap **folder collection reads its `folder:` NON-recursively** — so the nested
@@ -186,20 +213,29 @@ optional override plus a category-derived default, the same shape as
 
   | Category | Default label |
   |---|---|
-  | Featured Articles | Read the article |
-  | Policy & Advocacy | Read the brief |
+  | Articles & Commentary | Read the article |
+  | Briefs, Testimony & Reports | Read the document |
+  | Talks & Panels | About this talk |
   | Podcasts & Interviews | Listen to the episode |
-  | Speaking & Panels | About this talk |
-  | Press & News | Read the piece |
+  | Press Coverage | Read the coverage |
   | (unrecognized/blank) | Read the article |
 
-  **This map is DUAL-MAINTAINED with the `category` select `options:` in
-  `admin/collections.site.yml`**, exactly like `media_by_category` in
-  `_layouts/home.html` — adding, renaming, or reordering a category means
-  editing the layout's `{%- case page.category -%}` block AND the seam's
-  `options:` list, or the new category silently falls back to "Read the
-  article" on its own page (the home page's grouped list would also drop it,
-  per the existing `media_by_category` rule above).
+  `Podcasts & Interviews` now also holds print interviews (moved out of the
+  old `Featured Articles`) — "Listen to the episode" is right for the actual
+  podcast and wrong for a written interview, which is why those three items
+  each carry a per-item `link_label` override ("Read the interview") rather
+  than a sixth category.
+
+  **This map is the THIRD leg of a three-way dual-maintenance triangle**,
+  alongside the `category` select `options:` in `admin/collections.site.yml`
+  and the `media_authored_cats`/`media_coverage_cats` lists in
+  `_layouts/home.html` (see "Media is special" above) — adding, renaming, or
+  moving a category between groups means editing all three, or the new/moved
+  category silently falls back to "Read the article" on its own page, drops
+  out of the home page's grouped list, or both.
+  `scripts/verify-build-artifacts.rb`'s "Media: authored vs. appearances are
+  separated" group cross-checks all three legs and is the only one of the
+  three with a build-time guard until now.
 - **`pdf_label`** (optional string). Same shape, for the PDF download button:
   blank defaults to "Download PDF"; set it to override for an unusual item
   (e.g. an exhibit, a transcript).

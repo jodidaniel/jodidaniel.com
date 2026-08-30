@@ -1,8 +1,8 @@
 ---
-category: Featured Articles
+category: Articles & Commentary
 title: FDA Introduces a Potential Review Architecture for Generative AI-Enabled
   Medical Devices
 source: JD Supra
 article_url: https://www.jdsupra.com/legalnews/fda-introduces-a-potential-review-5114709/
-weight: 0
+weight: 1
 ---

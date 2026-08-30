@@ -1,7 +1,8 @@
 ---
-category: "Featured Articles"
+category: "Articles & Commentary"
 title: "The Data Advisor Blog"
 source: "Wilson Sonsini"
 article_url: "https://www.wsgrdataadvisor.com/author/jodi-daniel/"
-weight: 2
+link_label: "Visit the blog"
+weight: 3
 ---
