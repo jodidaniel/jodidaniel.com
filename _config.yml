@@ -1,6 +1,11 @@
 title: Jodi Daniel
-# GO-LIVE SEO (live public description): the site is live (`site_live: true` in
-# _data/settings.yml) and this description drives {% seo %} meta tags.
+# LAUNCH description. This is the real, post-sign-off copy and it stays here
+# permanently -- but it only reaches a page when the gate is OPEN. While
+# `site_live` is false (_data/settings.yml), _layouts/home.html skips {% seo %}
+# entirely and serves `coming_soon.seo_description` instead, so this string is
+# not published ahead of the copy sign-off (issue #26). Keeping the real value
+# here, gated at the point of use, is what makes go-live a one-line flag flip
+# rather than a three-file edit someone has to remember to do.
 description: "Jodi Daniel — nationally recognized leader in digital health law and policy. Regulatory strategy, health data privacy, FDA and telehealth counsel for healthcare organizations and technology innovators."
 url: "https://jodidaniel.com"
 baseurl: ""

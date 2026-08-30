@@ -1,3 +1,10 @@
+{%- comment -%}
+  `settings` / `live` are assigned HERE, above <head>, not in <body> where they
+  used to be -- the SEO block below has to branch on the gate, and a Liquid
+  assign is not visible before its own line.
+{%- endcomment -%}
+{%- assign settings = site.data.settings -%}
+{%- assign live = settings.site_live -%}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,7 +13,37 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Source+Sans+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+    {%- comment -%}
+      SEO is gated in PARALLEL with the body (the contract AGENTS.md states:
+      "no marketing claim is served until sign-off"). Until this was added the
+      two halves disagreed: the body correctly rendered only the coming-soon
+      shell while {% seo %} unconditionally served _config.yml's launch
+      description and index.html's "Digital Health Law & Policy Leader" title,
+      so a gated production build still announced the launch to search engines
+      and to anyone who looked at the tab. Measured on the deployed preview at
+      the gated head, which is what caught it.
+
+      Keeping the branch here rather than neutralising _config.yml/index.html
+      is what lets the go-live change stay a ONE-LINE flip of `site_live`:
+      those two files hold the real values at all times and simply are not
+      consulted while gated. Same shape as _layouts/media.html.
+
+      The gated arm deliberately does NOT add `noindex`: the apex is indexed
+      today with a neutral coming-soon string, and de-indexing it is an
+      outward-facing SEO change nobody asked for. It serves the same neutral
+      copy production serves right now -- just without the launch claim. (The
+      per-item /media/ pages DO carry noindex while gated; those are new routes
+      with no indexing status to preserve.)
+    {%- endcomment -%}
+    {%- if live -%}
     {% seo %}
+    {%- else -%}
+    <title>{{ site.title }}</title>
+    {%- assign gated_desc = settings.coming_soon.seo_description -%}
+    {%- if gated_desc and gated_desc != "" -%}
+    <meta name="description" content="{{ gated_desc | escape }}" />
+    {%- endif -%}
+    {%- endif -%}
     {%- comment -%}
       cms-platform#325: the gem emits its favicon <link> from its own default
       layout's <head>, which never runs here -- this site's layouts are
@@ -18,8 +55,6 @@
     <link rel="stylesheet" href="{{ '/assets/css/jodidaniel.css' | cachebust }}">
 </head>
 <body id="top">
-    {%- assign settings = site.data.settings -%}
-    {%- assign live = settings.site_live -%}
     {%- comment -%}
       `site_live` gates the whole site. When false (the default until the boss
       signs off), only the coming-soon shell renders: name + coming_soon.tagline

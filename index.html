@@ -1,6 +1,9 @@
 ---
 layout: home
-# GO-LIVE (content policy): the real page title ships now that `site_live: true`.
+# LAUNCH page title. Like _config.yml's `description`, this holds the real
+# value at all times but is only consulted while the gate is OPEN --
+# _layouts/home.html calls {% seo %} only when `site_live` is true, so a
+# gated build never serves it. Go-live is therefore just the flag flip.
 #
 # NOTE the value is the ROLE ONLY, deliberately. {% seo %} composes the tab title
 # as "<page.title> | <site.title>", and site.title is already "Jodi Daniel" — so

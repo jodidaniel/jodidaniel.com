@@ -218,6 +218,7 @@
             fields:
               - { name: tagline,   label: "Coming Soon Tagline", widget: string }
               - { name: copyright, label: "Copyright", widget: string }
+              - { name: seo_description, label: "Search-Result Description (while coming soon)", widget: string, required: false, hint: "What Google and link previews show while the site is still gated. Keep it neutral -- the launch description in the site config only takes over once Site Live is on. Leave blank to serve no description at all." }
           - name: footer
             label: "Footer (shown when site_live = true)"
             widget: object

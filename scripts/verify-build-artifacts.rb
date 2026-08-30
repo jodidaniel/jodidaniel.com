@@ -346,11 +346,26 @@ end
 # entry — see _media/1-ai-health-care-hipaa.md and _media/1-fda-amicus.md) at
 # least two DISTINCT labels must appear across the built, ungated pages.
 distinct_labels = article_labels.values.compact.uniq
-check(failures, "built media pages render more than one outbound-link label (issue #194)") do
-  !article_labels.empty? && distinct_labels.length >= 2
-end
-check(failures, "built media pages do NOT all say \"Read the article\" (issue #194)") do
-  !article_labels.empty? && distinct_labels != ["Read the article"]
+# ...and "ungated" in that sentence is load-bearing, which is why these two are
+# guarded rather than asserted flat. A media item's whole <article> -- the
+# outbound-link button included -- sits inside `{% if live %}`, so a GATED build
+# renders zero labels and both checks below fail for a reason that is not a
+# defect. Gated is the normal state of this site until the copy sign-off (issue
+# #26), so left unguarded they made a clean tree report failure on every run,
+# which is the fastest way to teach someone to stop reading this script's
+# output. Announce the vacuity instead -- the same contract the PDF and
+# nav-anchor groups follow below and above.
+if article_labels.empty?
+  puts "  note site_live is false (or no media pages rendered) -- the issue #194"
+  puts "       outbound-link label checks did NOT run. Flip site_live: true and"
+  puts "       rebuild to arm them."
+else
+  check(failures, "built media pages render more than one outbound-link label (issue #194)") do
+    distinct_labels.length >= 2
+  end
+  check(failures, "built media pages do NOT all say \"Read the article\" (issue #194)") do
+    distinct_labels != ["Read the article"]
+  end
 end
 
 # The two PDF assertions above are CONDITIONAL — they fire only for an entry
