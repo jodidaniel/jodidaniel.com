@@ -10,7 +10,7 @@ data file:
 | Source file | Holds | Edited in `/admin` as |
 |-------------|-------|------------------------|
 | `_data/header.yml`   | `name`, `tagline`                              | **Header / Hero** (`site_header`) |
-| `_data/about.yml`    | `photo`, `intro_heading`, `bio[]`, `nav[]`     | **About** (`site_about`) |
+| `_data/about.yml`    | `photo`, `intro_heading`, `lead`, `bio[]`, `nav[]` | **About** (`site_about`) |
 | `_data/contact.yml`  | `heading`, `intro`, `links[]`                  | **Contact** (`site_contact`) |
 | `_data/settings.yml` | `site_live` GATE, `coming_soon`, `footer`, `back_to_top_label`, `section_headings` | **Site Settings** (`site_settings`) |
 
@@ -59,7 +59,9 @@ posture as the PDF-upload checks documented further down in this file.
 Declared in `_config.yml` `collections:` with **`output: false`** (editable
 content, NOT standalone published pages) — **except `media`, which is
 `output: true`**; see "Media items are real pages" below. The layout reads each
-as `site.<collection> | sort: 'weight'`:
+as `site.<collection> | sort: 'weight'` — **except `events`, sorted by
+`start_date`**; see "Upcoming Events are ordered by `start_date`, not `weight`"
+below.
 
 | Collection | Directory | Per-item fields |
 |------------|-----------|-----------------|
@@ -68,9 +70,62 @@ as `site.<collection> | sort: 'weight'`:
 | `accomplishments` | `_accomplishments/` | `title`, `text`, `weight` |
 | `media`           | `_media/`           | `category`, `title`, `source`, `article_url`, `link_label` (optional), `pdf` (optional), `pdf_label` (optional), `weight` |
 | `education`       | `_education/`       | `degree`, `field`, `school`, `weight` |
+| `events`          | `_events/`          | `title`, `org`, `start_date`, `date_display`, `location`, `session` (optional), `event_url` (optional) |
 
 Each item is a front-matter-only `.md` file slugged `{{weight}}-{{slug}}`
 (e.g. `_expertise/1-digital-health-ai.md`). `weight` controls render order.
+**`events` is the one exception**: it is slugged `{{start_date}}-{{slug}}`
+instead, because there is no `weight` field to slug from — see below.
+
+### Upcoming Events are ordered by `start_date`, not `weight` (Jodi's 2026-08-30 feedback)
+
+`events` departs from every sibling folder collection above in three ways,
+each forced by what the section actually needs:
+
+- **Ordered by `start_date`, not `weight`.** "Upcoming" is inherently
+  chronological, so the date itself decides the order
+  (`site.events | sort: 'start_date'` in `_layouts/home.html`) rather than a
+  hand-maintained number. This is also what frees the owner from
+  renumbering the whole list every time she inserts a new event between two
+  existing ones — the trade-off every other section's `weight` field makes
+  in the other direction (an explicit, editor-controlled order that has to
+  be kept in sync by hand).
+- **`start_date` must stay a quoted `"YYYY-MM-DD"` string, never a bare
+  date.** Decap's `string` widget always writes a quoted scalar, so a
+  Decap-saved value parses as a Ruby/YAML String. A hand edit that drops the
+  quotes (`start_date: 2026-09-17`) gets auto-resolved to a YAML timestamp
+  (a `Date` object) instead, and `sort: 'start_date'` on a mix of Strings
+  and Dates compares mismatched types — `scripts/verify-build-artifacts.rb`
+  asserts every `_events/*.md`'s `start_date` is a String matching
+  `\A\d{4}-\d{2}-\d{2}\z` for exactly this reason. The admin seam's
+  `pattern: ['^\d{4}-\d{2}-\d{2}$', ...]` on that field must also stay
+  **single-quoted YAML** — `\d` inside a double-quoted scalar is not a
+  recognized escape and is a YAML parse error, not merely a different regex
+  (same trap the media `pdf` field's pattern already documents further
+  down).
+- **The outbound field is `event_url`, never `url`.** Same DocumentDrop
+  shadow as `_media`'s `article_url` (see "Media items are real pages"
+  below): a front-matter `url:` key on a collection document is unreachable
+  from Liquid, so this collection's field is named `event_url` from the
+  start rather than hitting that trap a second time.
+
+**Past events are not auto-hidden — deliberately.** The layout renders every
+event in `site.events`, with no date-based filter to drop ones that have
+already happened. Filtering on "today" would make the rendered page depend
+on the moment it was *built*, not on its content — exactly the
+non-determinism the platform's visual-regression lane and this repo's own
+test rules (AGENTS.md: "no reliance on wall-clock time") forbid. The owner
+removes a finished event from `/admin` herself once it has passed.
+
+**The new `about.yml` field, `lead`, costs above-the-fold space.** Feedback
+item 2 split the About card's copy in two: `lead` is a single sentence that
+renders *above* the nav pills (in `.intro-lead`), and the rest of `bio[]`
+renders *below* them (in `.intro-bio`) — see `_layouts/home.html` and
+`assets/css/jodidaniel.css`. `lead` and the nav pills are the only content
+above the fold on a laptop-height viewport; every character added to `lead`
+pushes the nav pills further down the page, which is exactly what
+`measure-fold.js` (see the CSS above-the-fold tuning it drove) exists to
+catch before it ships. Keep it to roughly one sentence.
 
 **Media is special**: items carry a `category`
 (Featured Articles / Policy & Advocacy / Podcasts & Interviews /

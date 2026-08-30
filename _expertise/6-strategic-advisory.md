@@ -1,5 +1,5 @@
 ---
 title: "Strategic Advisory"
-description: "Policy development, government relations, and strategic counsel for healthcare technology innovators and investors."
+description: "Policy strategy and government relations for health technology companies and the investors backing them."
 weight: 6
 ---

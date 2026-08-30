@@ -1,14 +1,27 @@
 photo: "/assets/images/uploads/jodi-daniel.jpg"
-intro_heading: "Pioneering the Future of Digital Health"
+# Jodi's 2026-08-30 feedback, item 1 ("too lawyery/conservative"): the heading
+# and lead now open with the concrete claim rather than the credential stack.
+# Every string here stays /admin-editable, so any of it can be dialled back
+# from the About editor without a code change.
+intro_heading: "She helped write the rules for digital health."
+# `lead` (feedback item 2) is the short blurb that renders ABOVE the nav pills
+# so both land in the first viewport; `bio` renders BELOW them. Keep this to
+# roughly one sentence — it is the only body copy above the fold, and every
+# line added here pushes the nav down. See docs/CONTENT-MODEL.md.
+lead: "Now she helps the people building AI and digital health work out what those rules mean for them."
 bio:
   # issue #197: **bold** here renders through markdownify (see _layouts/home.html)
   # as <strong>, styled to match the mockup's `.highlight` accent color/weight
   # (see .intro-text strong in jodidaniel.css). The owner can bold any future
   # phrase from /admin in plain Markdown — no HTML hand-writing required.
-  - "Jodi Daniel is a **nationally recognized leader** in digital health law and policy, trusted by healthcare organizations and technology innovators to navigate the complex regulatory landscape of digital health and wellness."
-  - "With **over 30 years of experience** in healthcare innovation, including 15 years as a lawyer and senior policymaker at the U.S. Department of Health and Human Services (HHS), Jodi brings unparalleled expertise to groundbreaking products and services that raise novel legal, policy, and ethical issues."
-  - "As one of the **first digital health lawyers** and a founding Director at the Office of the National Coordinator for Health IT (ONC) at HHS, Jodi helped shape the very foundation of digital health regulation in the United States."
+  - "Jodi is a partner at **Wilson Sonsini** in Washington, DC. She advises health systems, digital health and AI companies, and the investors backing them — usually on the products the rulebook did not anticipate."
+  - "She spent **15 years as a lawyer and senior policymaker at the U.S. Department of Health and Human Services**: first as the department's first senior counsel for health IT, then as **founding director of the Office of Policy at ONC**. She was a key drafter of the original **HIPAA Privacy Rule**."
+  - "She has been doing this for **more than 30 years** — as **one of the first digital health lawyers**, since before the field had a name. She also teaches at **Yale School of Medicine**."
 nav:
+  # Feedback item 3 added the Events section; "events" must also exist in the
+  # `anchor` select options in admin/collections.site.yml (dual-maintained with
+  # the <section id="..."> set in _layouts/home.html — see docs/CONTENT-MODEL.md).
+  - { label: "Events",          anchor: "events" }
   - { label: "Expertise",       anchor: "expertise" }
   - { label: "Experience",      anchor: "experience" }
   - { label: "Accomplishments", anchor: "accomplishments" }

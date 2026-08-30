@@ -1025,9 +1025,12 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
 - Single-page gated bio. Gate = `_data/settings.yml` `site_live` (default
   `false`); `_layouts/home.html` wraps bio sections in `{% if live %}`.
 - Content lives in `_data/{header,about,contact,settings}.yml` (singletons) +
-  the `_expertise/_experience/_accomplishments/_media/_education` folder
-  collections (ordered by `weight`, `output: false` — **except `media`**, which
-  is `output: true` and publishes a page per item at `/media/<slug>/`). NOT a
+  the `_expertise/_experience/_accomplishments/_media/_education/_events`
+  folder collections (ordered by `weight`, `output: false` — **except `media`**,
+  which is `output: true` and publishes a page per item at `/media/<slug>/`,
+  and **except `events`**, which is ordered by `start_date` — chronological,
+  not editor-numbered, since "upcoming" means chronological and it frees the
+  owner from renumbering the list every time she inserts an event). NOT a
   single data file. Full field lists → `docs/CONTENT-MODEL.md`.
 - `/admin` = 9 section editors; generics hidden via `cms.base_collections: []`;
   admin UI shipped by the `cms-platform-theme` gem; seam =
@@ -1078,3 +1081,13 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
   what the editor can pick). Adding, renaming, or reordering a category means
   editing BOTH — a value present in only one silently drops items from the page
   or from the picker, with no build error.
+- **The About nav's `anchor` select `options:` is the same dual-maintenance
+  shape, and it is no longer silent.** `admin/collections.site.yml`'s
+  `site_about` → `nav` → `anchor` field and the `<section id="...">` set in
+  `_layouts/home.html` have to name the same sections (see "About nav anchors
+  are a closed set" in `docs/CONTENT-MODEL.md`) — `scripts/verify-build-
+  artifacts.rb` now cross-checks the seam's options against the *built*
+  section ids (its "admin seam <-> layout section ids stay in step" group,
+  added with the Events section), so a section added, renamed, or removed in
+  one without the other fails the build instead of shipping a picker option
+  nobody can jump to.
