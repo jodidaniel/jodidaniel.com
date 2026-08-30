@@ -14,9 +14,13 @@ footer:
 # the site's "every visible string" rule rather than hardcoded in the layout.
 back_to_top_label: "Back to top"
 
+# Jodi's 2026-08-30 feedback item 1 ("too lawyery/conservative"): the headings
+# read as section labels a person would say out loud rather than CV rubrics.
+# `events_heading` is new with the Upcoming Events section (feedback item 3).
 section_headings:
-  expertise_heading: "Areas of Expertise"
-  experience_heading: "Professional Experience"
-  accomplishments_heading: "Key Accomplishments"
-  media_heading: "Publications & Media"
+  events_heading: "Where to Find Her Next"
+  expertise_heading: "What Jodi Works On"
+  experience_heading: "Where She's Worked"
+  accomplishments_heading: "What She Helped Build"
+  media_heading: "Writing, Talks & Press"
   education_heading: "Education"

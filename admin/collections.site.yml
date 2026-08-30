@@ -74,6 +74,39 @@
       - { name: school,  label: "School", widget: string }
       - { name: weight,  label: "Order", widget: number, hint: "1–3; controls sort order" }
 
+  # Jodi's 2026-08-30 feedback item 3: Upcoming Events. Departs from every
+  # sibling folder collection above in one way on purpose -- there is no
+  # `weight` field here. Order is `start_date` (an ISO YYYY-MM-DD string),
+  # because "upcoming" is inherently chronological, and letting the date
+  # itself decide the order frees the owner from renumbering the whole list
+  # every time she inserts an event between two existing ones. See
+  # docs/CONTENT-MODEL.md.
+  #
+  # `event_url`, NOT `url` -- same DocumentDrop-shadow trap `_media` already
+  # hit (see the `article_url`/`url` comment on the media collection below,
+  # and docs/CONTENT-MODEL.md): a front-matter `url:` key on a collection
+  # document is unreachable from Liquid, so this field is named `event_url`.
+  #
+  # The `start_date` `pattern:` below MUST stay single-quoted YAML --
+  # `'^\d{4}-\d{2}-\d{2}$'`. A double-quoted `"\d"` is a YAML parse error
+  # (not merely a different regex), same trap the `pdf` field's pattern
+  # below already documents.
+  - name: events
+    label: "Upcoming Events"
+    folder: "_events"
+    create: true
+    slug: "{{fields.start_date}}-{{slug}}"
+    editor:
+      preview: false
+    fields:
+      - { name: title,        label: "Event name", widget: string }
+      - { name: org,          label: "Host organization", widget: string }
+      - { name: start_date,   label: "Start date (sets the order)", widget: string, pattern: ['^\d{4}-\d{2}-\d{2}$', 'Use YYYY-MM-DD, e.g. 2026-10-20'], hint: "Year-month-day, e.g. 2026-10-20. This is what orders the list -- earliest first. It is NOT what visitors see; that is the next field." }
+      - { name: date_display, label: "Dates (as shown on the page)", widget: string, hint: "Written however you want it to read, e.g. \"October 20 - 21, 2026\"." }
+      - { name: location,     label: "Location", widget: string, hint: "City and state, e.g. \"Kansas City, MO\". The venue lives on the event's own site." }
+      - { name: session,      label: "Your session (optional)", widget: text, required: false, hint: "Optional. The panel or talk you are on, with its own date and time, e.g. \"Panel - Federal and State AI Policies, October 1 at 4:00 PM\". Leave blank if you are attending rather than speaking." }
+      - { name: event_url,    label: "Event website", widget: string, required: false, pattern: ["^https?://.*", "Must be a valid http(s) URL"] }
+
   # ─────────────────────────────────────────────────────────────────────────────────
   # FILE COLLECTIONS: singleton sections (one entry each).
   # ─────────────────────────────────────────────────────────────────────────────────
@@ -103,6 +136,7 @@
         fields:
           - { name: photo,         label: "Profile Photo", widget: image, required: false, media_library: { config: { multiple: false } } }
           - { name: intro_heading, label: "Intro Heading", widget: string }
+          - { name: lead, label: "Opening line (shown above the nav buttons)", widget: text, hint: "One sentence. This is the only body copy above the fold on a laptop -- everything you add here pushes the nav buttons down the page. The longer bio below the buttons is the next field." }
           - { name: bio,           label: "Bio Paragraphs", widget: list, summary: "{{fields.paragraph | truncate(60)}}", field: { name: paragraph, label: "Paragraph", widget: text } }
           - name: nav
             label: "In-Page Nav Links"
@@ -127,8 +161,14 @@
               # removing, or renaming a `<section id="...">` in the layout
               # means editing this options list too, or the new/renamed
               # section becomes unreachable from the nav picker with no
-              # build error.
-              - { name: anchor, label: "Anchor (destination section)", widget: select, options: ["expertise", "experience", "accomplishments", "media", "education", "contact"], hint: "Which section this pill jumps to when clicked. This is NOT the same as Label above -- Label is the visible button text; changing Label alone will not change where the pill goes." }
+              # build error. `scripts/verify-build-artifacts.rb` now
+              # cross-checks this options list against the built page's
+              # actual `<section id="...">` set (see its "admin seam <->
+              # layout section ids stay in step" group), so the two can no
+              # longer drift silently -- a mismatch fails the build instead
+              # of shipping a picker option nobody can jump to (or a real
+              # section the picker can't reach).
+              - { name: anchor, label: "Anchor (destination section)", widget: select, options: ["events", "expertise", "experience", "accomplishments", "media", "education", "contact"], hint: "Which section this pill jumps to when clicked. This is NOT the same as Label above -- Label is the visible button text; changing Label alone will not change where the pill goes." }
 
   - name: site_contact
     label: "Contact"

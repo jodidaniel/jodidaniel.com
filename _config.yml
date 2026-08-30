@@ -55,6 +55,12 @@ collections:
   # They stay crawlable via the home page's links once the site is live.
   media: { output: true, permalink: /media/:slug/ }
   education: { output: false }
+  # Jodi's 2026-08-30 feedback item 3: Upcoming Events. Unlike every sibling
+  # above, this one is ordered by `start_date` (an ISO YYYY-MM-DD string), NOT
+  # `weight` -- "upcoming" is inherently chronological, and chronological order
+  # is also what frees the owner from renumbering the whole list every time she
+  # inserts an event between two existing ones. See docs/CONTENT-MODEL.md.
+  events: { output: false }
 
 defaults:
   - { scope: { path: "", type: "posts" },    values: { layout: "post" } }

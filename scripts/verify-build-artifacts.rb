@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require "yaml"
+require "date"
 
 # Lightweight build-artifact assertion for the platform-chrome fixes that
 # jodidaniel.com owns (issues #28, #31). jodidaniel ships no JS/Playwright
@@ -291,6 +292,185 @@ if pdf_checks.zero?
 else
   puts "  ok   PDF assertions exercised on #{pdf_checks} media entr#{pdf_checks == 1 ? 'y' : 'ies'}"
 end
+
+puts "== Upcoming Events (Jodi 2026-08-30 feedback) =="
+# _events/ is a NEW folder collection (feedback item 3), ordered by
+# `start_date` rather than `weight` like every sibling collection above --
+# see the comment on `events:` in _config.yml. Front matter is parsed with
+# the `yaml` stdlib (AGENTS.md), never a regex/line-scan.
+events_src = Dir[File.join(__dir__, "..", "_events", "*.md")].sort
+check(failures, "_events/ has entries to check") { !events_src.empty? }
+
+EVENT_DATE_RE = /\A\d{4}-\d{2}-\d{2}\z/
+events_by_slug = {}
+events_src.each do |src|
+  slug = File.basename(src, ".md")
+  raw = read(src)
+  fm_match = raw && raw.match(/\A---\s*\n(.*?)\n---\s*\n?/m)
+  check(failures, "_events/#{slug}.md front matter parses as YAML") { !fm_match.nil? }
+  next unless fm_match
+
+  # `permitted_classes: [Date]` is load-bearing, not boilerplate. A bare
+  # `YAML.safe_load` RAISES Psych::DisallowedClass the moment it meets an
+  # unquoted `start_date: 2026-10-14` -- which is precisely the mistake the
+  # next check exists to report. The script then died at this line with a raw
+  # Psych backtrace instead of the one-line FAIL below, and, worse, took every
+  # remaining assertion in this file down with it (the above-the-fold group
+  # and the seam<->layout cross-check never ran), so a second unrelated
+  # regression in the same run would have been invisible. Permitting Date here
+  # lets the value through AS a Date so the `is_a?(String)` check can report it
+  # properly and the run continues. Rescue anything else Psych can raise for
+  # the same reason: a malformed entry must fail as a named assertion, never as
+  # a stack trace.
+  fm = begin
+    YAML.safe_load(fm_match[1], permitted_classes: [Date])
+  rescue Psych::Exception
+    nil
+  end || {}
+  events_by_slug[slug] = fm
+
+  check(failures, "_events/#{slug}.md front matter is a YAML mapping") { fm.is_a?(Hash) && !fm.empty? }
+  next unless fm.is_a?(Hash)
+
+  check(failures, "_events/#{slug}.md start_date is a String \"YYYY-MM-DD\" (not a YAML Date)") do
+    # Decap's `string` widget always writes a quoted scalar, so YAML parses
+    # it as a String -- but a hand edit that drops the quotes (`start_date:
+    # 2026-09-17` bare) gets auto-resolved to a Ruby Date by YAML's
+    # timestamp rule instead. `sort: 'start_date'` on a mix of Strings and
+    # Dates compares mismatched types, so this has to stay a String on
+    # every entry or the sort silently misorders (or raises) the moment one
+    # entry drifts.
+    fm["start_date"].is_a?(String) && fm["start_date"].match?(EVENT_DATE_RE)
+  end
+  check(failures, "_events/#{slug}.md has a non-empty title") do
+    fm["title"].is_a?(String) && !fm["title"].strip.empty?
+  end
+  # The DocumentDrop trap (docs/CONTENT-MODEL.md, and the AGENTS.md list of
+  # reserved front-matter keys): `url` and `date` are both DocumentDrop
+  # accessors that shadow a same-named front-matter key before Liquid ever
+  # sees it. That's exactly why this collection's fields are `event_url` and
+  # `start_date`, never `url`/`date` -- and why a stray top-level `url:` or
+  # `date:` here is a regression, not a style nit.
+  check(failures, "_events/#{slug}.md has no top-level `url:` key (DocumentDrop shadow)") do
+    !fm.key?("url")
+  end
+  check(failures, "_events/#{slug}.md has no top-level `date:` key (DocumentDrop shadow)") do
+    !fm.key?("date")
+  end
+end
+
+home_html_for_events = read(File.join(SITE, "index.html"))
+if home_html_for_events && home_html_for_events.include?('<section id="events"')
+  events_by_slug.each_value do |fm|
+    title = fm["title"].to_s
+    check(failures, "built home page includes event title #{title.inspect}") do
+      home_html_for_events.include?(title)
+    end
+    date_display = fm["date_display"].to_s
+    next if date_display.empty? # guarded {% if %} in the layout; nothing to find
+
+    check(failures, "built home page includes event date_display #{date_display.inspect}") do
+      home_html_for_events.include?(date_display)
+    end
+  end
+
+  expected_order = events_by_slug.values.sort_by { |fm| fm["start_date"].to_s }.map { |fm| fm["title"].to_s }
+  found_order = events_by_slug.values.map { |fm| fm["title"].to_s }
+                               .select { |t| home_html_for_events.include?(t) }
+                               .sort_by { |t| home_html_for_events.index(t) }
+  check(
+    failures,
+    "events appear in the built page in start_date order -- found #{found_order.inspect}, " \
+    "expected #{expected_order.inspect}"
+  ) { found_order == expected_order }
+else
+  # Same conditional posture as the #196 nav-anchor check and the PDF checks
+  # above: say out loud that this didn't run, rather than let an unrelated
+  # pass (or an empty failures array) imply coverage the gate is hiding.
+  puts "  note no <section id=\"events\"> in the built home page (site_live is false, or no"
+  puts "       events) -- the built-page title/date_display/order checks did NOT run. Flip"
+  puts "       site_live: true and rebuild to arm them."
+end
+
+puts "== Above the fold: blurb + nav (Jodi 2026-08-30 feedback) =="
+# Feedback item 2: the one-sentence `lead` and the nav pills both have to
+# land inside the first viewport; the full bio moves below them. The pixel
+# measurement itself isn't reproducible in pure Ruby (that's what
+# measure-fold.js is for -- see docs/CONTENT-MODEL.md) but the DOM ordering
+# that makes it *possible* is, and that's what a careless future edit -- one
+# that moves .intro-bio back above the nav, say -- would silently undo with
+# no build error. This checks that ordering, not the pixels.
+about_yaml_for_lead = YAML.safe_load(read(File.join(__dir__, "..", "_data", "about.yml")) || "") || {}
+check(failures, "_data/about.yml has a non-empty `lead`") do
+  about_yaml_for_lead["lead"].is_a?(String) && !about_yaml_for_lead["lead"].strip.empty?
+end
+
+home_html_for_fold = read(File.join(SITE, "index.html"))
+lead_idx = home_html_for_fold&.index('class="intro-lead"')
+nav_idx  = home_html_for_fold&.index('class="intro-nav"')
+bio_idx  = home_html_for_fold&.index('class="intro-bio"')
+
+if lead_idx && nav_idx && bio_idx
+  check(failures, "built page: .intro-lead precedes .intro-bio (blurb sits above the bio)") do
+    lead_idx < bio_idx
+  end
+  check(failures, "built page: .intro-nav precedes .intro-bio (nav sits above the bio)") do
+    nav_idx < bio_idx
+  end
+else
+  puts "  note site_live is false (or the About card didn't render, or bio is empty) -- the"
+  puts "       intro-lead/intro-nav/intro-bio ordering check did NOT run. Flip site_live: true"
+  puts "       and rebuild to arm it."
+end
+
+puts "== admin seam <-> layout section ids stay in step =="
+# The `anchor` select's `options:` (site_about -> nav -> anchor, in the admin
+# seam) is DUAL-MAINTAINED with the `<section id="...">` set _layouts/home.html
+# actually renders -- see docs/CONTENT-MODEL.md's "About nav anchors are a
+# closed set" section, and the comment on `anchor` in admin/collections.site.yml
+# itself. A mismatch either offers a picker option nobody can jump to, or
+# leaves a real section unreachable from the nav picker, with no build error
+# either way. Reuses `seam_yaml`, already parsed above for the media-seam
+# checks (`yaml` stdlib, never a regex/line-scan over this flow-mapping file).
+site_about_seam = seam_yaml.is_a?(Array) ? seam_yaml.find { |c| c.is_a?(Hash) && c["name"] == "site_about" } : nil
+check(failures, "admin seam has a `site_about` file collection") { !site_about_seam.nil? }
+
+about_file_seam = site_about_seam && (site_about_seam["files"] || []).find { |f| f.is_a?(Hash) && f["name"] == "about" }
+about_seam_fields = (about_file_seam && about_file_seam["fields"]).to_a
+
+check(failures, "admin seam's site_about offers a `lead` field") do
+  about_seam_fields.any? { |f| f.is_a?(Hash) && f["name"] == "lead" }
+end
+
+nav_seam_field = about_seam_fields.find { |f| f.is_a?(Hash) && f["name"] == "nav" }
+anchor_seam_field = (nav_seam_field && nav_seam_field["fields"]).to_a.find { |f| f.is_a?(Hash) && f["name"] == "anchor" }
+anchor_seam_options = (anchor_seam_field && anchor_seam_field["options"]).to_a
+
+home_html_for_ids = read(File.join(SITE, "index.html"))
+all_section_ids = home_html_for_ids.to_s.scan(/<section\s+id="([a-z-]+)"/).flatten.uniq
+
+if all_section_ids.empty?
+  puts "  note site_live is false (or no sections rendered) -- the admin-seam <-> layout"
+  puts "       section-id cross-check did NOT run. Flip site_live: true and rebuild to arm it."
+else
+  expected_ids = (all_section_ids - ["about"]).sort
+  actual_options = anchor_seam_options.sort
+  check(
+    failures,
+    "admin seam's anchor options == built section ids minus \"about\" -- " \
+    "seam has #{actual_options.inspect}, built page has #{expected_ids.inspect}"
+  ) { actual_options == expected_ids }
+end
+
+events_seam = seam_yaml.is_a?(Array) ? seam_yaml.find { |c| c.is_a?(Hash) && c["name"] == "events" } : nil
+check(failures, "admin seam has an `events` folder collection") { !events_seam.nil? }
+events_seam_field_names = (events_seam && events_seam["fields"]).to_a.filter_map { |f| f["name"] if f.is_a?(Hash) }.sort
+expected_event_fields = %w[date_display event_url location org session start_date title].sort
+check(
+  failures,
+  "admin seam's events fields == what the layout reads -- seam has #{events_seam_field_names.inspect}, " \
+  "expected #{expected_event_fields.inspect}"
+) { events_seam_field_names == expected_event_fields }
 
 puts
 if failures.empty?

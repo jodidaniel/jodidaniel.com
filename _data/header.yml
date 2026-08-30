@@ -1,2 +1,6 @@
 name: "Jodi Daniel"
-tagline: "Digital Health Law & Policy Leader"
+# Jodi's 2026-08-30 feedback: "too lawyery/conservative". The visible tagline
+# carries the warmth; the SEO title in index.html deliberately keeps the formal
+# role string ("Digital Health Law & Policy Leader") because that is the
+# keyword-bearing text search engines index. The two are allowed to differ.
+tagline: "Digital health law and policy for what comes next"

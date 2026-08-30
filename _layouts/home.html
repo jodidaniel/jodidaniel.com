@@ -48,6 +48,7 @@
         {%- if about -%}
             {%- if about.photo and about.photo != "" -%}{%- assign has_about = true -%}{%- endif -%}
             {%- if about.intro_heading and about.intro_heading != "" -%}{%- assign has_about = true -%}{%- endif -%}
+            {%- if about.lead and about.lead != "" -%}{%- assign has_about = true -%}{%- endif -%}
             {%- if about.bio and about.bio != empty -%}{%- assign has_about = true -%}{%- endif -%}
             {%- if about.nav and about.nav != empty -%}{%- assign has_about = true -%}{%- endif -%}
         {%- endif -%}
@@ -71,17 +72,20 @@
                     <h2>{{ about.intro_heading }}</h2>
                     {%- endif -%}
                     {%- comment -%}
-                      issue #197: markdownify (not the raw {{ p }} this used to
-                      be) so **bold** in the /admin-edited bio renders as
-                      <strong>, styled via .intro-text strong in
-                      jodidaniel.css to match the mockup's key-phrase
-                      highlight. markdownify already wraps a paragraph-shaped
-                      string in its own <p>...</p> — do NOT add an outer <p>
-                      here or every bio paragraph doubles up.
+                      Jodi's 2026-08-30 feedback item 2: the top blurb and the
+                      nav pills both have to land inside the FIRST viewport on
+                      a laptop, so .intro-text now holds only the heading and
+                      this one-sentence `lead` -- the full bio moved out to
+                      its own .intro-bio block below the nav (see the nav +
+                      .intro-bio markup right after this section closes
+                      .intro-section). markdownify already wraps a
+                      paragraph-shaped string in its own <p>...</p> — do NOT
+                      add an outer <p> here, same trap issue #197 hit on the
+                      bio loop this block used to contain.
                     {%- endcomment -%}
-                    {%- for p in about.bio -%}
-                    {{ p | markdownify }}
-                    {%- endfor -%}
+                    {%- if about.lead and about.lead != "" -%}
+                    <div class="intro-lead">{{ about.lead | markdownify }}</div>
+                    {%- endif -%}
                 </div>
             </div>
             {%- if about.nav and about.nav != empty -%}
@@ -91,12 +95,83 @@
                 {%- endfor -%}
             </nav>
             {%- endif -%}
+            {%- comment -%}
+              Guarded separately from .intro-text above (rather than folded
+              into has_about) so a bio-less About card — lead + nav only —
+              never renders an empty bordered box: the top border here is
+              visual punctuation between the nav and the bio, and an empty
+              .intro-bio would draw that rule over nothing.
+            {%- endcomment -%}
+            {%- if about.bio and about.bio != empty -%}
+            <div class="intro-bio">
+                {%- comment -%}
+                  issue #197: markdownify (not the raw {{ p }} this used to
+                  be) so **bold** in the /admin-edited bio renders as
+                  <strong>, styled via .intro-bio strong in jodidaniel.css
+                  (added beside .intro-text strong in the same shared
+                  .highlight block, not duplicated — see the comment there)
+                  to match the mockup's key-phrase highlight. markdownify
+                  already wraps a paragraph-shaped string in its own
+                  <p>...</p> — do NOT add an outer <p> here or every bio
+                  paragraph doubles up.
+                {%- endcomment -%}
+                {%- for p in about.bio -%}
+                {{ p | markdownify }}
+                {%- endfor -%}
+            </div>
+            {%- endif -%}
+        </section>
+        {%- endif -%}
+
+        {%- comment -%}
+          Jodi's 2026-08-30 feedback item 3: Upcoming Events, sorted by
+          `start_date` (an ISO YYYY-MM-DD string, so lexicographic sort ==
+          chronological sort — no Ruby/Liquid date parsing needed or wanted).
+          `event_url`, not `url`: same DocumentDrop-shadow trap as `_media`
+          (see docs/CONTENT-MODEL.md) — a front-matter `url:` on a collection
+          document is unreachable from Liquid, so the field is named
+          `event_url` here on purpose, never `url`.
+
+          Past events are deliberately NOT auto-hidden. Filtering on "today"
+          would make the rendered page depend on the moment it was BUILT —
+          exactly the non-determinism the platform's visual-regression lane
+          and this repo's own test rules (AGENTS.md: "no reliance on
+          wall-clock time") forbid. The owner removes a finished event from
+          `/admin` herself instead.
+        {%- endcomment -%}
+        {%- assign events_sorted = site.events | sort: 'start_date' -%}
+        {%- if events_sorted and events_sorted != empty -%}
+        <section id="events" class="container animate-in delay-3">
+            {%- if settings.section_headings.events_heading and settings.section_headings.events_heading != "" -%}
+            <span class="section-title">{{ settings.section_headings.events_heading }}</span>
+            {%- endif -%}
+            <div class="events-list">
+                {%- for ev in events_sorted -%}
+                <div class="event-item">
+                    {%- if ev.date_display and ev.date_display != "" -%}
+                    <div class="event-date">{{ ev.date_display }}</div>
+                    {%- endif -%}
+                    <div class="event-body">
+                        <h3>
+                            {%- if ev.event_url and ev.event_url != "" -%}
+                            <a href="{{ ev.event_url }}" target="_blank" rel="noopener">{{ ev.title }}</a>
+                            {%- else -%}
+                            {{ ev.title }}
+                            {%- endif -%}
+                        </h3>
+                        {%- if ev.org and ev.org != "" -%}<div class="event-org">{{ ev.org }}</div>{%- endif -%}
+                        {%- if ev.location and ev.location != "" -%}<div class="event-location">{{ ev.location }}</div>{%- endif -%}
+                        {%- if ev.session and ev.session != "" -%}<p class="event-session">{{ ev.session }}</p>{%- endif -%}
+                    </div>
+                </div>
+                {%- endfor -%}
+            </div>
         </section>
         {%- endif -%}
 
         {%- assign expertise_sorted = site.expertise | sort: 'weight' -%}
         {%- if expertise_sorted and expertise_sorted != empty -%}
-        <section id="expertise" class="container animate-in delay-3">
+        <section id="expertise" class="container animate-in delay-4">
             {%- if settings.section_headings.expertise_heading and settings.section_headings.expertise_heading != "" -%}
             <span class="section-title">{{ settings.section_headings.expertise_heading }}</span>
             {%- endif -%}
@@ -113,7 +188,7 @@
 
         {%- assign experience_sorted = site.experience | sort: 'weight' -%}
         {%- if experience_sorted and experience_sorted != empty -%}
-        <section id="experience" class="container animate-in delay-4">
+        <section id="experience" class="container animate-in delay-5">
             {%- if settings.section_headings.experience_heading and settings.section_headings.experience_heading != "" -%}
             <span class="section-title">{{ settings.section_headings.experience_heading }}</span>
             {%- endif -%}
@@ -132,7 +207,7 @@
 
         {%- assign accomplishments_sorted = site.accomplishments | sort: 'weight' -%}
         {%- if accomplishments_sorted and accomplishments_sorted != empty -%}
-        <section id="accomplishments" class="container animate-in delay-5">
+        <section id="accomplishments" class="container animate-in delay-6">
             {%- if settings.section_headings.accomplishments_heading and settings.section_headings.accomplishments_heading != "" -%}
             <span class="section-title">{{ settings.section_headings.accomplishments_heading }}</span>
             {%- endif -%}
@@ -154,7 +229,7 @@
         {%- assign media_icons = "article|globe|microphone|folder|globe" | split: "|" -%}
         {%- assign all_media_sorted = site.media | sort: 'weight' -%}
         {%- if all_media_sorted and all_media_sorted != empty -%}
-        <section id="media" class="container animate-in delay-6">
+        <section id="media" class="container animate-in delay-7">
             {%- if settings.section_headings.media_heading and settings.section_headings.media_heading != "" -%}
             <span class="section-title">{{ settings.section_headings.media_heading }}</span>
             {%- endif -%}
@@ -204,7 +279,7 @@
 
         {%- assign education_sorted = site.education | sort: 'weight' -%}
         {%- if education_sorted and education_sorted != empty -%}
-        <section id="education" class="container animate-in delay-7">
+        <section id="education" class="container animate-in delay-8">
             {%- if settings.section_headings.education_heading and settings.section_headings.education_heading != "" -%}
             <span class="section-title">{{ settings.section_headings.education_heading }}</span>
             {%- endif -%}
@@ -222,7 +297,7 @@
 
         {%- assign contact = site.data.contact -%}
         {%- if contact and contact.links and contact.links != empty -%}
-        <section id="contact" class="container contact-section animate-in delay-8">
+        <section id="contact" class="container contact-section animate-in delay-9">
             {%- if contact.heading and contact.heading != "" -%}
             <span class="section-title">{{ contact.heading }}</span>
             {%- endif -%}
@@ -321,7 +396,7 @@
         {%- assign copyright = settings.coming_soon.copyright -%}
         {%- endif -%}
         {%- if copyright and copyright != "" -%}
-        <footer class="animate-in delay-8">
+        <footer class="animate-in delay-9">
             <p>{{ copyright }}</p>
         </footer>
         {%- endif -%}
