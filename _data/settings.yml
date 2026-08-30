@@ -17,10 +17,20 @@ back_to_top_label: "Back to top"
 # Jodi's 2026-08-30 feedback item 1 ("too lawyery/conservative"): the headings
 # read as section labels a person would say out loud rather than CV rubrics.
 # `events_heading` is new with the Upcoming Events section (feedback item 3).
+#
+# `media_authored_heading` / `media_coverage_heading` (owner's request, see
+# issue thread on the Media section): the two group labels INSIDE Media that
+# separate what she wrote (Articles & Commentary; Briefs, Testimony &
+# Reports) from what was written about her or where she appeared (Talks &
+# Panels; Podcasts & Interviews; Press Coverage) -- see the dual-maintenance
+# comment on media_authored_cats/media_coverage_cats in _layouts/home.html.
+# `media_heading` stays the section title above both groups.
 section_headings:
   events_heading: "Where to Find Her Next"
   expertise_heading: "What Jodi Works On"
   experience_heading: "Where She's Worked"
   accomplishments_heading: "What She Helped Build"
   media_heading: "Writing, Talks & Press"
+  media_authored_heading: "Written by Jodi"
+  media_coverage_heading: "Appearances & Coverage"
   education_heading: "Education"

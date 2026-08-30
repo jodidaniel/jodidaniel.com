@@ -1074,13 +1074,20 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
   the section. Check any new field name against `DocumentDrop` before using it;
   `scripts/verify-build-artifacts.rb` guards the rest. Detail →
   `docs/CONTENT-MODEL.md`.
-- **The one standing exception is the media category list, and it lives in two
-  places that must move together**: `media_by_category` in
-  `_layouts/home.html` (drives grouping, order, and the rendered `<h3>` label)
-  and the `category` select `options:` in `admin/collections.site.yml` (drives
-  what the editor can pick). Adding, renaming, or reordering a category means
-  editing BOTH — a value present in only one silently drops items from the page
-  or from the picker, with no build error.
+- **The one standing exception is the media category list, and it lives in
+  three places that must move together**: the `media_authored_cats` /
+  `media_coverage_cats` lists in `_layouts/home.html` (drive grouping, order,
+  and the rendered `<h3>` label, and which of the two GROUPS — authored work
+  vs. appearances/coverage, the owner's split of what she wrote from what was
+  written about her — a category renders under), the `{% case page.category
+  %}` default-label map in `_layouts/media.html` (drives the per-item page's
+  outbound-link button text), and the `category` select `options:` in
+  `admin/collections.site.yml` (drives what the editor can pick). Adding,
+  renaming, reordering, or moving a category between the two groups means
+  editing all THREE — a value present in only some of them silently drops
+  items from the page, mislabels a picker option, or mislabels a per-item
+  page's button, with no build error.
+  `scripts/verify-build-artifacts.rb` now cross-checks all three.
 - **The About nav's `anchor` select `options:` is the same dual-maintenance
   shape, and it is no longer silent.** `admin/collections.site.yml`'s
   `site_about` → `nav` → `anchor` field and the `<section id="...">` set in
@@ -1091,3 +1098,8 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
   added with the Events section), so a section added, renamed, or removed in
   one without the other fails the build instead of shipping a picker option
   nobody can jump to.
+- **The `media` nav entry's `label` (`_data/about.yml`) is verifier-checked
+  against `settings.section_headings.media_heading`** — the other six nav
+  labels may be short forms of their headings, but this one must name the
+  same thing the heading names. `scripts/verify-build-artifacts.rb` fails
+  printing both sides on a mismatch.

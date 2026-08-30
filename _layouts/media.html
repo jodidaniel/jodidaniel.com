@@ -61,7 +61,7 @@
             {%- endif -%}
             <h2>{{ page.title }}</h2>
             {%- if page.source and page.source != "" -%}
-            <p class="media-detail__source">{{ page.source }}</p>
+            <p class="media-detail__source">{%- if page.date_display and page.date_display != "" %}{{ page.date_display }} · {% endif %}{{ page.source }}</p>
             {%- endif -%}
 
             {%- comment -%}
@@ -86,23 +86,30 @@
               Outbound link label (issue #194): an editor's own `link_label`
               wins when set; otherwise the label is derived from `category` so
               a podcast episode doesn't say "Read the article". This category
-              -> label map is DUAL-MAINTAINED with the `category` select
-              `options:` in admin/collections.site.yml, exactly like the
-              media_by_category map in _layouts/home.html — adding or
-              renaming a category means editing BOTH.
+              -> label map is the THIRD leg of a three-way dual-maintenance
+              triangle with `_layouts/home.html`'s media_authored_cats /
+              media_coverage_cats and the `category` select `options:` in
+              admin/collections.site.yml — adding, renaming, or moving a
+              category between groups means editing all three.
+
+              `Podcasts & Interviews` now also holds print interviews (the
+              old `Featured Articles` items she was quoted, not writing, in) —
+              "Listen to the episode" is wrong for those, which is why they
+              each carry a per-item `link_label` override ("Read the
+              interview") in the data below rather than a second category.
             {%- endcomment -%}
             {%- assign article_label = "Read the article" -%}
             {%- case page.category -%}
-              {%- when "Featured Articles" -%}
+              {%- when "Articles & Commentary" -%}
                 {%- assign article_label = "Read the article" -%}
-              {%- when "Policy & Advocacy" -%}
-                {%- assign article_label = "Read the brief" -%}
+              {%- when "Briefs, Testimony & Reports" -%}
+                {%- assign article_label = "Read the document" -%}
+              {%- when "Talks & Panels" -%}
+                {%- assign article_label = "About this talk" -%}
               {%- when "Podcasts & Interviews" -%}
                 {%- assign article_label = "Listen to the episode" -%}
-              {%- when "Speaking & Panels" -%}
-                {%- assign article_label = "About this talk" -%}
-              {%- when "Press & News" -%}
-                {%- assign article_label = "Read the piece" -%}
+              {%- when "Press Coverage" -%}
+                {%- assign article_label = "Read the coverage" -%}
             {%- endcase -%}
             {%- if page.link_label and page.link_label != "" -%}
               {%- assign article_label = page.link_label -%}
