@@ -410,10 +410,26 @@ end
 # wired to nothing that AGENTS.md warns about. Neither zero is a FAILURE — a
 # catalogue with no archived PDFs, or none yet cleared for republication, are
 # both legitimate content states — but the coverage claim has to be honest.
+# Two DIFFERENT reasons these can be zero, and saying the wrong one is worse
+# than saying nothing: "no entry carries a key" is a content statement, and
+# while the site gate is shut it is simply false — every media page is a
+# coming-soon shell, so there is no rendered page for either assertion to read.
+# Count the keys in the SOURCE, independently of the gate, so the note names the
+# real reason.
+keys_in_content = media_src.count { |f| read(f).to_s =~ /^pdf_archive_file:\s*\S/ }
 if pdf_gated_checks.zero? && pdf_public_checks.zero?
-  puts "  note no media entry carries a `pdf_archive_file`, so NEITHER the withhold"
-  puts "       assertion nor the publish assertion ran. A pass here is not evidence"
-  puts "       the PDF chain works — see docs/CONTENT-MODEL.md, \"Archived PDFs\"."
+  if keys_in_content.zero?
+    puts "  note no media entry carries a `pdf_archive_file`, so NEITHER the withhold"
+    puts "       assertion nor the publish assertion ran."
+  else
+    puts "  note #{keys_in_content} media entr#{keys_in_content == 1 ? 'y carries' : 'ies carry'} a " \
+         "`pdf_archive_file`, but site_live is false, so"
+    puts "       every media page is a coming-soon shell and NEITHER the withhold nor"
+    puts "       the publish assertion could run. Flip `site_live: true` and rebuild"
+    puts "       to arm them — the gated build proves nothing about the PDF gate."
+  end
+  puts "       A pass here is not evidence the PDF chain works — see"
+  puts "       docs/CONTENT-MODEL.md, \"Archived PDFs\"."
 else
   puts "  ok   PDF gate exercised: #{pdf_gated_checks} withheld, #{pdf_public_checks} published"
   if pdf_public_checks.zero?
