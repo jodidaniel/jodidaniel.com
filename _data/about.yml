@@ -8,7 +8,7 @@ intro_heading: "She helped write the rules for digital health."
 # so both land in the first viewport; `bio` renders BELOW them. Keep this to
 # roughly one sentence — it is the only body copy above the fold, and every
 # line added here pushes the nav down. See docs/CONTENT-MODEL.md.
-lead: "Now she helps the people building AI and digital health work out what those rules mean for them."
+lead: "Now she helps the people building AI and digital health figure out what those rules mean for them."
 bio:
   # issue #197: **bold** here renders through markdownify (see _layouts/home.html)
   # as <strong>, styled to match the mockup's `.highlight` accent color/weight
