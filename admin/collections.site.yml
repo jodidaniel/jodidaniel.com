@@ -60,6 +60,7 @@
       - { name: category, label: "Category", widget: select, options: ["Articles & Commentary", "Briefs, Testimony & Reports", "Talks & Panels", "Podcasts & Interviews", "Press Coverage"], hint: "The first two (Articles & Commentary; Briefs, Testimony & Reports) are things she wrote. The last three (Talks & Panels; Podcasts & Interviews; Press Coverage) are things she appeared in, or that someone else wrote about her." }
       - { name: title,    label: "Title", widget: string }
       - { name: source,   label: "Source", widget: string }
+      - { name: date_display, label: "When (month and year)", widget: string, required: false, hint: "Month and year as you want it to read, e.g. \"April 2025\". Leave blank only if the item genuinely has no single date." }
       # NOT `url`. A front-matter key named `url` is unreachable from Liquid:
       # Jekyll's DocumentDrop defines `url` (the document's OWN address) and it
       # shadows the front-matter value, so {{ item.url }} renders /media/<slug>/

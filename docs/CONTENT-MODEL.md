@@ -68,7 +68,7 @@ below.
 | `expertise`       | `_expertise/`       | `title`, `description`, `weight` |
 | `experience`      | `_experience/`      | `title`, `org`, `period`, `description`, `weight` |
 | `accomplishments` | `_accomplishments/` | `title`, `text`, `weight` |
-| `media`           | `_media/`           | `category`, `title`, `source`, `article_url`, `link_label` (optional), `pdf` (optional), `pdf_label` (optional), `weight` |
+| `media`           | `_media/`           | `category`, `title`, `source`, `date_display` (optional), `article_url`, `link_label` (optional), `pdf` (optional), `pdf_label` (optional), `weight` |
 | `education`       | `_education/`       | `degree`, `field`, `school`, `weight` |
 | `events`          | `_events/`          | `title`, `org`, `start_date`, `date_display`, `location`, `session` (optional), `event_url` (optional) |
 
@@ -197,6 +197,34 @@ to a built page, or if the admin seam loses the PDF widget. The same trap
 applies to any new field you add here — check the name against `DocumentDrop`
 (`url`, `content`, `output`, `path`, `relative_path`, `date`, `collection`,
 `excerpt`, `id`, `next`, `previous`) before using it.
+
+### `date_display`: month + year, and why it isn't named `date`
+
+The owner's second 2026-08-30 ask: each media item shows the month and year it
+ran. The field is **`date_display`**, never `date` — same `DocumentDrop` shadow
+that forced `article_url` and `event_url` above: `date` is a `DocumentDrop`
+accessor (it lists Jekyll's front-matter `date:` if present, or falls back to
+the file's mtime), so a front-matter `date:` key is unreachable from Liquid the
+same way a front-matter `url:` key is. `_events` hit this first and named its
+field `date_display` for the same reason; `_media` reuses that name rather than
+inventing a second one for the identical trap.
+
+`date_display` is a plain optional string (`admin/collections.site.yml`,
+`required: false`) — "Month YYYY" (e.g. `"April 2025"`), a bare year, or the
+literal `"Ongoing"`. `_layouts/home.html`'s media list and `_layouts/media.html`
+render it beside `source`, joined by ` · `, guarded so a blank value adds no
+stray separator.
+
+**The date used to live inside `source`** (`"Bloomberg Law, 2018"`); moving it
+out is why **`source` must never carry a 4-digit year again** — with
+`date_display` rendering alongside it, a leftover year in `source` would show
+the date twice. `scripts/verify-build-artifacts.rb` fails on any `_media/*.md`
+whose `source` matches a bare `\d{4}`, and separately asserts every item HAS a
+`date_display` key (the value may be empty — a real, deliberately-incomplete
+content state pending the owner, not a failure) and, where non-empty, that it
+matches `Month YYYY` / a bare year / `"Ongoing"`. It also prints a `note`
+listing every item still missing a month, so the gap stays visible without
+failing the build.
 
 ### Outbound link label + PDF button label (issues #194, #195)
 

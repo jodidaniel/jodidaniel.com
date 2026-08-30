@@ -130,6 +130,57 @@ media_src.each do |src|
   end
 end
 
+puts "== media date_display: a real date field, not baked into source =="
+# Jodi's second ask: month + year on each media item. The date used to live
+# inside `source` strings ("Bloomberg Law, 2018"), which is why the "no
+# 4-digit year in source" check below exists -- once date_display renders
+# beside source (_layouts/home.html, _layouts/media.html), a leftover year
+# still in source would render the date TWICE. Parsed with the `yaml` stdlib
+# (AGENTS.md), never a regex/line-scan over front matter.
+#
+# `date_display` is required to EXIST on every item (so a new entry can't
+# silently omit it) but is allowed to be empty, a bare year, or "Ongoing" --
+# those are real, deliberately-incomplete content states pending the owner
+# filling them in from /admin, not build failures. See docs/CONTENT-MODEL.md.
+MEDIA_DATE_DISPLAY_RE = /\A(Ongoing|(January|February|March|April|May|June|July|August|September|October|November|December) \d{4}|\d{4})\z/
+undated_media = []
+media_src.each do |src|
+  slug = File.basename(src, ".md")
+  raw = read(src)
+  fm_match = raw && raw.match(/\A---\s*\n(.*?)\n---\s*\n?/m)
+  fm = fm_match && YAML.safe_load(fm_match[1])
+  fm = {} unless fm.is_a?(Hash)
+
+  check(failures, "_media/#{slug}.md has a `date_display` key (may be empty)") { fm.key?("date_display") }
+
+  date_display = fm["date_display"].to_s
+  unless date_display.empty?
+    check(
+      failures,
+      "_media/#{slug}.md date_display #{date_display.inspect} is Month YYYY, a bare year, or \"Ongoing\""
+    ) { date_display.match?(MEDIA_DATE_DISPLAY_RE) }
+  end
+
+  source = fm["source"].to_s
+  check(failures, "_media/#{slug}.md source #{source.inspect} carries no 4-digit year (date lives in date_display)") do
+    !source.match?(/\d{4}/)
+  end
+
+  # "Lacks a month" = empty, or a bare year with no month. "Ongoing" is a
+  # deliberate final answer (2-data-advisor-blog.md's ongoing blog), not a
+  # gap waiting on the owner, so it is NOT flagged here.
+  undated_media << slug if date_display.empty? || date_display.match?(/\A\d{4}\z/)
+end
+
+if undated_media.empty?
+  puts "  ok   every media item's date_display has a month (or is \"Ongoing\")"
+else
+  puts "  note #{undated_media.length} media item(s) still need a month added to date_display " \
+       "(empty or bare-year today) -- not a failure, closes itself when the owner fills them in " \
+       "from /admin:"
+  undated_media.sort.each { |slug| puts "       - #{slug}" }
+end
+
 puts "== issue #196: About nav anchors must resolve to a real section id =="
 # `admin/collections.site.yml` turned `anchor` from a free-text string into a
 # `select` over the destination sections, which stops a NEW typo through the
@@ -166,6 +217,27 @@ else
   end
 end
 
+puts "== media nav label matches the section heading =="
+# label and settings.section_headings.media_heading are separate strings by
+# design (a nav label may be shorter than a headline) but must name the SAME
+# thing -- "Media" described a category that no longer exists now that the
+# section is split into what she wrote and what was written about her.
+# Scoped to the `media` entry only: the other six nav labels are deliberately
+# short forms of their headings ("Expertise" vs "What Jodi Works On") and
+# that's fine -- this check must not catch them. Reuses `about_yaml` /
+# `nav_entries`, already parsed with the `yaml` stdlib above; runs
+# unconditionally (unlike the anchor checks above) since it compares two
+# data files, not the built page.
+settings_yaml_for_nav_label = YAML.safe_load(read(File.join(__dir__, "..", "_data", "settings.yml")) || "") || {}
+media_heading = settings_yaml_for_nav_label.dig("section_headings", "media_heading").to_s
+media_nav_entry = nav_entries.find { |e| e.is_a?(Hash) && e["anchor"] == "media" }
+media_nav_label = media_nav_entry.is_a?(Hash) ? media_nav_entry["label"].to_s : nil
+check(
+  failures,
+  "_data/about.yml media nav label #{media_nav_label.inspect} == " \
+  "settings.section_headings.media_heading #{media_heading.inspect}"
+) { !media_nav_entry.nil? && media_nav_label == media_heading }
+
 puts "== issues #194 / #195: admin seam (link_label, pdf_label, .pdf pattern) =="
 # Parsed with the `yaml` stdlib, never a regex/line-scan (AGENTS.md) — a regex
 # over this flow-mapping seam can't tell `pattern:` apart from `hint:` text
@@ -194,6 +266,10 @@ check(failures, "admin seam offers `link_label` on media entries, and it's optio
 end
 check(failures, "admin seam offers `pdf_label` on media entries, and it's optional (issue #194)") do
   f = media_seam_fields["pdf_label"]
+  !f.nil? && f["required"] == false
+end
+check(failures, "admin seam offers `date_display` on media entries, and it's optional") do
+  f = media_seam_fields["date_display"]
   !f.nil? && f["required"] == false
 end
 

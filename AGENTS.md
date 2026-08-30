@@ -1098,3 +1098,8 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
   added with the Events section), so a section added, renamed, or removed in
   one without the other fails the build instead of shipping a picker option
   nobody can jump to.
+- **The `media` nav entry's `label` (`_data/about.yml`) is verifier-checked
+  against `settings.section_headings.media_heading`** — the other six nav
+  labels may be short forms of their headings, but this one must name the
+  same thing the heading names. `scripts/verify-build-artifacts.rb` fails
+  printing both sides on a mismatch.

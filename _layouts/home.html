@@ -296,7 +296,7 @@
                               {%- endcomment -%}
                               <a href="{{ item.url | relative_url }}">
                                   {{ item.title }}
-                                  <span class="source">{{ item.source }}</span>
+                                  <span class="source">{%- if item.date_display and item.date_display != "" %}{{ item.date_display }} · {% endif %}{{ item.source }}</span>
                               </a>
                           </li>
                           {%- endfor -%}
@@ -352,7 +352,7 @@
                               {%- endcomment -%}
                               <a href="{{ item.url | relative_url }}">
                                   {{ item.title }}
-                                  <span class="source">{{ item.source }}</span>
+                                  <span class="source">{%- if item.date_display and item.date_display != "" %}{{ item.date_display }} · {% endif %}{{ item.source }}</span>
                               </a>
                           </li>
                           {%- endfor -%}

@@ -1,7 +1,8 @@
 ---
 category: "Press Coverage"
 title: "Jodi Daniel to Step Down from ONC After Decade of Service"
-source: "Healthcare IT News, 2015"
+source: "Healthcare IT News"
+date_display: "2015"
 article_url: "https://www.healthcareitnews.com/news/jodi-daniel-step-down-onc"
 weight: 1
 ---

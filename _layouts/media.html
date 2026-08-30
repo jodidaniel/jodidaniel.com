@@ -61,7 +61,7 @@
             {%- endif -%}
             <h2>{{ page.title }}</h2>
             {%- if page.source and page.source != "" -%}
-            <p class="media-detail__source">{{ page.source }}</p>
+            <p class="media-detail__source">{%- if page.date_display and page.date_display != "" %}{{ page.date_display }} · {% endif %}{{ page.source }}</p>
             {%- endif -%}
 
             {%- comment -%}
