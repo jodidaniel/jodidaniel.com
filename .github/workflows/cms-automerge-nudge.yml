@@ -87,7 +87,7 @@ concurrency:
 
 jobs:
   nudge:
-    uses: Adam-S-Daniel/cms-platform/.github/workflows/cms-automerge-nudge.yml@v0.1.92-rc.1
+    uses: Adam-S-Daniel/cms-platform/.github/workflows/cms-automerge-nudge.yml@v0.1.92-rc.2
     with:
       # NOT branch-protection contexts (this repo's main ruleset requires
       # none) — the one check-run name guaranteed to report, correctly
@@ -98,7 +98,7 @@ jobs:
       # (ruleset `main`, id 17032014); `prerelease-guard / prerelease-guard` is
       # the seventh, added to `consumer-main` by cms-platform#309 and converged
       # onto this repo by `repo-settings-apply.yml`. It is listed here in the
-      # same PR as the v0.1.92-rc.1 bump because `platform-bump` moves pins and seeds
+      # same PR as the v0.1.92-rc.2 bump because `platform-bump` moves pins and seeds
       # new callers but never rewrites an EXISTING caller's inputs — so a
       # platform-side change to this list only reaches a consumer by hand.
       # This list is the nudge's ENTIRE notion of
