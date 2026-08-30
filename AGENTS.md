@@ -210,9 +210,13 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
 - Single-page gated bio. Gate = `_data/settings.yml` `site_live` (default
   `false`); `_layouts/home.html` wraps bio sections in `{% if live %}`.
 - Content lives in `_data/{header,about,contact,settings}.yml` (singletons) +
-  the `_expertise/_experience/_accomplishments/_media/_education` folder
-  collections (ordered by `weight`, `output: false`). NOT a single data file.
-  Full field lists → `docs/CONTENT-MODEL.md`.
+  the `_expertise/_experience/_accomplishments/_media/_education/_events`
+  folder collections (ordered by `weight`, `output: false` — **except `media`**,
+  which is `output: true` and publishes a page per item at `/media/<slug>/`,
+  and **except `events`**, which is ordered by `start_date` — chronological,
+  not editor-numbered, since "upcoming" means chronological and it frees the
+  owner from renumbering the list every time she inserts an event). NOT a
+  single data file. Full field lists → `docs/CONTENT-MODEL.md`.
 - `/admin` = 9 section editors; generics hidden via `cms.base_collections: []`;
   admin UI shipped by the `cms-platform-theme` gem; seam =
   `admin/collections.site.yml`.
@@ -245,10 +249,42 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
 - **A string you genuinely cannot route through `/admin` is a decision to
   surface, not a detail to absorb silently** — call it out in the PR and get it
   agreed before merge. Hardcoded chrome stays at the irreducible minimum.
-- **The one standing exception is the media category list, and it lives in two
-  places that must move together**: `media_by_category` in
-  `_layouts/home.html` (drives grouping, order, and the rendered `<h3>` label)
-  and the `category` select `options:` in `admin/collections.site.yml` (drives
-  what the editor can pick). Adding, renaming, or reordering a category means
-  editing BOTH — a value present in only one silently drops items from the page
-  or from the picker, with no build error.
+- **A `_media/` item's outbound link is `article_url`, NEVER `url`.** A
+  front-matter key named `url` is unreachable from Liquid — Jekyll's
+  `DocumentDrop` defines `url` (the document's own address) and shadows it — so
+  `{{ item.url }}` renders `/media/<slug>/` no matter what the front matter
+  says. That is why `media` is the one `output: true` collection: the item page
+  is real, and it carries the optional archived `pdf` next to `article_url`.
+  This shadowing silently 404'd all 16 media links until PR #176 first rendered
+  the section. Check any new field name against `DocumentDrop` before using it;
+  `scripts/verify-build-artifacts.rb` guards the rest. Detail →
+  `docs/CONTENT-MODEL.md`.
+- **The one standing exception is the media category list, and it lives in
+  three places that must move together**: the `media_authored_cats` /
+  `media_coverage_cats` lists in `_layouts/home.html` (drive grouping, order,
+  and the rendered `<h3>` label, and which of the two GROUPS — authored work
+  vs. appearances/coverage, the owner's split of what she wrote from what was
+  written about her — a category renders under), the `{% case page.category
+  %}` default-label map in `_layouts/media.html` (drives the per-item page's
+  outbound-link button text), and the `category` select `options:` in
+  `admin/collections.site.yml` (drives what the editor can pick). Adding,
+  renaming, reordering, or moving a category between the two groups means
+  editing all THREE — a value present in only some of them silently drops
+  items from the page, mislabels a picker option, or mislabels a per-item
+  page's button, with no build error.
+  `scripts/verify-build-artifacts.rb` now cross-checks all three.
+- **The About nav's `anchor` select `options:` is the same dual-maintenance
+  shape, and it is no longer silent.** `admin/collections.site.yml`'s
+  `site_about` → `nav` → `anchor` field and the `<section id="...">` set in
+  `_layouts/home.html` have to name the same sections (see "About nav anchors
+  are a closed set" in `docs/CONTENT-MODEL.md`) — `scripts/verify-build-
+  artifacts.rb` now cross-checks the seam's options against the *built*
+  section ids (its "admin seam <-> layout section ids stay in step" group,
+  added with the Events section), so a section added, renamed, or removed in
+  one without the other fails the build instead of shipping a picker option
+  nobody can jump to.
+- **The `media` nav entry's `label` (`_data/about.yml`) is verifier-checked
+  against `settings.section_headings.media_heading`** — the other six nav
+  labels may be short forms of their headings, but this one must name the
+  same thing the heading names. `scripts/verify-build-artifacts.rb` fails
+  printing both sides on a mismatch.

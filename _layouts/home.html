@@ -1,3 +1,10 @@
+{%- comment -%}
+  `settings` / `live` are assigned HERE, above <head>, not in <body> where they
+  used to be -- the SEO block below has to branch on the gate, and a Liquid
+  assign is not visible before its own line.
+{%- endcomment -%}
+{%- assign settings = site.data.settings -%}
+{%- assign live = settings.site_live -%}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,12 +13,48 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Source+Sans+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+    {%- comment -%}
+      SEO is gated in PARALLEL with the body (the contract AGENTS.md states:
+      "no marketing claim is served until sign-off"). Until this was added the
+      two halves disagreed: the body correctly rendered only the coming-soon
+      shell while {% seo %} unconditionally served _config.yml's launch
+      description and index.html's "Digital Health Law & Policy Leader" title,
+      so a gated production build still announced the launch to search engines
+      and to anyone who looked at the tab. Measured on the deployed preview at
+      the gated head, which is what caught it.
+
+      Keeping the branch here rather than neutralising _config.yml/index.html
+      is what lets the go-live change stay a ONE-LINE flip of `site_live`:
+      those two files hold the real values at all times and simply are not
+      consulted while gated. Same shape as _layouts/media.html.
+
+      The gated arm deliberately does NOT add `noindex`: the apex is indexed
+      today with a neutral coming-soon string, and de-indexing it is an
+      outward-facing SEO change nobody asked for. It serves the same neutral
+      copy production serves right now -- just without the launch claim. (The
+      per-item /media/ pages DO carry noindex while gated; those are new routes
+      with no indexing status to preserve.)
+    {%- endcomment -%}
+    {%- if live -%}
     {% seo %}
+    {%- else -%}
+    <title>{{ site.title }}</title>
+    {%- assign gated_desc = settings.coming_soon.seo_description -%}
+    {%- if gated_desc and gated_desc != "" -%}
+    <meta name="description" content="{{ gated_desc | escape }}" />
+    {%- endif -%}
+    {%- endif -%}
+    {%- comment -%}
+      cms-platform#325: the gem emits its favicon <link> from its own default
+      layout's <head>, which never runs here -- this site's layouts are
+      site-owned. The include is standalone by design for exactly this case, so
+      one line adopts it rather than the two consumers diverging on the
+      plumbing. Shadow assets/favicon.svg (or set cms.favicon_url) to brand it.
+    {%- endcomment -%}
+    {% include favicon.html %}
     <link rel="stylesheet" href="{{ '/assets/css/jodidaniel.css' | cachebust }}">
 </head>
-<body>
-    {%- assign settings = site.data.settings -%}
-    {%- assign live = settings.site_live -%}
+<body id="top">
     {%- comment -%}
       `site_live` gates the whole site. When false (the default until the boss
       signs off), only the coming-soon shell renders: name + coming_soon.tagline
@@ -40,6 +83,7 @@
         {%- if about -%}
             {%- if about.photo and about.photo != "" -%}{%- assign has_about = true -%}{%- endif -%}
             {%- if about.intro_heading and about.intro_heading != "" -%}{%- assign has_about = true -%}{%- endif -%}
+            {%- if about.lead and about.lead != "" -%}{%- assign has_about = true -%}{%- endif -%}
             {%- if about.bio and about.bio != empty -%}{%- assign has_about = true -%}{%- endif -%}
             {%- if about.nav and about.nav != empty -%}{%- assign has_about = true -%}{%- endif -%}
         {%- endif -%}
@@ -62,9 +106,21 @@
                     {%- if about.intro_heading and about.intro_heading != "" -%}
                     <h2>{{ about.intro_heading }}</h2>
                     {%- endif -%}
-                    {%- for p in about.bio -%}
-                    <p>{{ p }}</p>
-                    {%- endfor -%}
+                    {%- comment -%}
+                      Jodi's 2026-08-30 feedback item 2: the top blurb and the
+                      nav pills both have to land inside the FIRST viewport on
+                      a laptop, so .intro-text now holds only the heading and
+                      this one-sentence `lead` -- the full bio moved out to
+                      its own .intro-bio block below the nav (see the nav +
+                      .intro-bio markup right after this section closes
+                      .intro-section). markdownify already wraps a
+                      paragraph-shaped string in its own <p>...</p> — do NOT
+                      add an outer <p> here, same trap issue #197 hit on the
+                      bio loop this block used to contain.
+                    {%- endcomment -%}
+                    {%- if about.lead and about.lead != "" -%}
+                    <div class="intro-lead">{{ about.lead | markdownify }}</div>
+                    {%- endif -%}
                 </div>
             </div>
             {%- if about.nav and about.nav != empty -%}
@@ -74,12 +130,83 @@
                 {%- endfor -%}
             </nav>
             {%- endif -%}
+            {%- comment -%}
+              Guarded separately from .intro-text above (rather than folded
+              into has_about) so a bio-less About card — lead + nav only —
+              never renders an empty bordered box: the top border here is
+              visual punctuation between the nav and the bio, and an empty
+              .intro-bio would draw that rule over nothing.
+            {%- endcomment -%}
+            {%- if about.bio and about.bio != empty -%}
+            <div class="intro-bio">
+                {%- comment -%}
+                  issue #197: markdownify (not the raw {{ p }} this used to
+                  be) so **bold** in the /admin-edited bio renders as
+                  <strong>, styled via .intro-bio strong in jodidaniel.css
+                  (added beside .intro-text strong in the same shared
+                  .highlight block, not duplicated — see the comment there)
+                  to match the mockup's key-phrase highlight. markdownify
+                  already wraps a paragraph-shaped string in its own
+                  <p>...</p> — do NOT add an outer <p> here or every bio
+                  paragraph doubles up.
+                {%- endcomment -%}
+                {%- for p in about.bio -%}
+                {{ p | markdownify }}
+                {%- endfor -%}
+            </div>
+            {%- endif -%}
+        </section>
+        {%- endif -%}
+
+        {%- comment -%}
+          Jodi's 2026-08-30 feedback item 3: Upcoming Events, sorted by
+          `start_date` (an ISO YYYY-MM-DD string, so lexicographic sort ==
+          chronological sort — no Ruby/Liquid date parsing needed or wanted).
+          `event_url`, not `url`: same DocumentDrop-shadow trap as `_media`
+          (see docs/CONTENT-MODEL.md) — a front-matter `url:` on a collection
+          document is unreachable from Liquid, so the field is named
+          `event_url` here on purpose, never `url`.
+
+          Past events are deliberately NOT auto-hidden. Filtering on "today"
+          would make the rendered page depend on the moment it was BUILT —
+          exactly the non-determinism the platform's visual-regression lane
+          and this repo's own test rules (AGENTS.md: "no reliance on
+          wall-clock time") forbid. The owner removes a finished event from
+          `/admin` herself instead.
+        {%- endcomment -%}
+        {%- assign events_sorted = site.events | sort: 'start_date' -%}
+        {%- if events_sorted and events_sorted != empty -%}
+        <section id="events" class="container animate-in delay-3">
+            {%- if settings.section_headings.events_heading and settings.section_headings.events_heading != "" -%}
+            <span class="section-title">{{ settings.section_headings.events_heading }}</span>
+            {%- endif -%}
+            <div class="events-list">
+                {%- for ev in events_sorted -%}
+                <div class="event-item">
+                    {%- if ev.date_display and ev.date_display != "" -%}
+                    <div class="event-date">{{ ev.date_display }}</div>
+                    {%- endif -%}
+                    <div class="event-body">
+                        <h3>
+                            {%- if ev.event_url and ev.event_url != "" -%}
+                            <a href="{{ ev.event_url }}" target="_blank" rel="noopener">{{ ev.title }}</a>
+                            {%- else -%}
+                            {{ ev.title }}
+                            {%- endif -%}
+                        </h3>
+                        {%- if ev.org and ev.org != "" -%}<div class="event-org">{{ ev.org }}</div>{%- endif -%}
+                        {%- if ev.location and ev.location != "" -%}<div class="event-location">{{ ev.location }}</div>{%- endif -%}
+                        {%- if ev.session and ev.session != "" -%}<p class="event-session">{{ ev.session }}</p>{%- endif -%}
+                    </div>
+                </div>
+                {%- endfor -%}
+            </div>
         </section>
         {%- endif -%}
 
         {%- assign expertise_sorted = site.expertise | sort: 'weight' -%}
         {%- if expertise_sorted and expertise_sorted != empty -%}
-        <section id="expertise" class="container animate-in delay-3">
+        <section id="expertise" class="container animate-in delay-4">
             {%- if settings.section_headings.expertise_heading and settings.section_headings.expertise_heading != "" -%}
             <span class="section-title">{{ settings.section_headings.expertise_heading }}</span>
             {%- endif -%}
@@ -96,7 +223,7 @@
 
         {%- assign experience_sorted = site.experience | sort: 'weight' -%}
         {%- if experience_sorted and experience_sorted != empty -%}
-        <section id="experience" class="container animate-in delay-4">
+        <section id="experience" class="container animate-in delay-5">
             {%- if settings.section_headings.experience_heading and settings.section_headings.experience_heading != "" -%}
             <span class="section-title">{{ settings.section_headings.experience_heading }}</span>
             {%- endif -%}
@@ -115,7 +242,7 @@
 
         {%- assign accomplishments_sorted = site.accomplishments | sort: 'weight' -%}
         {%- if accomplishments_sorted and accomplishments_sorted != empty -%}
-        <section id="accomplishments" class="container animate-in delay-5">
+        <section id="accomplishments" class="container animate-in delay-6">
             {%- if settings.section_headings.accomplishments_heading and settings.section_headings.accomplishments_heading != "" -%}
             <span class="section-title">{{ settings.section_headings.accomplishments_heading }}</span>
             {%- endif -%}
@@ -128,23 +255,54 @@
         {%- endif -%}
 
         {%- comment -%}
-          Media is organized by category. Build a grouped/sorted view:
-          1. Group media items by category
-          2. Define icon mapping per category
-          3. Sort items within each category by weight
+          Media is organized into two GROUPS of categories, not one flat list
+          -- the owner's request: separate what she wrote/authored (Articles &
+          Commentary; Briefs, Testimony & Reports) from appearances/coverage
+          (Talks & Panels; Podcasts & Interviews; Press Coverage). The old flat
+          five-category list mixed the two -- Featured Articles held both a
+          blog she writes AND an interview where a reporter quotes her, which
+          read as if she'd written the interview.
+
+          These two category lists (plus their per-category icon lists) are
+          DUAL-MAINTAINED with the category-to-label case/when block in
+          `_layouts/media.html` and the `category` select `options:` in
+          `admin/collections.site.yml` -- adding, renaming, or moving a
+          category between groups means editing all three, or the new value
+          silently drops items here, mislabels the per-item page's button, or
+          both. `scripts/verify-build-artifacts.rb` cross-checks the seam's
+          options against the union of these two lists and asserts every
+          `_media/*.md`'s category is one of the five known values.
         {%- endcomment -%}
-        {%- assign media_by_category = "Featured Articles|Policy & Advocacy|Podcasts & Interviews|Speaking & Panels|Press & News" | split: "|" -%}
-        {%- assign media_icons = "article|globe|microphone|folder|globe" | split: "|" -%}
+        {%- assign media_authored_cats = "Articles & Commentary|Briefs, Testimony & Reports" | split: "|" -%}
+        {%- assign media_authored_icons = "article|folder" | split: "|" -%}
+        {%- assign media_coverage_cats = "Talks & Panels|Podcasts & Interviews|Press Coverage" | split: "|" -%}
+        {%- assign media_coverage_icons = "globe|microphone|globe" | split: "|" -%}
         {%- assign all_media_sorted = site.media | sort: 'weight' -%}
         {%- if all_media_sorted and all_media_sorted != empty -%}
-        <section id="media" class="container animate-in delay-6">
+        <section id="media" class="container animate-in delay-7">
             {%- if settings.section_headings.media_heading and settings.section_headings.media_heading != "" -%}
             <span class="section-title">{{ settings.section_headings.media_heading }}</span>
             {%- endif -%}
+
+            {%- comment -%}
+              Group A: authored. Renders nothing at all -- no heading, no
+              grid -- when none of its categories has items, the same
+              defensive shape the rest of this layout uses (see e.g. the
+              `has_about` guard above).
+            {%- endcomment -%}
+            {%- assign media_authored_has_items = false -%}
+            {%- for cat in media_authored_cats -%}
+              {%- assign media_group_check = all_media_sorted | where: "category", cat -%}
+              {%- if media_group_check and media_group_check != empty -%}{%- assign media_authored_has_items = true -%}{%- endif -%}
+            {%- endfor -%}
+            {%- if media_authored_has_items -%}
+            {%- if settings.section_headings.media_authored_heading and settings.section_headings.media_authored_heading != "" -%}
+            <span class="media-group-heading">{{ settings.section_headings.media_authored_heading }}</span>
+            {%- endif -%}
             <div class="media-grid">
-                {%- for cat_idx in (0..4) -%}
-                  {%- assign category = media_by_category[cat_idx] -%}
-                  {%- assign cat_icon = media_icons[cat_idx] -%}
+                {%- for cat_idx in (0..1) -%}
+                  {%- assign category = media_authored_cats[cat_idx] -%}
+                  {%- assign cat_icon = media_authored_icons[cat_idx] -%}
                   {%- assign category_items = all_media_sorted | where: "category", category -%}
                   {%- if category_items and category_items != empty -%}
                   <div class="media-category">
@@ -164,9 +322,16 @@
                       <ul class="media-list">
                           {%- for item in category_items -%}
                           <li>
-                              <a href="{{ item.url }}" target="_blank" rel="noopener">
+                              {%- comment -%}
+                                item.url is the item's OWN page (/media/<slug>/),
+                                not the article link — Jekyll's DocumentDrop
+                                shadows any front-matter `url:`. That page is
+                                where the archived PDF and the outbound
+                                `article_url` live, so this link stays in-tab.
+                              {%- endcomment -%}
+                              <a href="{{ item.url | relative_url }}">
                                   {{ item.title }}
-                                  <span class="source">{{ item.source }}</span>
+                                  <span class="source">{%- if item.date_display and item.date_display != "" %}{{ item.date_display }} · {% endif %}{{ item.source }}</span>
                               </a>
                           </li>
                           {%- endfor -%}
@@ -175,12 +340,69 @@
                   {%- endif -%}
                 {%- endfor -%}
             </div>
+            {%- endif -%}
+
+            {%- comment -%}
+              Group B: appearances and coverage. Same defensive shape as
+              Group A above.
+            {%- endcomment -%}
+            {%- assign media_coverage_has_items = false -%}
+            {%- for cat in media_coverage_cats -%}
+              {%- assign media_group_check = all_media_sorted | where: "category", cat -%}
+              {%- if media_group_check and media_group_check != empty -%}{%- assign media_coverage_has_items = true -%}{%- endif -%}
+            {%- endfor -%}
+            {%- if media_coverage_has_items -%}
+            {%- if settings.section_headings.media_coverage_heading and settings.section_headings.media_coverage_heading != "" -%}
+            <span class="media-group-heading">{{ settings.section_headings.media_coverage_heading }}</span>
+            {%- endif -%}
+            <div class="media-grid">
+                {%- for cat_idx in (0..2) -%}
+                  {%- assign category = media_coverage_cats[cat_idx] -%}
+                  {%- assign cat_icon = media_coverage_icons[cat_idx] -%}
+                  {%- assign category_items = all_media_sorted | where: "category", category -%}
+                  {%- if category_items and category_items != empty -%}
+                  <div class="media-category">
+                      <h3>
+                          {%- case cat_icon -%}
+                          {%- when 'article' -%}
+                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                          {%- when 'microphone' -%}
+                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/></svg>
+                          {%- when 'folder' -%}
+                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6 10H6v-2h8v2zm4-4H6v-2h12v2z"/></svg>
+                          {%- when 'globe' -%}
+                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM18.92 8h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zM5.08 16h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.91-4.33-3.56zm2.95-8H5.08c.96-1.65 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>
+                          {%- endcase -%}
+                          {{ category }}
+                      </h3>
+                      <ul class="media-list">
+                          {%- for item in category_items -%}
+                          <li>
+                              {%- comment -%}
+                                item.url is the item's OWN page (/media/<slug>/),
+                                not the article link — Jekyll's DocumentDrop
+                                shadows any front-matter `url:`. That page is
+                                where the archived PDF and the outbound
+                                `article_url` live, so this link stays in-tab.
+                              {%- endcomment -%}
+                              <a href="{{ item.url | relative_url }}">
+                                  {{ item.title }}
+                                  <span class="source">{%- if item.date_display and item.date_display != "" %}{{ item.date_display }} · {% endif %}{{ item.source }}</span>
+                              </a>
+                          </li>
+                          {%- endfor -%}
+                      </ul>
+                  </div>
+                  {%- endif -%}
+                {%- endfor -%}
+            </div>
+            {%- endif -%}
         </section>
         {%- endif -%}
 
         {%- assign education_sorted = site.education | sort: 'weight' -%}
         {%- if education_sorted and education_sorted != empty -%}
-        <section id="education" class="container animate-in delay-7">
+        <section id="education" class="container animate-in delay-8">
             {%- if settings.section_headings.education_heading and settings.section_headings.education_heading != "" -%}
             <span class="section-title">{{ settings.section_headings.education_heading }}</span>
             {%- endif -%}
@@ -198,7 +420,7 @@
 
         {%- assign contact = site.data.contact -%}
         {%- if contact and contact.links and contact.links != empty -%}
-        <section id="contact" class="container contact-section animate-in delay-8">
+        <section id="contact" class="container contact-section animate-in delay-9">
             {%- if contact.heading and contact.heading != "" -%}
             <span class="section-title">{{ contact.heading }}</span>
             {%- endif -%}
@@ -222,6 +444,73 @@
             </div>
         </section>
         {%- endif -%}
+
+        {%- comment -%}
+          issue #198 item 1: floating back-to-top affordance. Only makes
+          sense on the long, full bio page, so it lives inside this same
+          `live` gate alongside the sections it scrolls between.
+
+          No-JS fallback is "hidden entirely": the CSS default
+          (opacity:0; visibility:hidden; pointer-events:none) never shows
+          it, so a no-JS visitor sees no dead control and nothing to
+          stumble a screen reader/keyboard user into (visibility:hidden
+          also removes it from the tab order). `href="#top"` is kept as a
+          real, working anchor regardless — a harmless no-op while hidden,
+          and a correct plain jump to <body id="top"> above if it's ever
+          exposed without the script running.
+        {%- endcomment -%}
+        <a href="#top" id="back-to-top" class="back-to-top" aria-label="{{ settings.back_to_top_label | default: 'Back to top' }}">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.59 5.58L20 12l-8-8-8 8z"/></svg>
+        </a>
+        <script>
+        (function () {
+            {%- comment -%}
+              issue #198 items 1 + 3, one small script: (a) reveals
+              #back-to-top past a scroll threshold, and (b) gives it + the
+              .intro-nav pill links an explicit smooth scroll, since CSS
+              scroll-behavior can't be scoped to "link clicks only" — it
+              also governs the browser's own keyboard-Tab scroll-into-view,
+              which is exactly what jodidaniel.css's removal of
+              `scroll-behavior: smooth` from <html> fixes. Both respect
+              prefers-reduced-motion.
+            {%- endcomment -%}
+            var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var backToTop = document.getElementById('back-to-top');
+            var links = document.querySelectorAll('.intro-nav a[href^="#"]');
+
+            function smoothScrollTo(e) {
+                var hash = this.getAttribute('href') || '';
+                if (hash.charAt(0) !== '#' || hash.length < 2) { return; }
+                var target = document.getElementById(hash.slice(1));
+                if (!target) { return; }
+                e.preventDefault();
+                target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+                if (window.history && window.history.pushState) { window.history.pushState(null, '', hash); }
+                // issue #198 item 3 lists "Enter-then-Tab continues from the jumped
+                // section" as a TESTED POSITIVE to preserve. Native fragment
+                // navigation is what sets the sequential focus navigation starting
+                // point, and preventDefault() above suppresses it -- so without the
+                // next two lines a keyboard user who activates a nav pill would find
+                // Tab resuming from the pill, not from the section they jumped to.
+                // preventScroll keeps focus() from fighting the smooth scroll.
+                if (!target.hasAttribute('tabindex')) { target.setAttribute('tabindex', '-1'); }
+                target.focus({ preventScroll: true });
+            }
+
+            links.forEach(function (link) { link.addEventListener('click', smoothScrollTo); });
+
+            if (backToTop) {
+                backToTop.addEventListener('click', smoothScrollTo);
+
+                var SCROLL_THRESHOLD = 600;
+                var toggleVisibility = function () {
+                    backToTop.classList.toggle('is-visible', window.scrollY > SCROLL_THRESHOLD);
+                };
+                window.addEventListener('scroll', toggleVisibility, { passive: true });
+                toggleVisibility();
+            }
+        })();
+        </script>
         {%- endif -%}{%- comment -%} end: full-site sections (site_live) {%- endcomment -%}
 
         {%- if live -%}
@@ -230,7 +519,7 @@
         {%- assign copyright = settings.coming_soon.copyright -%}
         {%- endif -%}
         {%- if copyright and copyright != "" -%}
-        <footer class="animate-in delay-8">
+        <footer class="animate-in delay-9">
             <p>{{ copyright }}</p>
         </footer>
         {%- endif -%}

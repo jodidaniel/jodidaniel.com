@@ -4,8 +4,45 @@
     box-sizing: border-box;
 }
 
+/* issue #198 item 3: NOT `scroll-behavior: smooth` here. That CSS property
+   governs every browser-native "scroll an element into view" — including
+   the one the browser runs on every keyboard Tab focus move, not just the
+   nav-pill/back-to-top anchor clicks it was meant for. With it global, a
+   brisk keyboard tabber trails the focus ring by ~150ms/press and it sits
+   off-viewport for ~2 Tab stops across the page's largest gap
+   (Expertise -> Media). CSS has no way to scope scroll-behavior to only
+   *some* scroll-into-view triggers, so the smooth scroll for pill/
+   back-to-top clicks is done explicitly in JS (see the inline <script> in
+   _layouts/home.html) via scrollIntoView({behavior:'smooth'}), leaving the
+   default (instant) scroll-behavior below to govern keyboard focus jumps. */
 html {
-    scroll-behavior: smooth;
+    scroll-behavior: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    /* Standard-practice guard: if scroll-behavior: smooth is ever
+       reintroduced here (or by a future rule), reduced-motion visitors
+       still get instant scrolling. The back-to-top control's own
+       show/hide + hover motion is disabled too — it's new in this same
+       change, so it starts out motion-safe. */
+    html {
+        scroll-behavior: auto;
+    }
+
+    .back-to-top {
+        transition: none;
+    }
+}
+
+/* issue #198 item 3 (companion to the JS focus handoff in _layouts/home.html):
+   activating a nav pill moves focus to the target section so keyboard Tab
+   resumes from there. That section is focused programmatically, not tabbed to,
+   so it must not paint a focus ring around the whole box -- the visitor did not
+   navigate to it by keyboard. Scoped tightly to the roving tabindex="-1" targets
+   so it can never suppress a real, user-initiated focus indicator elsewhere. */
+section[tabindex="-1"]:focus,
+body[tabindex="-1"]:focus {
+    outline: none;
 }
 
 body {
@@ -60,6 +97,7 @@ body::after {
 .delay-6 { animation-delay: 1.0s; }
 .delay-7 { animation-delay: 1.2s; }
 .delay-8 { animation-delay: 1.4s; }
+.delay-9 { animation-delay: 1.6s; }
 
 .site-wrapper {
     max-width: 74rem;
@@ -67,10 +105,21 @@ body::after {
     padding: 2rem;
 }
 
+/* Feedback item 2: this padding (plus .intro-nav's margin-top/padding-top
+   below, and the phone-only photo/gap shrink in the 767px media query) is
+   the "above the fold" spacing budget -- tuned against measure-fold.js
+   (docs/CONTENT-MODEL.md) at all six of its viewports, not eyeballed. The
+   header still needs to read as a header, so this trims it rather than
+   collapsing it to zero. */
 header {
     text-align: center;
-    padding: 4rem 2rem;
+    padding: 2rem 2rem 1.5rem;
     color: #ffffff;
+}
+
+header h1 a {
+    color: inherit;
+    text-decoration: none;
 }
 
 header h1 {
@@ -144,24 +193,60 @@ header .tagline {
     line-height: 1.3;
 }
 
+/* Jodi's 2026-08-30 feedback item 2 moved the bio paragraphs out of
+   .intro-text into their own .intro-bio block below the nav (see
+   _layouts/home.html) — .intro-text now wraps only the heading and `lead`,
+   so this rule's only remaining audience is .intro-lead's single paragraph.
+   Left in place rather than renamed/merged into .intro-lead p below so the
+   override cascade (next rule, same specificity, later in the sheet wins)
+   stays legible as "body-copy baseline, then the lead's own treatment". */
 .intro-text p {
     margin-bottom: 1rem;
     font-size: 1.05rem;
     line-height: 1.85;
 }
 
-.highlight {
+/* The one-sentence hook above the nav pills (feedback item 2) — bigger and
+   lighter than body copy so it reads as a lede, not another paragraph, and
+   with no bottom margin because it's the last thing before the nav's own
+   `margin-top` takes over the spacing (double margins here is exactly the
+   "why is there a huge gap before the buttons" bug the fold measurement in
+   docs/CONTENT-MODEL.md exists to catch). Same specificity as `.intro-text
+   p` above; wins on source order, so it must stay below it in the sheet. */
+.intro-lead p {
+    font-size: 1.2rem;
+    font-weight: 300;
+    line-height: 1.6;
+    color: #5a6a7a;
+    margin-bottom: 0;
+}
+
+/* issue #197: the bio's key phrases are marked up as **bold** in
+   _data/about.yml and rendered through markdownify, so the accent styling
+   the mockup calls `.highlight` now lands on the <strong> markdownify
+   produces. All three selectors share this one block rather than
+   duplicating it (or deleting `.highlight`, which would leave the mockup's
+   class name dead) — every markup path gets the same accent color/weight.
+   `.intro-bio strong` was added here (2026-08-30) when the bio moved out of
+   .intro-text into its own block — the bio's **bold** phrases still need
+   the same accent, just from a selector that now matches where they live. */
+.highlight,
+.intro-text strong,
+.intro-bio strong {
     color: #2d5a7b;
     font-weight: 600;
 }
 
-/* Navigation inside the about box */
+/* Navigation inside the about box. margin-top/padding-top trimmed for
+   feedback item 2 -- see the header comment above; this is the other half
+   of the same fold budget, tuned the same way (measure-fold.js, not by
+   eye). */
 .intro-nav {
     display: flex;
     justify-content: center;
     gap: 1rem;
-    margin-top: 2.5rem;
-    padding-top: 2rem;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
     border-top: 1px solid #e8eef3;
     flex-wrap: wrap;
 }
@@ -188,6 +273,107 @@ header .tagline {
 .intro-nav a:not(:last-child)::after {
     content: '';
     display: none;
+}
+
+/* The bio, moved below the nav by feedback item 2 (see the comment on
+   .intro-lead p above and _layouts/home.html). Reuses .intro-nav's own
+   `border-top: 1px solid #e8eef3` rule verbatim, so the same hairline that
+   separates the lead/heading from the nav also separates the nav from the
+   bio -- one visual language for "new group of content starts here" rather
+   than inventing a second divider style. `.intro-bio p` restates the exact
+   three declarations `.intro-text p` used to give these paragraphs when
+   they lived inside .intro-text, so the bio's type size/leading is
+   unchanged by the move. */
+.intro-bio {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e8eef3;
+}
+
+.intro-bio p {
+    margin-bottom: 1rem;
+    font-size: 1.05rem;
+    line-height: 1.85;
+}
+
+/* Upcoming Events (feedback item 3). Reuses the .expertise-card visual
+   language rather than inventing a new one: same #f8fafc panel, 0.5rem
+   radius, teal left accent border, and translateY(-3px)+shadow hover. Each
+   item is a two-column grid -- a fixed-width date column beside the body --
+   collapsing to one column at the same 767px breakpoint the rest of the
+   mobile layout uses (see @media (max-width: 767px) below). */
+.events-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.event-item {
+    display: grid;
+    grid-template-columns: 9rem 1fr;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: #f8fafc;
+    border-radius: 0.5rem;
+    border-left: 4px solid #5dd9e8;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.event-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.event-date {
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #2d5a7b;
+}
+
+.event-body h3 {
+    font-family: 'Raleway', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1a3a5c;
+    margin-bottom: 0.25rem;
+}
+
+/* Same underline-on-hover idiom as .intro-nav a: the link inherits the
+   heading's own color rather than switching to the usual link blue, so an
+   event without a URL (plain text heading) and one with a URL (linked
+   heading) read as the same visual weight. */
+.event-body h3 a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.25s ease;
+}
+
+.event-body h3 a:hover {
+    border-bottom-color: #5dd9e8;
+}
+
+/* Colors lifted from .timeline-item .org / .timeline-item .period -- the
+   Experience section already uses this org/meta color pairing, so Events
+   (a sibling "where/when" section) reads as the same visual language. */
+.event-org {
+    font-weight: 600;
+    color: #2d5a7b;
+    margin-bottom: 0.25rem;
+}
+
+.event-location {
+    font-size: 0.85rem;
+    color: #8a9aaa;
+    margin-bottom: 0.25rem;
+}
+
+.event-session {
+    font-size: 0.95rem;
+    color: #5a6a7a;
+    margin-top: 0.5rem;
 }
 
 .expertise-grid {
@@ -407,6 +593,63 @@ header .tagline {
     margin-top: 0.15rem;
 }
 
+/* Group label ABOVE each .media-grid inside #media -- the owner's split of
+   authored work from appearances/coverage (see _layouts/home.html's
+   media_authored_cats/media_coverage_cats). One step below .section-title
+   (the section's own heading) and one step above each category's own h3, so
+   the hierarchy reads: section title, group label, category label. */
+.media-group-heading {
+    display: block;
+    font-family: 'Raleway', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #1a3a5c;
+    margin: 1.75rem 0 0.75rem;
+}
+
+/* Per-item media page (/media/<slug>/) — the target of every entry in the
+   media list above. Reuses .container / .section-title / .contact-link so the
+   detail page reads as the same document as the home page. */
+.media-detail h2 {
+    font-family: 'Raleway', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #1a3a5c;
+    line-height: 1.35;
+    margin-top: 1.25rem;
+}
+
+.media-detail__source {
+    color: #6a7a8a;
+    font-size: 1rem;
+    margin-top: 0.5rem;
+}
+
+.media-detail__actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+}
+
+.media-detail__back {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e4ecf2;
+    font-size: 0.95rem;
+}
+
+.media-detail__back a {
+    color: #2d5a7b;
+    text-decoration: none;
+    transition: color 0.25s ease;
+}
+
+.media-detail__back a:hover {
+    color: #1a3a5c;
+    text-decoration: underline;
+}
+
 .contact-section {
     text-align: center;
 }
@@ -452,6 +695,58 @@ header .tagline {
     fill: currentColor;
 }
 
+/* issue #198 item 1: floating back-to-top affordance for a long scroll (the
+   .intro-nav pills live only in the About card, so once a visitor is deep
+   in Media/Education there's otherwise no way back but manual scrolling).
+   Hidden by default — opacity/visibility/pointer-events all off, which also
+   removes it from the tab order — so a no-JS visitor never sees or tabs
+   into a dead control. The inline <script> in _layouts/home.html adds
+   `.is-visible` past a scroll threshold and reveals it into the tab order
+   at that point. Reuses the .contact-link color/hover/shadow idiom rather
+   than introducing a new visual language. */
+.back-to-top {
+    position: fixed;
+    right: 1.5rem;
+    bottom: 1.5rem;
+    z-index: 20;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    background: #2d5a7b;
+    color: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    text-decoration: none;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease, background 0.25s ease;
+}
+
+.back-to-top.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.back-to-top:hover {
+    background: #1a3a5c;
+    transform: translateY(-2px);
+}
+
+.back-to-top:focus-visible {
+    outline: 3px solid #5dd9e8;
+    outline-offset: 2px;
+}
+
+.back-to-top svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    fill: currentColor;
+}
+
 footer {
     text-align: center;
     padding: 2rem;
@@ -475,7 +770,32 @@ footer a:hover {
     }
 }
 
-@media (max-width: 768px) {
+/* issue #198 item 2: 767px (not 768px) so a 768px-wide viewport (iPad
+   portrait) lands on the >=768 tablet layout above rather than this
+   single-column phone layout. The 900px breakpoint above is unrelated and
+   deliberately untouched — it only collapses the expertise/media grids and
+   still applies on top of this one at narrower widths. */
+@media (max-width: 767px) {
+    /* issue #198 item 1: smaller + tucked further into the corner so it
+       stays clear of content on narrow viewports. */
+    .back-to-top {
+        right: 1rem;
+        bottom: 1rem;
+        width: 2.75rem;
+        height: 2.75rem;
+    }
+
+    /* Feedback item 2, phone half: the header/photo/gap trims that only
+       apply once .intro-section stacks (grid-template-columns: 1fr below)
+       -- the photo sits ABOVE the text at these widths, so its height adds
+       directly to how far the nav sits from the top, in a way it doesn't
+       in the desktop side-by-side layout. Tuned against measure-fold.js's
+       two phone viewports, same as the base-level header/.intro-nav trims
+       above. */
+    header {
+        padding: 0.75rem 1rem 0.5rem;
+    }
+
     header h1 {
         font-size: 2rem;
         letter-spacing: 0.1em;
@@ -488,15 +808,16 @@ footer a:hover {
     .intro-section {
         grid-template-columns: 1fr;
         text-align: center;
+        gap: 0.5rem;
     }
 
     .profile-placeholder {
-        width: 150px;
+        width: 70px;
         margin: 0 auto;
     }
 
     .profile-image {
-        max-width: 150px;
+        max-width: 70px;
         margin: 0 auto;
     }
 
@@ -504,8 +825,16 @@ footer a:hover {
         font-size: 1.5rem;
     }
 
+    /* 7 pills (up from 6, pre-Events) wrap onto 3 rows at this width, so the
+       nav's own margin-top/padding-top -- fine as a single-row gap on wider
+       viewports -- gets multiplied against the fold budget here. Trimmed
+       further than the base rule for exactly the phone widths that wrap
+       hardest (measured on measure-fold.js's narrowest viewport,
+       phone-375x667, which has the least vertical room of the six). */
     .intro-nav {
         gap: 0.5rem;
+        margin-top: 0.75rem;
+        padding-top: 0.5rem;
     }
 
     .intro-nav a {
@@ -527,7 +856,27 @@ footer a:hover {
         gap: 1rem;
     }
 
+    /* The fixed 9rem date column (base rule above) only makes sense beside
+       a wide body column; collapse to one, date-above-body, same as every
+       other two-column-to-one-column layout in this breakpoint. */
+    .event-item {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+
     .education-grid {
         grid-template-columns: 1fr;
+    }
+
+    .media-detail h2 {
+        font-size: 1.35rem;
+    }
+
+    .media-detail__actions {
+        flex-direction: column;
+    }
+
+    .media-detail__actions .contact-link {
+        justify-content: center;
     }
 }

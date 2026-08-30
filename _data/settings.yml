@@ -5,13 +5,40 @@ site_live: false
 coming_soon:
   tagline: "Site coming soon"
   copyright: "© 2026 Jodi Daniel"
+  # The meta description served while the gate is closed. _config.yml's
+  # `description` is the LAUNCH copy and is only consulted once site_live is
+  # true, so this is what search engines and link previews see until then --
+  # which is why it lives here, editable in /admin, rather than being a
+  # literal in _layouts/home.html. Keep it free of any marketing claim: the
+  # whole point of the gate is that no claim ships before the copy sign-off
+  # (issue #26). Blank it and the gated page simply serves no description.
+  seo_description: "Jodi Daniel — site coming soon."
 
 footer:
   copyright: "© 2026 Jodi Daniel. All rights reserved."
 
+# issue #198 item 1: accessible label for the floating back-to-top button
+# (an aria-label, since the button is icon-only) — kept /admin-editable per
+# the site's "every visible string" rule rather than hardcoded in the layout.
+back_to_top_label: "Back to top"
+
+# Jodi's 2026-08-30 feedback item 1 ("too lawyery/conservative"): the headings
+# read as section labels a person would say out loud rather than CV rubrics.
+# `events_heading` is new with the Upcoming Events section (feedback item 3).
+#
+# `media_authored_heading` / `media_coverage_heading` (owner's request, see
+# issue thread on the Media section): the two group labels INSIDE Media that
+# separate what she wrote (Articles & Commentary; Briefs, Testimony &
+# Reports) from what was written about her or where she appeared (Talks &
+# Panels; Podcasts & Interviews; Press Coverage) -- see the dual-maintenance
+# comment on media_authored_cats/media_coverage_cats in _layouts/home.html.
+# `media_heading` stays the section title above both groups.
 section_headings:
-  expertise_heading: "Areas of Expertise"
-  experience_heading: "Professional Experience"
-  accomplishments_heading: "Key Accomplishments"
-  media_heading: "Publications & Media"
+  events_heading: "Where to Find Her Next"
+  expertise_heading: "What Jodi Works On"
+  experience_heading: "Where She's Worked"
+  accomplishments_heading: "What She Helped Build"
+  media_heading: "Writing, Talks & Press"
+  media_authored_heading: "Written by Jodi"
+  media_coverage_heading: "Appearances & Coverage"
   education_heading: "Education"

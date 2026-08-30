@@ -1,14 +1,12 @@
 title: Jodi Daniel
-# COMING-SOON SEO (go-live content policy): while the site is gated
-# (`site_live: false` in _data/settings.yml), keep this description neutral so
-# {% seo %} does not leak the marketing blurb in <meta>/og:description/JSON-LD
-# even though the full copy is present in the per-section data + collections.
-# GO-LIVE = flip `site_live: true` in _data/settings.yml AND restore the real
-# description here:
-#   "Jodi Daniel — nationally recognized leader in digital health law and
-#    policy. Regulatory strategy, health data privacy, FDA and telehealth
-#    counsel for healthcare organizations and technology innovators."
-description: "Jodi Daniel — site coming soon."
+# LAUNCH description. This is the real, post-sign-off copy and it stays here
+# permanently -- but it only reaches a page when the gate is OPEN. While
+# `site_live` is false (_data/settings.yml), _layouts/home.html skips {% seo %}
+# entirely and serves `coming_soon.seo_description` instead, so this string is
+# not published ahead of the copy sign-off (issue #26). Keeping the real value
+# here, gated at the point of use, is what makes go-live a one-line flag flip
+# rather than a three-file edit someone has to remember to do.
+description: "Jodi Daniel — nationally recognized leader in digital health law and policy. Regulatory strategy, health data privacy, FDA and telehealth counsel for healthcare organizations and technology innovators."
 url: "https://jodidaniel.com"
 baseurl: ""
 author:
@@ -50,8 +48,24 @@ collections:
   expertise: { output: false }
   experience: { output: false }
   accomplishments: { output: false }
-  media: { output: false }
+  # media is the ONE exception to output:false. Each item gets its own page at
+  # /media/<slug>/, which is what the home page's media list links to, and which
+  # carries the optional archived PDF next to the outbound Article URL. It has to
+  # be a real page: Jekyll's DocumentDrop defines `url` (the document's OWN
+  # address), so a front-matter `url:` is shadowed and {{ item.url }} always
+  # renders /media/<slug>/. With output:false that address was never written and
+  # every media link 404'd. The article link lives in `article_url` instead.
+  # sitemap:false below (not the gate) keeps these thin link-out pages out of
+  # sitemap.xml — including their title-derived slugs while site_live is false.
+  # They stay crawlable via the home page's links once the site is live.
+  media: { output: true, permalink: /media/:slug/ }
   education: { output: false }
+  # Jodi's 2026-08-30 feedback item 3: Upcoming Events. Unlike every sibling
+  # above, this one is ordered by `start_date` (an ISO YYYY-MM-DD string), NOT
+  # `weight` -- "upcoming" is inherently chronological, and chronological order
+  # is also what frees the owner from renumbering the whole list every time she
+  # inserts an event between two existing ones. See docs/CONTENT-MODEL.md.
+  events: { output: false }
 
 defaults:
   - { scope: { path: "", type: "posts" },    values: { layout: "post" } }
@@ -59,6 +73,7 @@ defaults:
   - { scope: { path: "", type: "tags" },     values: { layout: "tag" } }
   - { scope: { path: "pages" },              values: { layout: "page" } }
   - { scope: { path: "", type: "e2e" },      values: { layout: "canary", sitemap: false, robots: "noindex,nofollow" } }
+  - { scope: { path: "", type: "media" },    values: { layout: "media", sitemap: false } }
 
 plugins:
   - jekyll-seo-tag
