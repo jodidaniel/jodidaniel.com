@@ -354,40 +354,47 @@ halves were proven able to fail: flipping one entry to `pdf_public: true` fails
 the `_site` existence check, and removing the `pdf_public` test from the layout
 fails all eight withhold assertions.
 
-**The bucket exists; the deploy wiring is blocked upstream.**
+**The bucket exists and the deploy is wired.**
 `jodidaniel-com-media-archive` is live and verified private (public access
 blocked on all four axes, no bucket policy, versioning on, AES256), and the
 GitHub Actions role holds its own read-only statement — `s3:GetObject` +
 `s3:ListBucket`, so a deploy can copy a capture out but can never overwrite or
-delete the only copy. What is NOT yet done is step 5 of the platform's
-`docs/MEDIA-ARCHIVE.md`: adding `media_archive_bucket` (and, on the production
-caller, `platform_ref`) to `.github/workflows/deploy-*.yml`. Those two keys
-cannot be added at platform v0.1.93, because two platform rules contradict each
-other:
+delete the only copy. Step 5 of the platform's `docs/MEDIA-ARCHIVE.md` is now
+done here: `media_archive_bucket` is set on **both** deploy callers, and
+`platform_ref` on the production one.
 
-- `docs/MEDIA-ARCHIVE.md` step 5 instructs consumers to add the keys.
-- `examples/site/.github/workflows/deploy-*.yml` ships them **commented out**,
-  and `scripts/check-platform-pin-consistency.js` compares a thin caller's
-  `with:` **key set** against those canonical examples with an exact sorted-set
-  match — no allowlist, and comments drop out in the YAML parse.
+That pair is not decoration on the production caller, and the platform enforces
+it rather than trusting a comment. The reusable declares `platform_ref` with
+`default: main` — not a pin — and the `media_archive_bucket != ''` steps check
+the platform out at that ref to run `publish-opted-in-pdfs.sh`. Set the bucket
+without it and the site would publish PDFs to its live domain from an
+**unpinned** `main` checkout. `check-platform-pin-consistency.js` fails the
+build on exactly that shape (`workflow-content: media_archive_bucket without
+platform_ref`), so the mistake is caught rather than deployed.
 
-So uncommenting them makes the consumer's key set diverge from canonical and
-the required `pin-consistency` check fails with `workflow-content: DRIFT`.
-Verified on PR #224: adding both keys failed the guard; reverting them made it
-pass. The wiring itself is sound, though — on that same run the preview deploy
+**This was blocked for one release, and the history is worth keeping.** At
+platform v0.1.93 the documented opt-in was unshippable by *any* consumer: step 5
+told sites to add the keys, `examples/site` shipped them commented out, and the
+checker compared a caller's `with:` key set against those examples as an exact
+sorted-set match — and comments drop out in the YAML parse. So following the
+docs necessarily produced `workflow-content: DRIFT` on the required
+`pin-consistency` check. Verified on PR #224: adding both keys failed the guard,
+reverting them passed, and this repo backed the wiring out in commit `07e5c4b`.
+The wiring itself was never the problem — on that same run the preview deploy
 executed `publish-opted-in-pdfs.sh` against the real bucket and logged
-`no media entry has 'pdf_public: true' - nothing published from the archive`,
-so the copy-out path works end to end and only the structural key-set compare
-stands in the way. Wiring the deploys therefore needs a cms-platform fix
-first — either uncomment the keys in `examples/site/`, or exempt the two
-optional media-archive keys from the key-set compare — then a release and a
-`platform-bump` here.
+`no media entry has 'pdf_public: true' - nothing published from the archive`.
+cms-platform#360 fixed it by exempting the two opt-in keys from the key-set
+compare (and adding the pairing assertion above); it shipped in **v0.1.95**,
+which is the ref this repo now pins.
 
-None of this blocks anything today: all 8 `_media` entries naming a
-`pdf_archive_file` are `pdf_public: false`, so even once wired the publish
-script would find nothing opted in and exit 0. The objects themselves are also
-not uploaded yet — `bash scripts/media-archive.sh audit` lists all 8 as
-missing.
+**What is still outstanding is the bytes.** All 8 `_media` entries naming a
+`pdf_archive_file` are `pdf_public: false` on `main`, so a production deploy
+finds nothing opted in and exits 0. But the archive objects are not uploaded —
+`bash scripts/media-archive.sh audit` lists all 8 as missing. That matters the
+moment a box is ticked: with the deploy wired, an entry whose `pdf_public` is
+true and whose object is absent now **fails the deploy loudly** (`exit 1`)
+rather than shipping a "Download PDF" button that 404s. Upload the object first,
+then tick the box.
 
 **Adding an archived PDF, end to end.**
 
