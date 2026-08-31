@@ -346,13 +346,18 @@ assertions passed" over zero of both would be a green light wired to nothing:
 | key, `pdf_public: true`  | page links `/media-pdfs/<key>`, href ends `.pdf`, **and the file exists in `_site`** |
 | no key | nothing (a legitimate content state) |
 
-That last publish-side row is why a ticked box currently **fails** the build:
-the step that copies an opted-in object out of the private archive into the
-deploy is platform-side (`cms-platform`) and is not wired up yet. That is
-deliberate — better a loud red than a "Download PDF" button that 404s. Both
-halves were proven able to fail: flipping one entry to `pdf_public: true` fails
-the `_site` existence check, and removing the `pdf_public` test from the layout
-fails all eight withhold assertions.
+That last publish-side row needs the platform's copy-out step, which is now
+wired up: both `deploy-production.yml` and `deploy-preview.yml` pass
+`media_archive_bucket: jodidaniel-com-media-archive`, and the platform's
+`publish-opted-in-pdfs.sh` copies each opted-in object into the built site
+before the S3 sync. A ticked box whose object is MISSING from the archive still
+fails — loudly, at deploy time — which is the intent: better a red run than a
+"Download PDF" button that 404s. Note the local `bundle exec jekyll build` has
+no AWS credentials and so never copies anything, so a ticked entry fails
+`verify-build-artifacts.rb` locally by design; the deploy is where it passes.
+Both halves were proven able to fail: flipping one entry to `pdf_public: true`
+fails the `_site` existence check, and removing the `pdf_public` test from the
+layout fails all eight withhold assertions.
 
 **Adding an archived PDF, end to end.**
 
