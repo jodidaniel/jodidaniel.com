@@ -50,7 +50,7 @@ jobs:
       # own default is `main` -- unpinned. MUST equal the `uses:@` pin above;
       # platform-bump rewrites both, and platform-pin-consistency fails the
       # build if they disagree or if this key is missing.
-      platform_ref: v0.1.95
+      platform_ref: v0.1.96
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       PRODUCTION_CLOUDFRONT_ID: ${{ secrets.PRODUCTION_CLOUDFRONT_ID }}

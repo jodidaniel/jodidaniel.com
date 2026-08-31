@@ -385,7 +385,7 @@ executed `publish-opted-in-pdfs.sh` against the real bucket and logged
 `no media entry has 'pdf_public: true' - nothing published from the archive`.
 cms-platform#360 fixed it by exempting the two opt-in keys from the key-set
 compare (and adding the pairing assertion above); it shipped in **v0.1.95**,
-which is the ref this repo now pins.
+so any ref from that release onward carries it.
 
 **What is still outstanding is the bytes.** All 8 `_media` entries naming a
 `pdf_archive_file` are `pdf_public: false` on `main`, so a production deploy
