@@ -43,9 +43,6 @@ jobs:
       preview_bucket: jodidaniel-com-previews
       # Keep unique per site so multiple sites' bots never clobber comments.
       bot_marker: jodidaniel-com-preview-bot
-      # Same private archive as production, so a newly-ticked `pdf_public` can
-      # be checked on the preview before it reaches the live site.
-      media_archive_bucket: jodidaniel-com-media-archive
       # Pin to the SAME ref as the `uses:` pin above so the helper scripts match.
       platform_ref: v0.1.93
     secrets:
