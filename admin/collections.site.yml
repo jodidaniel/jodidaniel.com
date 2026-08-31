@@ -67,8 +67,42 @@
       # instead of the article link. See docs/CONTENT-MODEL.md.
       - { name: article_url, label: "Article URL", widget: string, pattern: ["^https?://.*", "Must be a valid http(s) URL"] }
       - { name: link_label, label: "Link Button Label", widget: string, required: false, hint: "Optional. Leave blank and a sensible label is picked automatically from Category (e.g. \"Read the brief\" for Policy & Advocacy, \"Listen to the episode\" for Podcasts & Interviews). Set this only to override that default for an unusual item." }
-      - { name: pdf,      label: "PDF Copy", widget: file, required: false, pattern: ['\.pdf$', 'Must be a PDF file (.pdf)'], hint: "Optional. Upload a PDF of the piece (an offprint, or a copy of a paywalled article). Must be a .pdf file. It appears as a download link on the item's own page, next to the Article URL." }
-      - { name: pdf_label, label: "PDF Button Label", widget: string, required: false, hint: "Optional. Leave blank to use the default \"Download PDF\". Set this only to override that default for an unusual item." }
+      # ARCHIVED PDF -- two fields, and the split is the whole point.
+      #
+      # The PDF BYTES never live in this repo. jodidaniel.com is a PUBLIC
+      # GitHub repo, so a committed PDF of someone else's article would be
+      # world-readable at raw.githubusercontent.com forever, whatever the
+      # website chose to render -- and history is immutable, so a later
+      # `git rm` would not take it back. Archived PDFs therefore live in the
+      # PRIVATE S3 media archive (see docs/CONTENT-MODEL.md, "Archived PDFs").
+      # `pdf_archive_file` names the object there; it is NOT a site path.
+      #
+      # `pdf_public` is the permission gate, and it is OFF by default on
+      # purpose. Most of these PDFs are copies of third-party articles that we
+      # have no licence to redistribute. Leaving the box unticked means the
+      # deploy never copies the file to the public bucket at all -- so the PDF
+      # is not merely unlinked, it is not on the website to be found. Tick it
+      # only for a document we may lawfully host (a US-government work, our own
+      # writing, or something the publisher has cleared).
+      #
+      # The field is named `pdf_archive_file`, and the avoided word is a
+      # constraint rather than a preference: it must not contain "key".
+      # gitleaks' `generic-api-key` rule fires on a KEYWORD next to a
+      # high-entropy value, and that word is on its keyword list -- so the
+      # earlier name, paired with a long hyphenated file name, read to the
+      # scanner as a leaked credential. Measured, not theorised: on the pinned
+      # 8.30.1 with this repo's own `.gitleaks.toml`, three of these eight
+      # entries tripped it and reddened `scan / scan`. `secrets-scan.yml` reads
+      # FULL history on push and on the weekly sweep, and history is immutable,
+      # so such a name reaching `main` reddens every future push to `main`
+      # rather than one PR. The scanner's keyword list is short and ordinary
+      # (access, auth, api, credential, creds, passwd, password, secret, token,
+      # and the one above) -- check a new field name against it before
+      # committing. Renaming is the fix at source; an allowlist entry is not,
+      # for the reasons the top of `.gitleaks.toml` sets out.
+      - { name: pdf_archive_file, label: "Archived PDF (file name in the private archive)", widget: string, required: false, pattern: ['\.pdf$', 'Must be a PDF file name (.pdf)'], hint: "Optional. The file name of this item's PDF in the private media archive, e.g. \"example-article.pdf\". Leave blank if there is no archived copy. Uploading a new PDF into the archive is done by the site maintainer, not from here." }
+      - { name: pdf_public, label: "Publish this PDF on the public website", widget: boolean, required: false, default: false, hint: "Leave OFF unless you know we are permitted to republish this document -- e.g. it is a US-government work, something Jodi wrote and holds the rights to, or the publisher has given permission. While OFF, the PDF stays in the private archive: no download button appears and the file is not deployed to the website at all." }
+      - { name: pdf_label, label: "PDF Button Label", widget: string, required: false, hint: "Optional. Leave blank to use the default \"Download PDF\". Set this only to override that default for an unusual item. Only ever seen when \"Publish this PDF on the public website\" is ticked." }
       - { name: weight,   label: "Order within category", widget: number }
 
   - name: education
@@ -99,7 +133,7 @@
   #
   # The `start_date` `pattern:` below MUST stay single-quoted YAML --
   # `'^\d{4}-\d{2}-\d{2}$'`. A double-quoted `"\d"` is a YAML parse error
-  # (not merely a different regex), same trap the `pdf` field's pattern
+  # (not merely a different regex), same trap the `pdf_archive_file` field's pattern
   # below already documents.
   - name: events
     label: "Upcoming Events"

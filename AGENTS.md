@@ -254,7 +254,9 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
   `DocumentDrop` defines `url` (the document's own address) and shadows it — so
   `{{ item.url }}` renders `/media/<slug>/` no matter what the front matter
   says. That is why `media` is the one `output: true` collection: the item page
-  is real, and it carries the optional archived `pdf` next to `article_url`.
+  is real, and it carries the archived PDF next to `article_url` -- gated on
+  `pdf_public`, with the bytes in a private S3 archive rather than this
+  public repo (see docs/CONTENT-MODEL.md, "Archived PDFs").
   This shadowing silently 404'd all 16 media links until PR #176 first rendered
   the section. Check any new field name against `DocumentDrop` before using it;
   `scripts/verify-build-artifacts.rb` guards the rest. Detail →

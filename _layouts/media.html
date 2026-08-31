@@ -6,7 +6,10 @@
   address — Jekyll's DocumentDrop defines `url` and it shadows any front-matter
   `url:` key — so {{ item.url }} in _layouts/home.html can only ever render
   /media/<slug>/. The outbound article link lives in `article_url`, and this
-  page is where it surfaces, alongside the optional archived `pdf`.
+  page is where it surfaces, alongside the archived PDF -- but only when
+  that item's `pdf_public` gate has been ticked (see docs/CONTENT-MODEL.md,
+  "Archived PDFs"). The PDF bytes are NOT in this repo; they live in a
+  private S3 archive and `pdf_archive_file` names the object.
 
   Gating: `site_live` gates this page exactly as it gates home.html. While the
   gate is false only the coming-soon shell renders, {% seo %} is skipped (so no
@@ -65,19 +68,40 @@
             {%- endif -%}
 
             {%- comment -%}
-              PDF button: only for a value that actually ends in `.pdf` (issue
-              #195). Decap's `file` widget stores whatever string was picked at
-              upload/select time and applies string `pattern:` validation to
-              it (admin/collections.site.yml requires `\.pdf$` there), but that
-              only guards NEW saves — this is the belt to that seam's braces,
-              so a value from before the pattern existed (or a hand-edited
-              front-matter file) still can't render a lying "download PDF"
-              button for a non-PDF file.
+              PDF button: THREE conditions, and the first is a permission gate,
+              not a formatting one.
+
+              1. `pdf_public` must be literally true. Off by default (see the
+                 admin seam's `pdf_public` field). While it is off the deploy
+                 never copies the PDF out of the private archive into the
+                 public bucket, so the file is not on the website at all --
+                 rendering a link here would only produce a confident 404, and
+                 rendering one for a document we may not republish is the very
+                 thing the gate exists to prevent. Anything falsy (missing,
+                 `false`, `""`, `"false"`) keeps the button off; only a real
+                 boolean true opens it, which is what Decap's boolean widget
+                 writes.
+              2. There must be an archive key to point at.
+              3. That key must actually end in `.pdf` (issue #195). Decap's
+                 string `pattern:` guards NEW saves; this is the belt to that
+                 seam's braces, so a hand-edited front-matter file still can't
+                 render a lying "download PDF" button for a non-PDF file.
+
+              The href is derived, never authored: `pdf_archive_file` is an
+              object name in the PRIVATE archive (e.g. "1-fda-amicus.pdf"), and
+              /media-pdfs/ is where the deploy publishes an opted-in copy. An
+              editor never types a URL, so they cannot accidentally publish one
+              that bypasses the gate.
             {%- endcomment -%}
             {%- assign has_pdf = false -%}
-            {%- if page.pdf and page.pdf != "" -%}
-              {%- assign pdf_suffix = page.pdf | downcase | slice: -4, 4 -%}
-              {%- if pdf_suffix == ".pdf" -%}{%- assign has_pdf = true -%}{%- endif -%}
+            {%- assign pdf_href = "" -%}
+            {%- if page.pdf_public == true and page.pdf_archive_file and page.pdf_archive_file != "" -%}
+              {%- assign pdf_suffix = page.pdf_archive_file | downcase | slice: -4, 4 -%}
+              {%- if pdf_suffix == ".pdf" -%}
+                {%- assign has_pdf = true -%}
+                {%- capture pdf_path -%}/media-pdfs/{{ page.pdf_archive_file }}{%- endcapture -%}
+                {%- assign pdf_href = pdf_path | relative_url -%}
+              {%- endif -%}
             {%- endif -%}
             {%- assign has_article = false -%}
             {%- if page.article_url and page.article_url != "" -%}{%- assign has_article = true -%}{%- endif -%}
@@ -123,7 +147,7 @@
             {%- if has_pdf or has_article -%}
             <div class="media-detail__actions">
                 {%- if has_pdf -%}
-                <a class="contact-link" href="{{ page.pdf | relative_url }}" target="_blank" rel="noopener">
+                <a class="contact-link" href="{{ pdf_href }}" target="_blank" rel="noopener">
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
                     {{ pdf_button_label }}
                 </a>
