@@ -149,6 +149,22 @@ real (post-go-live) values to restore.
 after the boss approves the copy. Until then, no bio content reaches prod and
 no marketing claim ships. Do not flip the gate on your own initiative.
 
+**`/admin` now SAYS the site is gated**, on every screen, instead of leaving it
+discoverable only by opening the Settings collection. The gate's location is
+declared in `_config.yml` as `cms.site_gate` (path / field / Decap entry route
+/ label); both cms-platform render paths inject it as `window.CMS_SITE_GATE`
+and `admin/site-gate-banner.js` renders the banner (cms-platform v0.1.95,
+`docs/PUBLISHING-UX.md` phase 5). Two things about it that will bite:
+
+- **`entry` is the Decap route of the `site_settings` file collection** in
+  `admin/collections.site.yml`. Rename that collection or its `settings` file
+  entry and the banner's "Change this setting" link dead-ends — the two move
+  together, and nothing fails the build if they drift.
+- **`field` is matched as a TOP-LEVEL boolean** in that YAML file. Nesting
+  `site_live` under another key, or quoting its value, makes the banner show
+  NOTHING rather than something wrong — deliberately, since claiming the site
+  is gated when it is not would be worse than silence.
+
 ### Known open blockers (CMS editing)
 
 All three blockers previously tracked here (#27 org OAuth App access
