@@ -346,13 +346,48 @@ assertions passed" over zero of both would be a green light wired to nothing:
 | key, `pdf_public: true`  | page links `/media-pdfs/<key>`, href ends `.pdf`, **and the file exists in `_site`** |
 | no key | nothing (a legitimate content state) |
 
-That last publish-side row is why a ticked box currently **fails** the build:
-the step that copies an opted-in object out of the private archive into the
-deploy is platform-side (`cms-platform`) and is not wired up yet. That is
+That last publish-side row is why a ticked box still **fails** the build: the
+step that copies an opted-in object out of the private archive is platform-side
+(`cms-platform`) and is not wired into this repo's deploy callers yet. That is
 deliberate — better a loud red than a "Download PDF" button that 404s. Both
 halves were proven able to fail: flipping one entry to `pdf_public: true` fails
 the `_site` existence check, and removing the `pdf_public` test from the layout
 fails all eight withhold assertions.
+
+**The bucket exists; the deploy wiring is blocked upstream.**
+`jodidaniel-com-media-archive` is live and verified private (public access
+blocked on all four axes, no bucket policy, versioning on, AES256), and the
+GitHub Actions role holds its own read-only statement — `s3:GetObject` +
+`s3:ListBucket`, so a deploy can copy a capture out but can never overwrite or
+delete the only copy. What is NOT yet done is step 5 of the platform's
+`docs/MEDIA-ARCHIVE.md`: adding `media_archive_bucket` (and, on the production
+caller, `platform_ref`) to `.github/workflows/deploy-*.yml`. Those two keys
+cannot be added at platform v0.1.93, because two platform rules contradict each
+other:
+
+- `docs/MEDIA-ARCHIVE.md` step 5 instructs consumers to add the keys.
+- `examples/site/.github/workflows/deploy-*.yml` ships them **commented out**,
+  and `scripts/check-platform-pin-consistency.js` compares a thin caller's
+  `with:` **key set** against those canonical examples with an exact sorted-set
+  match — no allowlist, and comments drop out in the YAML parse.
+
+So uncommenting them makes the consumer's key set diverge from canonical and
+the required `pin-consistency` check fails with `workflow-content: DRIFT`.
+Verified on PR #224: adding both keys failed the guard; reverting them made it
+pass. The wiring itself is sound, though — on that same run the preview deploy
+executed `publish-opted-in-pdfs.sh` against the real bucket and logged
+`no media entry has 'pdf_public: true' - nothing published from the archive`,
+so the copy-out path works end to end and only the structural key-set compare
+stands in the way. Wiring the deploys therefore needs a cms-platform fix
+first — either uncomment the keys in `examples/site/`, or exempt the two
+optional media-archive keys from the key-set compare — then a release and a
+`platform-bump` here.
+
+None of this blocks anything today: all 8 `_media` entries naming a
+`pdf_archive_file` are `pdf_public: false`, so even once wired the publish
+script would find nothing opted in and exit 0. The objects themselves are also
+not uploaded yet — `bash scripts/media-archive.sh audit` lists all 8 as
+missing.
 
 **Adding an archived PDF, end to end.**
 
