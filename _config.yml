@@ -35,6 +35,27 @@ cms:
   # section editors. `base_collections` is a KEEP-LIST; [] hides them all.
   # (Honored by cms-platform-theme >= v0.1.7.)
   base_collections: []
+  # The site-level publish gate, declared for /admin (cms-platform >= v0.1.95).
+  #
+  # This site ships coming-soon behind `site_live` in _data/settings.yml, and
+  # while that is false an editor can write, save, publish, watch the deploy
+  # succeed, open the site — and see none of it. Nothing has gone wrong; the
+  # gate is doing its job. The problem is disclosure: that boolean is
+  # discoverable only by opening one collection and reading one field, and
+  # this site has been gated for months.
+  #
+  # Declaring it here makes both render paths inject `window.CMS_SITE_GATE`,
+  # which admin/site-gate-banner.js reads to show a permanent banner on every
+  # screen of /admin saying so, with a link to the one control that changes
+  # it. The platform hardcodes no site's identity, which is why the gate's
+  # location is named HERE rather than there. `entry` is the Decap route of
+  # the `site_settings` file collection in admin/collections.site.yml — the
+  # two move together.
+  site_gate:
+    path: _data/settings.yml
+    field: site_live
+    entry: "#/collections/site_settings/entries/settings"
+    label: coming-soon mode
 
 collections:
   projects: { output: false, permalink: /projects/:slug/ }
