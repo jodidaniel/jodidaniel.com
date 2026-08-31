@@ -41,6 +41,16 @@ jobs:
     with:
       apex_domain: jodidaniel.com
       prod_bucket: jodidaniel-com-production
+      # Private S3 bucket of archived media PDFs. The deploy copies out ONLY
+      # `_media` entries carrying `pdf_public: true`; everything else stays in
+      # the bucket. See docs/CONTENT-MODEL.md, "Archived PDFs".
+      media_archive_bucket: jodidaniel-com-media-archive
+      # REQUIRED whenever media_archive_bucket is set: the archive step fetches
+      # the publish script from the platform at this ref, and the reusable's
+      # own default is `main` -- unpinned. MUST equal the `uses:@` pin above;
+      # platform-bump rewrites both, and platform-pin-consistency fails the
+      # build if they disagree or if this key is missing.
+      platform_ref: v0.1.96
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       PRODUCTION_CLOUDFRONT_ID: ${{ secrets.PRODUCTION_CLOUDFRONT_ID }}
