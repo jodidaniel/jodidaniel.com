@@ -83,6 +83,54 @@ Gotchas measured while setting this up (2026-08-29, platform v0.1.90),
   needs `PORT=<n>` plus `local_backend: {url: "http://localhost:<n>/api/v1"}`
   in the copy's gem config).
 
+## Testing the DEPLOYED site from a sandboxed session (issue #200)
+
+Issue #200 moves the method onto the deployed site with the real GitHub
+backend. Two boundaries decide what a session can do there, and both were
+measured on 2026-09-02 (platform v0.1.101, prod and `preview-pr220`):
+
+- **The credential boundary is the operator's, full stop.** The real `/admin`
+  is behind GitHub OAuth; a session does the unauthenticated subset and reports
+  BLOCKED for the rest until a logged-in browser or a scoped credential is
+  handed over (#200, hard boundary 1). Nothing below changes that.
+- **Chromium in a Claude Code cloud session cannot reach the deployed site at
+  all.** Playwright's Chromium ignores `HTTPS_PROXY`, so the first symptom is
+  `ERR_CONNECTION_RESET` on every URL; pass the proxy explicitly
+  (`chromium.launch({ proxy: { server: process.env.HTTPS_PROXY } })`) and the
+  CONNECT succeeds, then the egress gateway closes the tunnel 6 s after the
+  TLS ClientHello with nothing back. It is not the handshake size: 1802 B with
+  Chromium's post-quantum key share, 534 B with it off (enterprise policy
+  `PostQuantumKeyAgreementEnabled: false`), 522 B with HTTP/2 and QUIC
+  disabled — same outcome each time, while `curl` fetches the same URLs
+  without complaint (the proxy's `/__agentproxy/status` logs each attempt as
+  `ws_closed_mid_exchange`). So the protocol's "look with your eyes" rule
+  cannot be met from the sandbox against a DEPLOYED target; the screenshot
+  half needs a browser outside the proxy — the operator's own, or a CI
+  runner — and a sandbox session should say so rather than spend an hour on
+  proxy flags.
+
+What a sandbox session CAN establish, unauthenticated, with `curl` plus a
+text extractor: HTTP status, tab title, the visible copy of the public pages,
+the 404 and `/preview/` pages, link labels against their destinations, and
+whether test content is really gone after cleanup. What it cannot judge:
+layout, contrast, spacing, and anything Decap renders — the `/admin` login
+screen included, because the shell is static and Decap mounts client-side
+from unpkg.
+
+Two checks before judging anything on a deployed `/admin`:
+
+- **Confirm the CDN is serving the pinned platform.** `deploy-production`
+  fires its CloudFront invalidation without waiting for it, so the edge can
+  serve the previous admin for minutes after a green deploy (cms-platform
+  `AGENTS.md`, "A validation dispatch tests the code that is REACHABLE").
+  Curl a served asset and grep for a symbol the pinned release introduced,
+  e.g. `curl -s https://<host>/admin/publish-progress.js | grep -c
+  'no-cache'` is non-zero from v0.1.101 on.
+- **Confirm the preview target is current with `main`.** A preview belongs to
+  a PR, and only that PR's merges from `main` move it:
+  `git fetch origin <pr-branch> && git merge-base --is-ancestor origin/main
+  FETCH_HEAD` says whether the preview carries everything on `main`.
+
 ## Report contract and missions
 
 The protocol below is handed to every tester verbatim; the five missions
