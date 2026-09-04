@@ -514,13 +514,13 @@ know what to do without calling her son?
    and note what the media library felt like — filenames, previews, any
    clutter?). Judge: would Jodi trust she picked the right image?
 10. **Site Settings — the launch lever**: open Site Settings. In persona,
-    read the "Site Live" control and its hint: do you understand EXACTLY
-    what flipping it does, and how consequential it is? Flip it OFF, save,
-    reload the public site — what do you see? Flip it back ON, save, verify
-    the full site is back. Any moment of fear ("did I just break my
-    site?") is a finding. Also read the rest of Settings (coming-soon
-    fields, footer, section headings): is it clear which of these are live
-    on the site right now vs. dormant?
+    read the "Show the full site to the public" control and its hint: do
+    you understand EXACTLY what flipping it does, and how consequential it
+    is? Flip it OFF, save, reload the public site — what do you see? Flip
+    it back ON, save, verify the full site is back. Any moment of fear
+    ("did I just break my site?") is a finding. Also read the rest of
+    Settings (coming-soon fields, footer, section headings): is it clear
+    which of these are live on the site right now vs. dormant?
 11. **New media item end-to-end**: create a new Media Item: category
     `Press & News`, title `Test Coverage Item — DELETE ME`, source
     `Testing Weekly`, Article URL `https://example.com/story`, Order `9`.
