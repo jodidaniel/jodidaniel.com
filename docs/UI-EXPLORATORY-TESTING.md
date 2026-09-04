@@ -514,9 +514,10 @@ know what to do without calling her son?
    and note what the media library felt like — filenames, previews, any
    clutter?). Judge: would Jodi trust she picked the right image?
 10. **Site Settings — the launch lever**: open Site Settings. In persona,
-    read the "Show the full site to the public" control and its hint: do
-    you understand EXACTLY what flipping it does, and how consequential it
-    is? Flip it OFF, save, reload the public site — what do you see? Flip
+    read the "Show the full site" control and its hint: do you understand
+    EXACTLY what flipping it does, how consequential it is, and WHICH site
+    it changes from the URL you are on? Flip it OFF, save, reload the site
+    — what do you see? Flip
     it back ON, save, verify the full site is back. Any moment of fear
     ("did I just break my site?") is a finding. Also read the rest of
     Settings (coming-soon fields, footer, section headings): is it clear
