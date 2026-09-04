@@ -265,6 +265,19 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
 - **A string you genuinely cannot route through `/admin` is a decision to
   surface, not a detail to absorb silently** — call it out in the PR and get it
   agreed before merge. Hardcoded chrome stays at the irreducible minimum.
+- **The seam's own `label:`/`hint:` copy is editor-facing too, and is held to
+  the same bar.** Routing a string through `/admin` achieves nothing if the
+  field it lands in is labelled in developer vocabulary — "Site Live (controls
+  gating)", "Coming Soon (shown when `site_live` = false)" — because Decap
+  renders whatever string the seam hands it and nothing else fails when the
+  copy drifts. `scripts/verify-build-artifacts.rb` now parses every
+  `label`/`hint`/validation message in the seam and fails on two narrow
+  classes: an internal key (any snake_case token, which is never natural
+  English) or a code comparison (`= true`/`= false`), and a small fixed
+  vocabulary list ("gating", "boolean", "repo", "commit", "widget", bare
+  "true"/"false", …). It is deliberately a lint and not a style opinion —
+  plain words the owner already meets in Decap's own chrome are not on the
+  list. Name the effect she can see, not the key behind it.
 - **A `_media/` item's outbound link is `article_url`, NEVER `url`.** A
   front-matter key named `url` is unreachable from Liquid — Jekyll's
   `DocumentDrop` defines `url` (the document's own address) and shadows it — so

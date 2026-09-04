@@ -772,6 +772,59 @@ check(
   "expected #{expected_event_fields.inspect}"
 ) { events_seam_field_names == expected_event_fields }
 
+puts "== editor-facing admin copy stays out of developer vocabulary =="
+# Every word an editor reads in /admin comes from this seam, and the premise of
+# this site (AGENTS.md, "Keep every visible string /admin-editable") is that its
+# owner maintains it with no developer standing by. Copy that names an internal
+# key (`site_live`), states a code comparison (`= false`), or reaches for
+# developer vocabulary ("gating", "boolean") tells her nothing she can act on --
+# and nothing else fails when it drifts back, because Decap renders whatever
+# string it is handed. Both assertions below were RED on the seam as it stood --
+# "Site Live (controls gating)" and "Settings & Gating" on the vocabulary one,
+# "Coming Soon (shown when site_live = false)" and its footer sibling on both.
+#
+# Scope is deliberately narrow, so this stays a lint and not a style opinion: an
+# internal key is a snake_case token (never natural English), and the vocabulary
+# list holds only words that carry no meaning for a non-technical owner. Plain
+# words she already meets in Decap's own chrome are NOT on it.
+editor_copy = []
+collect_copy = lambda do |node|
+  case node
+  when Hash
+    node.each do |k, v|
+      editor_copy << [k, v] if %w[label hint].include?(k) && v.is_a?(String)
+      # `pattern: ["<regex>", "<message shown on a bad value>"]` -- element 1 is
+      # editor-facing copy too, and parsing (rather than scanning lines) is what
+      # lets this tell it apart from the regex sitting beside it.
+      editor_copy << ["pattern message", v[1]] if k == "pattern" && v.is_a?(Array) && v[1].is_a?(String)
+      collect_copy.call(v)
+    end
+  when Array
+    node.each { |v| collect_copy.call(v) }
+  end
+end
+collect_copy.call(seam_yaml)
+
+# Guard the denominator: an empty or mis-parsed seam would make both checks
+# below pass over nothing at all.
+check(failures, "admin seam yields editor-facing copy to check (#{editor_copy.size} strings)") do
+  editor_copy.size > 50
+end
+
+internal_key = /\b[a-z]+(?:_[a-z]+)+\b|=\s*(?:true|false)\b/
+key_offenders = editor_copy.select { |(_, text)| text =~ internal_key }
+check(failures, "no admin label/hint/validation message names an internal key or a code comparison") do
+  key_offenders.empty?
+end
+key_offenders.each { |(kind, text)| puts "       ^ #{kind}: #{text}" }
+
+jargon = /\b(?:gating|gated|boolean|front[- ]matter|yaml|repo|repository|commit|permalink|slug|widget|true|false|null|nil)\b/i
+jargon_offenders = editor_copy.select { |(_, text)| text =~ jargon }
+check(failures, "no admin label/hint/validation message uses developer vocabulary") do
+  jargon_offenders.empty?
+end
+jargon_offenders.each { |(kind, text)| puts "       ^ #{kind}: #{text}" }
+
 puts
 if failures.empty?
   puts "All build-artifact assertions passed."

@@ -242,19 +242,19 @@
       preview: false
     files:
       - name: settings
-        label: "Settings & Gating"
+        label: "Settings & Launch"
         file: "_data/settings.yml"
         fields:
-          - { name: site_live, label: "Site Live (controls gating)", widget: boolean, hint: "When false, only shows 'coming soon'; when true, shows full bio." }
+          - { name: site_live, label: "Show the full site", widget: boolean, hint: "Off — visitors see only the coming-soon page. On — the whole bio is shown. Your work stays saved either way; this only controls what visitors see." }
           - name: coming_soon
-            label: "Coming Soon (shown when site_live = false)"
+            label: "Coming-soon page (what visitors see while the full site is hidden)"
             widget: object
             fields:
               - { name: tagline,   label: "Coming Soon Tagline", widget: string }
               - { name: copyright, label: "Copyright", widget: string }
-              - { name: seo_description, label: "Search-Result Description (while coming soon)", widget: string, required: false, hint: "What Google and link previews show while the site is still gated. Keep it neutral -- the launch description in the site config only takes over once Site Live is on. Leave blank to serve no description at all." }
+              - { name: seo_description, label: "Search-Result Description (while coming soon)", widget: string, required: false, hint: "What Google and link previews show while the full site is hidden. Keep it neutral — the launch description takes over on its own once you show the full site. Leave blank to serve no description at all." }
           - name: footer
-            label: "Footer (shown when site_live = true)"
+            label: "Footer (shown once the full site is on)"
             widget: object
             fields:
               - { name: copyright, label: "Copyright", widget: string }
