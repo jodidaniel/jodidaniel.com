@@ -3,10 +3,12 @@
 ## CI: the e2e lane surfaces many contexts but requires ONE
 
 `e2e-tests.yml` here is a thin caller; the platform reusable fans the Playwright
-suite out over a **`project` matrix — one job per Playwright project** (10 of
-them, each on its own runner, each installing only its own browser engine)
-behind an aggregating `e2e` gate job. So a PR shows ~10 informational
-`e2e / project (<name>)` checks plus the ONE required `e2e / e2e`, which is the
+suite out over a **`project` matrix — one job per Playwright project, the two
+admin projects as three `--shard` jobs each** (14 jobs since cms-platform
+v0.1.120, each on its own runner, each installing only its own browser engine)
+behind an aggregating `e2e` gate job. So a PR shows 14 informational
+`e2e / project (<slot>)` checks (e.g. `e2e / project (chromium-laptop)`,
+`e2e / project (webkit-iphone16-shard-1-of-3)`) plus the ONE required `e2e / e2e`, which is the
 gate. No ruleset names the per-project contexts, and nothing in this repo needed
 changing for it.
 
@@ -16,9 +18,15 @@ single-page bio exercises far fewer tests than a full consumer.
 
 Every project job runs at the SAME worker count (`150%` — 6 on a 4-vCPU runner);
 an earlier version of this line said the counts "differ per project by design",
-which was never true of the shipped config. `--shard` is deliberately unused (it
-balances by test count, and per-test durations span 5 ms → 49 s) — the
-measurements are in the platform's
+which was never true of the shipped config. Whole-suite `--shard` stays unused
+(it balances by test count, and per-test durations span 5 ms → 90 s); only the
+two admin projects are sharded, where the tests are of similar weight.
+
+The install restores apt's downloaded `.deb`s from a cache only a `main` run can
+save, so this repo's `warm-e2e-apt-cache.yml` re-seeds it daily (02:37 UTC, plus
+`workflow_dispatch`; not a required check). Without it a slow Ubuntu mirror can
+hold one lane for 20+ minutes — the v0.1.120 bump PR's own pre-seed run did
+exactly that (gate 1379 s). The measurements are in the platform's
 [`docs/E2E-PARALLELISM.md`](https://github.com/Adam-S-Daniel/cms-platform/blob/main/docs/E2E-PARALLELISM.md).
 To dial the workers down without a platform release, pass the reusable's
 `workers` input from this caller (e.g. `workers: "2"`).
