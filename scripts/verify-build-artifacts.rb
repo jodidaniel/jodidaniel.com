@@ -282,7 +282,11 @@ check(failures, "rendered `pdf_archive_file` validates a `.pdf` suffix (issue #1
   pattern = pdf_field && pdf_field["pattern"]
   if pattern.is_a?(Array) && pattern.length == 2 && pattern[0].is_a?(String) && !pattern[1].to_s.empty?
     suffix = Regexp.new(pattern[0])
-    suffix.match?("report.pdf") && !suffix.match?("report.txt") && !suffix.match?("reportxpdf")
+    suffix.match?("report.pdf") &&
+      !suffix.match?("report.txt") &&
+      !suffix.match?("reportxpdf") &&
+      !suffix.match?("report.pdf.txt") &&
+      !suffix.match?("report.PDF")
   else
     false
   end
