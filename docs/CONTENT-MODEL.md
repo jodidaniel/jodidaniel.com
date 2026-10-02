@@ -97,12 +97,10 @@ each forced by what the section actually needs:
   (a `Date` object) instead, and `sort: 'start_date'` on a mix of Strings
   and Dates compares mismatched types — `scripts/verify-build-artifacts.rb`
   asserts every `_events/*.md`'s `start_date` is a String matching
-  `\A\d{4}-\d{2}-\d{2}\z` for exactly this reason. The admin seam's
-  `pattern: ['^\d{4}-\d{2}-\d{2}$', ...]` on that field must also stay
-  **single-quoted YAML** — `\d` inside a double-quoted scalar is not a
-  recognized escape and is a YAML parse error, not merely a different regex
-  (same trap the media `pdf_archive_file` field's pattern already documents further
-  down).
+  `\A\d{4}-\d{2}-\d{2}\z` for exactly this reason. The admin seam uses the
+  equivalent `pattern: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}$', ...]`. Its
+  backslash-free spelling survives the whole-fragment YAML round-trip that a
+  platform field-library `$ref` activates while keeping the same date shape.
 - **The outbound field is `event_url`, never `url`.** Same DocumentDrop
   shadow as `_media`'s `article_url` (see "Media items are real pages"
   below): a front-matter `url:` key on a collection document is unreachable
@@ -193,7 +191,8 @@ site every single media link:
 So: **the outbound link lives in `article_url`.** `admin/collections.site.yml`
 names that field, so Decap writes it; `scripts/verify-build-artifacts.rb` fails
 if any `_media/*.md` regains a top-level `url:` key, if an item stops resolving
-to a built page, or if the admin seam loses the PDF widget. The same trap
+to a built page, or if the rendered admin config loses the shared PDF fields.
+The same trap
 applies to any new field you add here — check the name against `DocumentDrop`
 (`url`, `content`, `output`, `path`, `relative_path`, `date`, `collection`,
 `excerpt`, `id`, `next`, `previous`) before using it.
@@ -315,26 +314,21 @@ verifier's withhold assertion checks that the built page contains no
 that no button rendered.
 
 **3. Opening the gate is an editor's explicit act.** Ticking *"Publish this PDF
-on the public website"* in `/admin` is the whole opt-in. The hint tells the
-editor what the box means: tick it for a US-government work, for something Jodi
-wrote and holds the rights to, or where the publisher has cleared it.
+on jodidaniel.com"* in `/admin` is the whole opt-in. The shared platform hint
+keeps the rule site-neutral: publish only when the owner has permission, owns
+the rights, the work is in the public domain, or the publisher has cleared it.
+The hostname is filled from the routed admin host at runtime.
 
 The href is **derived, never authored** — `/media-pdfs/<pdf_archive_file>` — so
 an editor cannot type a URL that bypasses the gate.
 
 **Suffix guard (issue #195).** Before the original fix, the field accepted any
 file type and the page rendered a confident "DOWNLOAD PDF" button that handed
-the visitor a text file. Two layers still guard it: the seam `pattern:`
-(rejecting a non-`.pdf` value at save time) and the layout, which renders the
-button only when the key's last four characters, downcased, equal `.pdf`.
-**Quoting matters**: the regex must be **single-quoted** YAML (`'\.pdf$'`) — a
-double-quoted `"\.pdf$"` is a YAML parse *error*, not merely a different regex.
-Verify with a real parser, never by eye:
-
-```sh
-ruby -ryaml -e 'p YAML.safe_load(File.read("admin/collections.site.yml", encoding: "utf-8")).find { |c| c["name"] == "media" }["fields"].find { |f| f["name"] == "pdf_archive_file" }["pattern"]'
-# => ["\\.pdf$", "Must be a PDF file name (.pdf)"]
-```
+the visitor a text file. Two layers still guard it: the shared field-library
+`pattern: ['[.]pdf$', ...]` rejects a non-`.pdf` value at save time, and the
+layout renders the button only when the file name's last four characters,
+downcased, equal `.pdf`. The character class is deliberately equivalent to
+`\.` without carrying a backslash through the `$ref` YAML render.
 
 **What the build verifies, and what it cannot.** `verify-build-artifacts.rb`
 splits the PDF assertions two ways and reports which half ran, because "All
@@ -427,7 +421,9 @@ honored by `cms-platform-theme` >= v0.1.7). This single-page bio has no blog.
 The admin UI itself is **delivered by the gem** (`cms-platform-theme`), not
 vendored here. The only admin file this repo owns is the **site seam**
 `admin/collections.site.yml`: a YAML fragment of Decap collection definitions
-that the platform's render hook splices into the base config at the
+that references the platform's reusable `archived_pdf_fields` group. The
+platform's render hook resolves that `$ref`, then splices the result into the
+base config at the
 `# __SITE_COLLECTIONS__` marker at build time (indentation must match the base
 list — 2 spaces for `- name:`). `admin/collections.site.yml.example` documents
 the seam format. Do not add a vendored `admin/config.yml` or admin machinery;
