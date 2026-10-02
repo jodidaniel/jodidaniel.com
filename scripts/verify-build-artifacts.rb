@@ -238,7 +238,7 @@ check(
   "settings.section_headings.media_heading #{media_heading.inspect}"
 ) { !media_nav_entry.nil? && media_nav_label == media_heading }
 
-puts "== issues #194 / #195: admin seam (link_label, pdf_label, .pdf pattern) =="
+puts "== issues #194 / #195: rendered admin fields (link_label, pdf_label, .pdf pattern) =="
 # Parsed with the `yaml` stdlib, never a regex/line-scan (AGENTS.md) — a regex
 # over this flow-mapping seam can't tell `pattern:` apart from `hint:` text
 # that happens to mention "pdf", and it can't see a field that moved lines.
@@ -250,6 +250,23 @@ media_seam_fields = (media_seam && media_seam["fields"]).to_a.each_with_object({
   h[f["name"]] = f if f.is_a?(Hash)
 end
 
+# Shared platform fields are `$ref` nodes in the site-owned seam, so their
+# actual Decap contract exists only in the rendered config. Read the build
+# artifact the editor receives; continuing to inspect only the raw seam would
+# mistake every shared field for a missing field.
+admin_config = admin_cfg && YAML.safe_load(
+  admin_cfg,
+  permitted_classes: [Date],
+  aliases: true
+)
+media_admin = admin_config.is_a?(Hash) ? admin_config.fetch("collections", []).find do |collection|
+  collection.is_a?(Hash) && collection["name"] == "media"
+end : nil
+check(failures, "rendered admin config parses as YAML and has a `media` collection") { !media_admin.nil? }
+media_admin_fields = (media_admin && media_admin["fields"]).to_a.each_with_object({}) do |field, fields|
+  fields[field["name"]] = field if field.is_a?(Hash)
+end
+
 # The PDF BYTES must never enter this repo. jodidaniel.com is PUBLIC, so a
 # committed PDF of a third-party article is world-readable at
 # raw.githubusercontent.com regardless of what the site renders — and git
@@ -257,17 +274,23 @@ end
 # is private S3; the seam names an OBJECT in it. A `file`/`image` widget here
 # would quietly restore the repo-upload path, so assert its absence, not just
 # the new field's presence. See docs/CONTENT-MODEL.md, "Archived PDFs".
-pdf_field = media_seam_fields["pdf_archive_file"]
-check(failures, "admin seam names the archived PDF and offers NO repo upload") do
-  pdf_field && pdf_field["widget"] == "string" && media_seam_fields["pdf"].nil?
+pdf_field = media_admin_fields["pdf_archive_file"]
+check(failures, "rendered admin config names the archived PDF and offers NO repo upload") do
+  pdf_field && pdf_field["widget"] == "string" && media_admin_fields["pdf"].nil?
 end
-check(failures, "admin seam's `pdf_archive_file` validates a `.pdf` suffix (issue #195)") do
+check(failures, "rendered `pdf_archive_file` validates a `.pdf` suffix (issue #195)") do
   pattern = pdf_field && pdf_field["pattern"]
-  pattern.is_a?(Array) && pattern.length == 2 && pattern[0].is_a?(String) &&
-    pattern[0].include?(".pdf$") && !pattern[1].to_s.empty?
+  if pattern.is_a?(Array) && pattern.length == 2 && pattern[0].is_a?(String) && !pattern[1].to_s.empty?
+    suffix = Regexp.new(pattern[0])
+    suffix.match?("report.pdf") && !suffix.match?("report.txt") && !suffix.match?("reportxpdf")
+  else
+    false
+  end
+rescue RegexpError
+  false
 end
-check(failures, "admin seam offers the `pdf_public` gate, defaulting to OFF") do
-  f = media_seam_fields["pdf_public"]
+check(failures, "rendered admin config offers the `pdf_public` gate, defaulting to OFF") do
+  f = media_admin_fields["pdf_public"]
   !f.nil? && f["widget"] == "boolean" && f["default"] == false
 end
 
@@ -275,8 +298,8 @@ check(failures, "admin seam offers `link_label` on media entries, and it's optio
   f = media_seam_fields["link_label"]
   !f.nil? && f["required"] == false
 end
-check(failures, "admin seam offers `pdf_label` on media entries, and it's optional (issue #194)") do
-  f = media_seam_fields["pdf_label"]
+check(failures, "rendered admin config offers `pdf_label` on media entries, and it's optional (issue #194)") do
+  f = media_admin_fields["pdf_label"]
   !f.nil? && f["required"] == false
 end
 check(failures, "admin seam offers `date_display` on media entries, and it's optional") do
@@ -804,6 +827,12 @@ collect_copy = lambda do |node|
   end
 end
 collect_copy.call(seam_yaml)
+# The site's `$ref` leaves shared PDF labels and hints out of the source seam.
+# Include the three resolved fields from the rendered config so centralized
+# platform copy stays under the same editor-language guard.
+%w[pdf_archive_file pdf_public pdf_label].each do |name|
+  collect_copy.call(media_admin_fields[name])
+end
 
 # Guard the denominator: an empty or mis-parsed seam would make both checks
 # below pass over nothing at all.

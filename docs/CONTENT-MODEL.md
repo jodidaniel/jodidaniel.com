@@ -191,7 +191,8 @@ site every single media link:
 So: **the outbound link lives in `article_url`.** `admin/collections.site.yml`
 names that field, so Decap writes it; `scripts/verify-build-artifacts.rb` fails
 if any `_media/*.md` regains a top-level `url:` key, if an item stops resolving
-to a built page, or if the admin seam loses the PDF widget. The same trap
+to a built page, or if the rendered admin config loses the shared PDF fields.
+The same trap
 applies to any new field you add here — check the name against `DocumentDrop`
 (`url`, `content`, `output`, `path`, `relative_path`, `date`, `collection`,
 `excerpt`, `id`, `next`, `previous`) before using it.
