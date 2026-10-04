@@ -48,11 +48,12 @@ close. `scripts/verify-build-artifacts.rb` covers that gap: for every entry
 in `_data/about.yml`'s `nav`, the *built* home page must contain a real
 `<section id="...">` matching that entry's `anchor` — checked against
 `_site/index.html`, not the layout source — so a rename that silently drifts
-the two apart fails the build instead of shipping a dead pill. That check is
-vacuous while `site_live: false` (the gate hides every section, so there is
-nothing built to check anchors against); it prints a `note` saying so rather
-than letting a pass imply coverage it doesn't have — the same conditional
-posture as the PDF-upload checks documented further down in this file.
+the two apart fails the build instead of shipping a dead pill. On the
+committed build that check is vacuous while `site_live: false` (the gate hides
+every section, so there is nothing built to check anchors against), and it
+prints a `note` saying so. The verifier's second, open-gate pass (issue #306,
+see "What the build verifies" further down) runs it for real against a
+disposable build with the gate forced open, where a skip is a failure.
 
 ### Repeating sections → folder collections (one file per item, ordered by `weight`)
 
@@ -288,7 +289,7 @@ a later `git rm` fixes the working tree and nothing else. So the archive is a
 
 - **`pdf_archive_file`** (optional string) — the object's file name in the
   archive, e.g. `"1-fda-amicus.pdf"`. It is NOT a site path and NOT a URL.
-  Seam-validated with `pattern: ['\.pdf$', …]`.
+  Must end in a lowercase `.pdf` (see "Suffix guard" below).
 - **`pdf_public`** (boolean, default `false`) — the permission gate.
 - **`pdf_label`** (optional string) — button text; only ever seen when the gate
   is open.
@@ -322,31 +323,68 @@ The hostname is filled from the routed admin host at runtime.
 The href is **derived, never authored** — `/media-pdfs/<pdf_archive_file>` — so
 an editor cannot type a URL that bypasses the gate.
 
-**Suffix guard (issue #195).** Before the original fix, the field accepted any
-file type and the page rendered a confident "DOWNLOAD PDF" button that handed
-the visitor a text file. Two layers still guard it: the shared field-library
-`pattern: ['[.]pdf$', ...]` rejects a non-`.pdf` value at save time, and the
-layout renders the button only when the file name's last four characters,
-downcased, equal `.pdf`. The character class is deliberately equivalent to
-`\.` without carrying a backslash through the `$ref` YAML render.
+**Suffix guard (issues #195, #305).** Before the original fix, the field
+accepted any file type and the page rendered a confident "DOWNLOAD PDF" button
+that handed the visitor a text file.
+
+**The rule: the name ends in a lowercase `.pdf`, compared case-sensitively.**
+`report.pdf` qualifies; `report.PDF`, `report.Pdf`, `report` and
+`report.pdf.txt` do not. Every link in the chain applies that one rule:
+
+- the shared field-library `pattern: ['[.]pdf$', ...]` rejects anything else at
+  save time (the character class is deliberately equivalent to `\.` without
+  carrying a backslash through the `$ref` YAML render);
+- `_layouts/media.html` renders the button only when the name's last four
+  characters equal `.pdf` exactly. It used to downcase them first, so
+  `report.PDF` got a button for a file the deploy would never publish;
+- the platform's `publish-opted-in-pdfs.sh` copies an object out of the
+  archive only when its name matches `^[A-Za-z0-9._-]+\.pdf$`, and fails the
+  deploy otherwise;
+- `verify-build-artifacts.rb` holds every committed entry's name to the
+  field's own pattern, and checks the built pages against all five example
+  names above.
+
+The rule is about the suffix only. The rest of the name keeps its casing: the
+href is `/media-pdfs/<pdf_archive_file>` verbatim, matching the object's name in
+the archive. If an archived object's name ends in `.PDF`, rename the object to
+end in `.pdf` rather than changing the rule.
 
 **What the build verifies, and what it cannot.** `verify-build-artifacts.rb`
-splits the PDF assertions two ways and reports which half ran, because "All
-assertions passed" over zero of both would be a green light wired to nothing:
+splits the PDF assertions by entry state and reports which ran, because "All
+assertions passed" over zero of them would be a green light wired to nothing:
 
 | entry state | assertion |
 |---|---|
 | key, `pdf_public: false` | page carries no `/media-pdfs/` href and no file name |
-| key, `pdf_public: true`  | page links `/media-pdfs/<key>`, href ends `.pdf`, **and the file exists in `_site`** |
+| key ending in lowercase `.pdf`, `pdf_public: true` | page links `/media-pdfs/<key>`, href ends `.pdf`, **and the file exists in `_site`** |
+| any other key, `pdf_public: true` | page shows no PDF button and no `/media-pdfs/` href |
 | no key | nothing (a legitimate content state) |
 
-That last publish-side row is why a ticked box still **fails** the build: the
-step that copies an opted-in object out of the private archive is platform-side
-(`cms-platform`) and is not wired into this repo's deploy callers yet. That is
-deliberate — better a loud red than a "Download PDF" button that 404s. Both
-halves were proven able to fail: flipping one entry to `pdf_public: true` fails
-the `_site` existence check, and removing the `pdf_public` test from the layout
-fails all eight withhold assertions.
+**It runs them twice (issue #306).** While `site_live` is false every media page
+is a coming-soon shell, so on the committed build none of those rows has a page
+to read, and neither do the nav, Events, Media-grouping and above-the-fold
+groups. So after checking the committed `_site`, the verifier copies the source
+into a temporary directory outside the repo (without `.git`), forces
+`site_live: true` in that copy only, adds six synthetic `_media` entries (one
+withheld, one published, and `.PDF`, `.Pdf`, no suffix and `.pdf.txt` names,
+all ticked), builds it, and runs every assertion again. On that pass a group
+the gate would hide is a failure, and each PDF row above must run at least
+once. The temporary directory is deleted when the run ends, so that build is
+never deployed, and the verifier asserts the committed `_data/settings.yml` is
+byte-for-byte unchanged afterwards. Both passes print how many assertions they
+executed.
+
+The publish row is why a ticked box still **fails** the build. CI never reads
+the private archive; only the deploy's `publish-opted-in-pdfs.sh` does. On the
+open-gate pass the verifier writes a stand-in file for the synthetic published
+entry where that script would put it, but never for a real entry. So ticking
+the box on a real entry turns `site-verify` red, **now even while the site is
+gated**, because the open-gate pass checks it on every run. That is
+deliberate — better a loud red than a "Download PDF" button that 404s. These
+rows were proven able to fail: flipping one entry to `pdf_public: true` fails
+the `_site` existence check, removing the `pdf_public` test from the layout
+fails all eight withhold assertions, and putting the layout's `downcase` back
+fails the `.PDF` and `.Pdf` rows.
 
 **The bucket exists and the deploy is wired.**
 `jodidaniel-com-media-archive` is live and verified private (public access

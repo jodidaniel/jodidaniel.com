@@ -82,7 +82,12 @@
                  boolean true opens it, which is what Decap's boolean widget
                  writes.
               2. There must be an archive key to point at.
-              3. That key must actually end in `.pdf` (issue #195). Decap's
+              3. That key must actually end in `.pdf` (issue #195), lowercase
+                 and compared case-sensitively (issue #305): `report.PDF` gets
+                 no button. That is the platform's rule end to end -- the
+                 shared field's `[.]pdf$` pattern rejects it at save time and
+                 the deploy's publish step refuses to copy it -- so accepting
+                 it here would link to a file that is never published. Decap's
                  string `pattern:` guards NEW saves; this is the belt to that
                  seam's braces, so a hand-edited front-matter file still can't
                  render a lying "download PDF" button for a non-PDF file.
@@ -96,7 +101,7 @@
             {%- assign has_pdf = false -%}
             {%- assign pdf_href = "" -%}
             {%- if page.pdf_public == true and page.pdf_archive_file and page.pdf_archive_file != "" -%}
-              {%- assign pdf_suffix = page.pdf_archive_file | downcase | slice: -4, 4 -%}
+              {%- assign pdf_suffix = page.pdf_archive_file | slice: -4, 4 -%}
               {%- if pdf_suffix == ".pdf" -%}
                 {%- assign has_pdf = true -%}
                 {%- capture pdf_path -%}/media-pdfs/{{ page.pdf_archive_file }}{%- endcapture -%}
