@@ -23,13 +23,14 @@ require "date"
 # hides every section and every media page, so most content groups below have
 # nothing to read on the committed build: a green run there said nothing about
 # what launch would ship. So, after checking the committed build in `_site`,
-# this script copies the source tree into a temporary directory OUTSIDE the
-# repo (no `.git`, so nothing run there can push), forces `site_live: true` in
-# that copy only, adds the synthetic PDF entries in PDF_FIXTURES, builds it,
-# and re-runs every assertion against that build with `--open-pass`. On that
-# pass a group the gate would hide is a FAILURE, not a note. The copy and its
-# build are deleted when the run ends, so nothing in them can be deployed, and
-# the committed `_data/settings.yml` is never written (asserted below).
+# this script copies the tracked source files (`git ls-files`, so no ignored
+# local content) into a temporary directory OUTSIDE the repo (no `.git`, so
+# nothing run there can push), forces `site_live: true` in that copy only,
+# adds the synthetic PDF entries in PDF_FIXTURES, builds it, and re-runs every
+# assertion against that build with `--open-pass`. On that pass a group the
+# gate would hide is a FAILURE, not a note. The copy and its build are deleted
+# when the run ends, so nothing in them can be deployed, and the committed
+# `_data/settings.yml` is never written (asserted below).
 #
 #   ruby scripts/verify-build-artifacts.rb --open-pass <source-copy> <its _site>
 #
@@ -50,6 +51,32 @@ SITE = OPEN_PASS ? File.expand_path(ARGV.fetch(2)) : File.join(REPO_ROOT, "_site
 # `^[A-Za-z0-9._-]+\.pdf$` both reject `report.PDF` -- so the layout (no
 # `downcase`) and this script follow it rather than accepting any casing.
 PDF_SUFFIX_RE = /\.pdf\z/
+
+# The stricter rule the DEPLOY applies (cms-platform's
+# scripts/publish-opted-in-pdfs.sh, at the tag in platform.lock): an opted-in
+# `pdf_archive_file` is copied out of the private archive only when it matches
+# `^[A-Za-z0-9._-]+\.pdf$` and contains no `..`; any other name aborts the
+# deploy. The admin field's `[.]pdf$` is looser (it would accept `my file.pdf`
+# or `a/b.pdf`), so THIS is where the stricter rule is enforced before deploy.
+# `\A...\z`, not `^...$`: a name with a newline in it must not pass.
+DEPLOY_PDF_KEY_RE = /\A[A-Za-z0-9._-]+\.pdf\z/
+
+def deploy_accepts_pdf_key?(key)
+  key.match?(DEPLOY_PDF_KEY_RE) && !key.include?("..")
+end
+
+# An entry's front matter parsed as the deploy script parses it (a real YAML
+# parser, the same split and options), so "is this entry opted in" means the
+# same thing here as at deploy time. Nil when there is none or it does not parse.
+def media_front_matter(path)
+  parts = File.read(path, encoding: "utf-8").split(/^---\s*$/, 3)
+  return nil if parts.length < 3
+
+  fm = YAML.safe_load(parts[1], aliases: true, permitted_classes: [Date, Time])
+  fm.is_a?(Hash) ? fm : nil
+rescue Psych::SyntaxError, Psych::DisallowedClass
+  nil
+end
 
 # Synthetic `_media` entries the open-gate pass adds to its disposable copy, so
 # the withhold path, the publish path and the suffix rule all run even though
@@ -426,6 +453,26 @@ media_src.each do |src|
       !field_suffix_rule.nil? && field_suffix_rule.match?(pdf_key)
     end
   end
+  # Item 1 of the review round on issue #306: the PDF's bytes live in a private
+  # archive CI cannot read, so whether the object EXISTS is the deploy's check
+  # (it fails loudly). What CI can verify is the name: the deploy refuses any
+  # opted-in name outside `[A-Za-z0-9._-]+.pdf`, and the admin field is looser,
+  # so a ticked box over such a name would pass the editor and fail the deploy.
+  # Committed pass only (the open-gate copy's fixtures break the rule on
+  # purpose); it runs whatever the gate state, since it reads the source.
+  if !OPEN_PASS && (front = media_front_matter(src)) && front["pdf_public"] == true
+    opted_key = front["pdf_archive_file"].to_s.strip
+    check(failures, "_media/#{slug}.md publishes its PDF under a name the deploy accepts (#{opted_key.inspect})") do
+      deploy_accepts_pdf_key?(opted_key)
+    end
+    unless deploy_accepts_pdf_key?(opted_key)
+      puts "       ^ _media/#{slug}.md has \"Publish this PDF\" ticked, but its archived file name"
+      puts "         #{opted_key.inspect} cannot be published. The name must use only letters, numbers,"
+      puts "         dots, dashes and underscores (no spaces, no slashes, no \"..\"), and end in a"
+      puts "         lowercase .pdf. Rename the file in the private archive to match and update"
+      puts "         the \"Archived PDF\" field, or untick \"Publish this PDF\"."
+    end
+  end
   page = read(File.join(SITE, "media", slug, "index.html"))
   next if page.nil?
   gated = page.include?("noindex,nofollow")
@@ -464,8 +511,14 @@ media_src.each do |src|
         # platform-side (cms-platform), so until a site's deploy runs it this
         # assertion is what stops the box being ticked into a broken link
         # rather than a working download.
-        check(failures, "published PDF #{href} exists in _site") do
-          File.exist?(File.join(SITE, "media-pdfs", pdf_key))
+        #
+        # A name the deploy would refuse is not staged and is reported, with the
+        # reason, by the committed pass's name check; failing "exists" for it
+        # too would only say the same thing less usefully.
+        if deploy_accepts_pdf_key?(pdf_key)
+          check(failures, "published PDF #{href} exists in _site") do
+            File.exist?(File.join(SITE, "media-pdfs", pdf_key))
+          end
         end
       elsif pdf_public
         pdf_refused_checks += 1
@@ -568,9 +621,17 @@ end
 # a hand-copied offprint, a well-meaning `assets/` commit. _site is excluded
 # because a build legitimately materialises opted-in PDFs there; it is never
 # committed (.gitignore).
+# The skip list is matched against the path RELATIVE to the tree being scanned
+# and as whole path segments: an absolute path would let a TMPDIR containing
+# `/vendor/` or `/_site/` quietly skip the whole open-gate copy, and a bare
+# substring would let `xgit` stand in for `.git`.
+pdf_scan_skip = %w[_site .git .cms-platform node_modules vendor e2e].freeze
 pdf_bytes_in_repo = Dir.glob(File.join(ROOT, "**", "*.pdf"), File::FNM_CASEFOLD)
                        .map { |f| File.expand_path(f) }
-                       .reject { |f| f =~ %r{/(_site|\.git|\.cms-platform|node_modules|vendor|e2e)/} }
+                       .reject do |f|
+                         rel = f.delete_prefix("#{ROOT}/")
+                         rel.split("/")[0...-1].any? { |seg| pdf_scan_skip.include?(seg) }
+                       end
 check(failures, "no PDF bytes are committed to this public repo") do
   pdf_bytes_in_repo.empty?
 end
@@ -969,11 +1030,65 @@ puts "#{committed_executed} assertion(s) executed on the committed-gate build."
 # The open-gate pass (issue #306). See the header comment for the design.
 # ---------------------------------------------------------------------------
 
-# Left out of the disposable copy: build output and caches, installed gems
-# (Bundler still resolves them from REPO_ROOT, where the build is launched),
-# local agent state, and `.git`, so the copy is not a repository and nothing
-# run in it can reach `origin`.
+# What goes into the disposable copy is an ALLOWLIST, never "everything except":
+# the files `git ls-files` reports, nothing else. A checkout carries local-only
+# content git ignores (the OAuth proxy's real credentials in
+# infrastructure/site-params.env, .cms-platform, .jodidaniel-real-content,
+# e2e/node_modules), and an exclude list would copy whatever it forgot to name
+# into /tmp. Without git metadata (a tarball checkout) there is no list to ask,
+# so the fallback walks the tree and refuses the local-only names below.
+#
+# Build output and caches, installed gems (Bundler still resolves them from
+# REPO_ROOT, where the build is launched), local agent state and `.git` are
+# never copied either, so the copy is not a repository and nothing run in it can
+# reach `origin`.
 OPEN_COPY_SKIP = %w[.git _site .jekyll-cache .sass-cache .bundle vendor node_modules .claude].freeze
+# Fallback only: names and shapes that hold local-only or credential content.
+OPEN_COPY_LOCAL_ONLY = %w[infrastructure .cms-platform .jodidaniel-real-content e2e].freeze
+
+# Paths, relative to REPO_ROOT, to copy: nil when there is no usable git
+# metadata. Argument array and NUL-delimited output, so no shell string and no
+# name can be misread.
+def tracked_paths
+  return nil unless File.exist?(File.join(REPO_ROOT, ".git"))
+
+  out = IO.popen(["git", "-C", REPO_ROOT, "ls-files", "-z"], err: File::NULL, &:read)
+  return nil unless $?.success?
+
+  out.force_encoding("UTF-8").split("\0").reject(&:empty?)
+rescue SystemCallError
+  nil
+end
+
+def walked_paths
+  Dir.glob("**/*", File::FNM_DOTMATCH, base: REPO_ROOT).select do |rel|
+    segs = rel.split("/")
+    base = segs.last
+    next false if base == "." || segs.include?("..")
+    next false if segs.any? { |seg| OPEN_COPY_SKIP.include?(seg) || OPEN_COPY_LOCAL_ONLY.include?(seg) }
+    next false if base.start_with?(".env") || base.end_with?(".env")
+
+    File.file?(File.join(REPO_ROOT, rel)) || File.symlink?(File.join(REPO_ROOT, rel))
+  end
+end
+
+# Copy the source tree into `tmp`. Returns the relative paths copied and the
+# listing mode, for the assertion that the copy holds nothing else.
+def copy_source_tree(tmp)
+  tracked = tracked_paths
+  paths = tracked || walked_paths
+  paths.each do |rel|
+    next if OPEN_COPY_SKIP.include?(rel.split("/").first)
+
+    src = File.join(REPO_ROOT, rel)
+    next unless File.file?(src) # a tracked file deleted in the working tree, or a submodule
+
+    dest = File.join(tmp, rel)
+    FileUtils.mkdir_p(File.dirname(dest))
+    FileUtils.cp(src, dest)
+  end
+  [paths, tracked ? :git : :walk]
+end
 
 def write_pdf_fixtures(media_dir)
   PDF_FIXTURES.each do |slug, key, pdf_public|
@@ -992,15 +1107,23 @@ def write_pdf_fixtures(media_dir)
 end
 
 # Stand in for the deploy's publish-opted-in-pdfs.sh, which copies an opted-in
-# object out of the private archive to exactly this path. Only the fixtures
-# whose name the deploy would accept get a file, so the "exists in _site" check
-# exercises its pass path here; a real ticked entry gets nothing and still
-# fails that check, as it does on a live build.
-def stage_published_fixture_pdfs(site)
+# object out of the private archive to exactly this path. EVERY `pdf_public:
+# true` entry in the copy's `_media` gets a file -- the real ones as well as the
+# fixtures -- provided the deploy would accept its name (DEPLOY_PDF_KEY_RE, no
+# `..`). CI cannot read the private archive, so whether the object exists is the
+# deploy's check, which fails loudly; staging here keeps a legitimately ticked
+# real entry from turning the required check red for a file only the deploy can
+# see. A name the deploy would refuse gets nothing, and the committed pass's
+# name check reports it.
+def stage_published_pdfs(media_dir, site)
   dir = File.join(site, "media-pdfs")
   FileUtils.mkdir_p(dir)
-  PDF_FIXTURES.each do |_slug, key, pdf_public|
-    next unless pdf_public && key.match?(PDF_SUFFIX_RE)
+  Dir.glob(File.join(media_dir, "*.md")).sort.each do |entry|
+    front = media_front_matter(entry)
+    next unless front && front["pdf_public"] == true
+
+    key = front["pdf_archive_file"].to_s.strip
+    next unless deploy_accepts_pdf_key?(key)
 
     File.write(File.join(dir, key), "verifier stand-in, not a real PDF\n")
   end
@@ -1012,11 +1135,20 @@ settings_path = File.join(REPO_ROOT, "_data", "settings.yml")
 settings_before = File.binread(settings_path)
 open_built = false
 open_passed = false
+copied_paths = []
+copy_mode = nil
+stray_in_copy = []
 Dir.mktmpdir("verify-open-gate-") do |tmp|
-  Dir.children(REPO_ROOT).each do |entry|
-    next if OPEN_COPY_SKIP.include?(entry)
-
-    FileUtils.cp_r(File.join(REPO_ROOT, entry), tmp)
+  copied_paths, copy_mode = copy_source_tree(tmp)
+  # Prove the allowlist held, from what is actually on disk: every file in the
+  # copy must be one that was meant to go in (before the fixtures, settings edit
+  # and build add their own).
+  on_disk = Dir.glob("**/*", File::FNM_DOTMATCH, base: tmp).select { |rel| File.file?(File.join(tmp, rel)) }
+  stray_in_copy = on_disk - copied_paths
+  if copy_mode == :walk
+    stray_in_copy += on_disk.select do |rel|
+      rel.split("/").first == "infrastructure" || File.basename(rel).end_with?(".env")
+    end
   end
 
   copy_settings = File.join(tmp, "_data", "settings.yml")
@@ -1034,13 +1166,17 @@ Dir.mktmpdir("verify-open-gate-") do |tmp|
                       "bundle", "exec", "jekyll", "build", "--quiet", "--source", tmp, "--destination", site,
                       chdir: REPO_ROOT)
   if open_built
-    stage_published_fixture_pdfs(site)
+    stage_published_pdfs(File.join(tmp, "_media"), site)
     $stdout.flush
     open_passed = system(RbConfig.ruby, File.expand_path(__FILE__), "--open-pass", tmp, site)
   end
 end
 puts
 puts "#### back in the committed-gate pass"
+check(failures, "open-gate copy holds only tracked source files (#{copy_mode == :git ? 'git ls-files' : 'no git metadata, so a walk without infrastructure/ or *.env'}; #{copied_paths.size} paths), no local-only content") do
+  stray_in_copy.empty?
+end
+stray_in_copy.first(5).each { |f| puts "       unexpected in the copy: #{f}" }
 check(failures, "open-gate build succeeds (bundle exec jekyll build on the disposable copy)") { open_built }
 check(failures, "open-gate pass: every assertion passed (its output is above)") { open_passed } if open_built
 check(failures, "_data/settings.yml is unchanged by the open-gate pass (the committed site_live stays as is)") do
