@@ -243,6 +243,30 @@ The Decap GitHub backend authenticates through an **API Gateway OAuth proxy**:
 Production is served from CloudFront; the apex `jodidaniel.com` was cut over
 from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
 
+### Deploying the bootstrap stack (security headers, media bucket)
+
+Run `bash infrastructure/bootstrap/deploy.sh` (needs AWS credentials, Ruby,
+python3; the operator runs it, never CI). The wrapper checks the platform out
+at `platform.lock`'s `platform_ref` and delegates to its bootstrap script. It
+**pins** the live stack: `BOOTSTRAP_STACK_NAME=jodidaniel-com-bootstrap`
+(us-east-1), `CREATE_OIDC_PROVIDER=false`, `CREATE_APEX_DNS_RECORDS=false`,
+`GITHUB_ORG=jodidaniel` and `MEDIA_ARCHIVE_BUCKET=jodidaniel-com-media-archive`,
+overriding the shell and `site-params.env`, and refuses if that stack name
+equals `site-params.env`'s `STACK_NAME` (the OAuth **proxy** stack,
+`jodidaniel-com-oauth-proxy`). Do not source `site-params.env` and call the
+platform script by hand: that is how the proxy stack got targeted.
+
+- The stack exists, so a run is an update; `ALLOW_STACK_CREATE=1` is for a
+  first create only and the wrapper never sets it.
+- The platform script re-sends every parameter, so a setting the wrapper does
+  not pin (`ADMIN_DOMAIN`, `HSTS_*`, `ADMIN_CSP_MODE`) reverts to its default
+  unless exported. Compare `aws cloudformation describe-stacks --stack-name
+  jodidaniel-com-bootstrap --region us-east-1 --query 'Stacks[0].Parameters'`
+  with the printed change set, and use `ALLOW_DESTRUCTIVE_CHANGES=1` only when
+  a removal is the intent.
+- `bash scripts/test-bootstrap-deploy.sh` tests the wrapper with a stub platform
+  and `aws` (no AWS, no network, example values only).
+
 ## Quick orientation for a fresh session
 
 - Single-page gated bio. Gate = `_data/settings.yml` `site_live` (default

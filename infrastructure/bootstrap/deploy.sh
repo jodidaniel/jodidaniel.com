@@ -31,6 +31,21 @@
 # bootstrap stack name equal to it. See cms-platform infrastructure/README.md,
 # "The STACK_NAME collision".
 #
+# jodidaniel.com SPECIFICS (this copy differs from the scaffolded template):
+# the live bootstrap stack is `jodidaniel-com-bootstrap` (us-east-1), and this
+# wrapper PINS its identity and the parameters the live stack was deployed with,
+# because the platform script re-sends every parameter on each run and a missing
+# one silently reverts to the script's default:
+#   BOOTSTRAP_STACK_NAME=jodidaniel-com-bootstrap   (never the proxy STACK_NAME)
+#   CREATE_OIDC_PROVIDER=false   (the account's one GitHub OIDC provider exists)
+#   CREATE_APEX_DNS_RECORDS=false (the apex alias is not managed by this stack)
+#   GITHUB_ORG=jodidaniel, MEDIA_ARCHIVE_BUCKET=jodidaniel-com-media-archive
+# They override the caller's environment and site-params.env on purpose. The
+# wrapper refuses, before any platform checkout or AWS call, if the bootstrap
+# stack name equals site-params.env's STACK_NAME (the OAuth proxy stack).
+# Creating the stack needs ALLOW_STACK_CREATE=1, which this wrapper never sets;
+# it exists already, so an ordinary run is an update.
+#
 # Prerequisites: AWS CLI v2, git, Ruby, python3, AWS credentials.
 # Usage:  bash infrastructure/bootstrap/deploy.sh   (idempotent)
 # =============================================================================
@@ -63,16 +78,35 @@ PLATFORM_REF="${PLATFORM_REF:-$(read_lock platform_ref)}"
 
 # ── Load site parameters (GITHUB_REPO, APEX_DOMAIN, …) ──────────────────────
 PARAMS_FILE="$REPO_ROOT/infrastructure/site-params.env"
+PROXY_STACK_NAME=""
 if [[ -f "$PARAMS_FILE" ]]; then
   info "Sourcing $PARAMS_FILE"
-  # The file's STACK_NAME is the OAuth proxy stack's; never hand it on.
+  # The file's STACK_NAME is the OAuth proxy stack's; never hand it on. Unset it
+  # first so what the file leaves behind is exactly the file's own value.
   if [[ -v STACK_NAME ]]; then STACK_NAME_BEFORE="$STACK_NAME"; else unset STACK_NAME_BEFORE; fi
+  unset STACK_NAME
   set -a; # shellcheck disable=SC1090
   source "$PARAMS_FILE"; set +a
+  PROXY_STACK_NAME="${STACK_NAME-}"
   if [[ -v STACK_NAME_BEFORE ]]; then export STACK_NAME="$STACK_NAME_BEFORE"; else unset STACK_NAME; fi
   export SITE_PARAMS_FILE="$PARAMS_FILE"
 else
   warn "infrastructure/site-params.env not found — relying on already-exported env / platform defaults."
+fi
+
+# ── Pin the live bootstrap stack's identity and parameters ───────────────────
+# Forced, not defaulted: a stale shell variable or a missing line in
+# site-params.env must not change what the live stack is updated to.
+export BOOTSTRAP_STACK_NAME="jodidaniel-com-bootstrap"
+export AWS_REGION="us-east-1"
+export CREATE_OIDC_PROVIDER="false"
+export CREATE_APEX_DNS_RECORDS="false"
+export GITHUB_ORG="jodidaniel"
+export MEDIA_ARCHIVE_BUCKET="jodidaniel-com-media-archive"
+export GITHUB_REPO="${GITHUB_REPO:-jodidaniel.com}"
+export APEX_DOMAIN="${APEX_DOMAIN:-jodidaniel.com}"
+if [[ -n "$PROXY_STACK_NAME" && "$BOOTSTRAP_STACK_NAME" == "$PROXY_STACK_NAME" ]]; then
+  error "Refusing: the bootstrap stack name ${BOOTSTRAP_STACK_NAME} is the STACK_NAME in ${PARAMS_FILE}, the OAuth proxy stack. Nothing was deployed."
 fi
 
 # ── Check the platform out at platform_ref into .cms-platform/ ──────────────
