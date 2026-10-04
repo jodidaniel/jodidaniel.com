@@ -243,7 +243,7 @@
         label: "Settings & Launch"
         file: "_data/settings.yml"
         fields:
-          - { name: site_live, label: "Show the full site on {{CMS_CURRENT_HOST}}", widget: boolean, hint: "Off — visitors to {{CMS_CURRENT_HOST}} see only the coming-soon page. On — they see the full site. Your work stays saved either way; this only controls what visitors see. The change takes effect on {{CMS_CURRENT_HOST}} only after you select Publish. If {{CMS_CURRENT_HOST}} is a preview address (it starts with \"preview-\"), Publish switches this preview only: jodidaniel.com keeps its current setting until this preview's pull request is merged on GitHub. That merge carries this switch to jodidaniel.com together with everything else published on this preview, no matter who merges it. To change jodidaniel.com directly, make the change at jodidaniel.com/admin instead." }
+          - { name: site_live, label: "Show the full site on {{CMS_CURRENT_HOST}}", widget: boolean, hint: "Off — visitors to {{CMS_CURRENT_HOST}} see only the coming-soon page. On — they see the full site. Your work is kept either way. Changing this switch does nothing until you select Publish. On a preview address (one that starts with \"preview-\"), Publish changes this preview only. jodidaniel.com keeps its own setting until this preview's pull request is merged. That merge takes your change to jodidaniel.com, along with everything else published on this preview, even if someone else merges it. To change jodidaniel.com itself, use [jodidaniel.com/admin](https://jodidaniel.com/admin/)." }
           - name: coming_soon
             label: "Coming-soon page (shown on {{CMS_CURRENT_HOST}} while the full site is hidden)"
             widget: object
