@@ -54,6 +54,18 @@ body {
     min-height: 100vh;
 }
 
+/* These custom layouts load this stylesheet without the platform's main.css,
+   so keep its responsive embed and bare-table rules here. */
+iframe {
+    max-width: 100%;
+}
+
+table:not([class]) {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
 /* Gradient dither — break up Firefox/WebKit color banding on the page
    background. Chromium dithers CSS gradients; Firefox/Safari don't, so the
    135deg linear gradient above shows visible stair-step bands on those

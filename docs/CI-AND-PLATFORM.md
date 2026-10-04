@@ -71,6 +71,17 @@ slower than Chromium does.
   produced exactly that message. `no-deploy-fired` is still emitted, but only
   once the PR really has merged.
 
+## Responsive overflow coverage (platform v0.1.126)
+
+The [home layout](../_layouts/home.html) and [media layout](../_layouts/media.html)
+load the [site stylesheet](../assets/css/jodidaniel.css) without the platform's
+`main.css`, so it carries the iframe width limit and bare-table horizontal
+scrolling rules. The platform's
+[`responsive-overflow` spec](https://github.com/Adam-S-Daniel/cms-platform/blob/v0.1.126/e2e/responsive-overflow.spec.js)
+was added by [platform PR #555](https://github.com/Adam-S-Daniel/cms-platform/pull/555)
+for [issue #540](https://github.com/Adam-S-Daniel/cms-platform/issues/540) and
+checks those rules.
+
 ## Resolved blockers (historical)
 
 Previously tracked in "Known open blockers (CMS editing)" in AGENTS.md;
