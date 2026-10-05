@@ -39,6 +39,7 @@ require "date"
 require "fileutils"
 require "rbconfig"
 require "tmpdir"
+require_relative "media_rules"
 
 REPO_ROOT = File.expand_path("..", __dir__)
 OPEN_PASS = ARGV[0] == "--open-pass"
@@ -213,8 +214,10 @@ media_src.each do |src|
   check(failures, "_media/#{slug}.md uses `article_url:`, not the shadowed `url:`") do
     fm.match?(/^article_url:/) && !fm.match?(/^url:/)
   end
-  check(failures, "/media/#{slug}/ is a real page (home page links here)") do
-    File.exist?(File.join(SITE, "media", slug, "index.html"))
+  # Jekyll builds `/media/:slug/` from its OWN slug of the file name, which drops
+  # characters such as an em dash (issue #339), so the address is not the raw name.
+  check(failures, "/media/#{MediaRules.page_slug(src)}/ is a real page (home page links here)") do
+    File.exist?(MediaRules.page_path(SITE, src))
   end
 end
 
@@ -226,11 +229,10 @@ puts "== media date_display: a real date field, not baked into source =="
 # still in source would render the date TWICE. Parsed with the `yaml` stdlib
 # (AGENTS.md), never a regex/line-scan over front matter.
 #
-# `date_display` is required to EXIST on every item (so a new entry can't
-# silently omit it) but is allowed to be empty, a bare year, or "Ongoing" --
-# those are real, deliberately-incomplete content states pending the owner
-# filling them in from /admin, not build failures. See docs/CONTENT-MODEL.md.
-MEDIA_DATE_DISPLAY_RE = /\A(Ongoing|(January|February|March|April|May|June|July|August|September|October|November|December) \d{4}|\d{4})\z/
+# `date_display` is optional: absent, empty, a bare year, or "Ongoing" are all real,
+# deliberately-incomplete content states pending the owner filling them in from
+# /admin, not build failures. Absent counts the same as empty because Decap writes
+# NO key for an optional text field left blank (issue #338). See docs/CONTENT-MODEL.md.
 undated_media = []
 media_src.each do |src|
   slug = File.basename(src, ".md")
@@ -239,14 +241,12 @@ media_src.each do |src|
   fm = fm_match && YAML.safe_load(fm_match[1])
   fm = {} unless fm.is_a?(Hash)
 
-  check(failures, "_media/#{slug}.md has a `date_display` key (may be empty)") { fm.key?("date_display") }
-
-  date_display = fm["date_display"].to_s
+  date_display = MediaRules.optional_text(fm, "date_display")
   unless date_display.empty?
     check(
       failures,
       "_media/#{slug}.md date_display #{date_display.inspect} is Month YYYY, a bare year, or \"Ongoing\""
-    ) { date_display.match?(MEDIA_DATE_DISPLAY_RE) }
+    ) { MediaRules.date_display_problem(fm).nil? }
   end
 
   source = fm["source"].to_s
@@ -473,7 +473,7 @@ media_src.each do |src|
       puts "         the \"Archived PDF\" field, or untick \"Publish this PDF\"."
     end
   end
-  page = read(File.join(SITE, "media", slug, "index.html"))
+  page = read(MediaRules.page_path(SITE, src))
   next if page.nil?
   gated = page.include?("noindex,nofollow")
   if OPEN_PASS
