@@ -153,9 +153,9 @@ boss signs off on the copy. The gate is a single boolean,
 **`site_live` in `_data/settings.yml`** (default `false`).
 
 `_layouts/home.html` assigns `live = settings.site_live` and wraps **every** bio
-section (about, expertise, experience, accomplishments, media, education,
-contact) in `{% if live %}`. When `site_live` is `false`, only the coming-soon
-shell renders: the name (`_data/header.yml`), `coming_soon.tagline`, and
+section (about, events, expertise, experience, accomplishments, media,
+education, contact) in `{% if live %}`. When `site_live` is `false`, only the
+coming-soon shell renders: the name (`_data/header.yml`), `coming_soon.tagline`, and
 `coming_soon.copyright` (all from `_data/settings.yml`). The full bio copy is
 present in the data/collections but is **not rendered** — so there is zero bio
 leak on prod while gated.
@@ -205,7 +205,7 @@ or reshaping a content source.
 
 ## `/admin` (Decap CMS)
 
-The 9 section editors, the site-owned `admin/collections.site.yml` seam
+The 10 section editors, the site-owned `admin/collections.site.yml` seam
 format, the brand-mark shadowing fix, and visual-regression gotchas for new
 folder collections/top-level routes → read
 [`docs/CONTENT-MODEL.md`](docs/CONTENT-MODEL.md) before touching `/admin`
@@ -279,7 +279,7 @@ platform script by hand: that is how the proxy stack got targeted.
   not editor-numbered, since "upcoming" means chronological and it frees the
   owner from renumbering the list every time she inserts an event). NOT a
   single data file. Full field lists → `docs/CONTENT-MODEL.md`.
-- `/admin` = 9 section editors; generics hidden via `cms.base_collections: []`;
+- `/admin` = 10 section editors; generics hidden via `cms.base_collections: []`;
   admin UI shipped by the `cms-platform-theme` gem; seam =
   `admin/collections.site.yml`.
   Full detail → `docs/CONTENT-MODEL.md`.
@@ -306,7 +306,7 @@ platform script by hand: that is how the proxy stack got targeted.
   that its owner maintains it end to end without a developer; a string only a
   commit can change is invisible in `/admin` and she cannot fix it herself. Add
   the data source first, then have the layout read it (`site.data.*` /
-  `site.<collection>`), not the other way round. Even the five section headings
+  `site.<collection>`), not the other way round. Even the section headings
   live in `_data/settings.yml` `section_headings` for this reason.
 - **A string you genuinely cannot route through `/admin` is a decision to
   surface, not a detail to absorb silently** — call it out in the PR and get it
