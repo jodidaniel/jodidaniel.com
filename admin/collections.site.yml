@@ -57,7 +57,7 @@
       # A value present in one but not the others silently drops items,
       # mislabels a picker option, or mislabels a per-item page's button,
       # with no build error. See docs/CONTENT-MODEL.md.
-      - { name: category, label: "Category", widget: select, options: ["Articles & Commentary", "Briefs, Testimony & Reports", "Talks & Panels", "Podcasts & Interviews", "Press Coverage"], hint: "The first two (Articles & Commentary; Briefs, Testimony & Reports) are things she wrote. The last three (Talks & Panels; Podcasts & Interviews; Press Coverage) are things she appeared in, or that someone else wrote about her." }
+      - { name: category, label: "Category", widget: select, options: ["Articles & Commentary", "Briefs, Testimony & Reports", "Talks & Panels", "Podcasts & Interviews", "Press Coverage"], hint: "The first two (Articles & Commentary; Briefs, Testimony & Reports) are things you wrote. The last three (Talks & Panels; Podcasts & Interviews; Press Coverage) are things you appeared in, or that someone else wrote about you." }
       - { name: title,    label: "Title", widget: string }
       - { name: source,   label: "Source", widget: string }
       - { name: date_display, label: "When (month and year)", widget: string, required: false, hint: "Month and year as you want it to read, e.g. \"April 2025\". Leave blank only if the item genuinely has no single date." }
@@ -66,7 +66,7 @@
       # shadows the front-matter value, so {{ item.url }} renders /media/<slug>/
       # instead of the article link. See docs/CONTENT-MODEL.md.
       - { name: article_url, label: "Article URL", widget: string, pattern: ["^https?://.*", "Must be a valid http(s) URL"] }
-      - { name: link_label, label: "Link Button Label", widget: string, required: false, hint: "Optional. Leave blank and a sensible label is picked automatically from Category (e.g. \"Read the brief\" for Policy & Advocacy, \"Listen to the episode\" for Podcasts & Interviews). Set this only to override that default for an unusual item." }
+      - { name: link_label, label: "Link Button Label", widget: string, required: false, hint: "Optional. Leave blank and a sensible label is picked automatically from Category (e.g. \"Read the brief\" for Briefs, Testimony & Reports,\"Listen to the episode\" for Podcasts & Interviews). Set this only to override that default for an unusual item." }
       # ARCHIVED PDF -- three fields, and the split is the whole point.
       #
       # The PDF BYTES never live in this repo. jodidaniel.com is a PUBLIC
@@ -101,7 +101,7 @@
       # committing. Renaming is the fix at source; an allowlist entry is not,
       # for the reasons the top of `.gitleaks.toml` sets out.
       - $ref: "#/field_library/archived_pdf_fields"
-      - { name: weight,   label: "Order within category", widget: number }
+      - { name: weight,   label: "Order within category", widget: number, hint: "A whole number such as 1, 2 or 3; controls sort order. Within its category, the lowest number is listed first, so type 1 to put this item at the top. Give each item in a category its own number to keep the order fixed." }
 
   - name: education
     label: "Education"
@@ -243,7 +243,7 @@
         label: "Settings & Launch"
         file: "_data/settings.yml"
         fields:
-          - { name: site_live, label: "Show the full site on {{CMS_CURRENT_HOST}}", widget: boolean, hint: "Off — visitors to {{CMS_CURRENT_HOST}} see only the coming-soon page. On — they see the full site. Your work is kept either way. Changing this switch does nothing until you select Publish. On a preview address (one that starts with \"preview-\"), Publish changes this preview only. jodidaniel.com keeps its own setting until this preview's pull request is merged. That merge takes your change to jodidaniel.com, along with everything else published on this preview, even if someone else merges it. To change jodidaniel.com itself, use [jodidaniel.com/admin](https://jodidaniel.com/admin/)." }
+          - { name: site_live, label: "Show the full site on {{CMS_CURRENT_HOST}}", widget: boolean, hint: "Off — visitors to {{CMS_CURRENT_HOST}} see only the coming-soon page. On — they see the full site. Your work is kept either way. Changing this switch does nothing until you select Publish. On a preview address (one that starts with \"preview-\"), Publish changes only that preview, so to change jodidaniel.com itself, use [jodidaniel.com/admin](https://jodidaniel.com/admin/)." }
           - name: coming_soon
             label: "Coming-soon page (shown on {{CMS_CURRENT_HOST}} while the full site is hidden)"
             widget: object
