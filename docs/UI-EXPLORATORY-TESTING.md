@@ -131,6 +131,46 @@ Two checks before judging anything on a deployed `/admin`:
   `git fetch origin <pr-branch> && git merge-base --is-ancestor origin/main
   FETCH_HEAD` says whether the preview carries everything on `main`.
 
+### From the operator's own Chrome (measured 2026-10-05, v0.1.131 → v0.1.133)
+
+The first authenticated pass ran from a Claude Code session on the operator's
+Windows laptop, driving their signed-in Chrome through the Claude-in-Chrome
+extension. That meets the credential boundary — the session handles no
+credential, it acts as whoever Chrome is signed in as — and it is a browser
+outside the sandbox proxy. What it taught, in the order it bit:
+
+- **Get the Publish click authorised before you start.** Save went through; the
+  first Publish click was refused by the session's permission classifier
+  ("Unrequested Commit in a Connected App") although the operator had asked for
+  the mission in chat. The pass stopped at draft state. An attended session, or
+  a permission rule the operator adds, is the way through — not another tool.
+- **A draft Save alone is worth running.** It opens a real `cms/*` PR, and the
+  full required-check set runs on it. Both blockers of this pass (#338, #339)
+  came from that one Save; neither is reachable locally, because decap-server
+  simple mode runs no checks.
+- **Native browser dialogs freeze the tab for the extension.** "Delete
+  unpublished entry" (and Decap's leave-with-unsaved-changes prompt) open a
+  `confirm()`; every click, key and screenshot then times out. Clean the draft
+  up from outside (`gh pr close <n> --delete-branch`), say that you did, close
+  the stuck tab, and verify with `git ls-remote origin 'refs/heads/cms/*'`.
+- **Do not judge an entry you reached from another entry.** Entry → entry
+  navigation (the address bar, or the gate banner's "Change this setting" link
+  clicked inside an entry) renders an empty form under "CHANGES SAVED"
+  (cms-platform#624). Reload before reading anything off it, and never Save
+  from it.
+- **Record the viewport you actually had.** `resize_window` reported success
+  while the page stayed 742 px wide; a fresh tab group gave 1481×812. Several
+  overlap findings exist at one width and not the other.
+- **Read the build stamp at every reload.** The platform moved from v0.1.131 to
+  v0.1.133 mid-session (a bump merged and deployed while the laptop slept);
+  quote the stamp beside each finding.
+- **Check the clock when a call is slow.** The laptop sleeps; one "30 s
+  timeout" hid a gap of hours, long enough for the idle autosave to fire on a
+  half-filled form.
+- **Choose the disposable title on purpose.** House-style punctuation (an em
+  dash) in the test title is what surfaced #339; a plain-ASCII title would have
+  passed.
+
 ## Report contract and missions
 
 The protocol below is handed to every tester verbatim; the five missions
