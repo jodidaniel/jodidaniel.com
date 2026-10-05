@@ -32,8 +32,11 @@ module MediaRules
   # own slugify when it can be loaded; otherwise an equivalent (the test compares the two
   # whenever Jekyll is installed). Characters such as an em dash are dropped, so the built
   # page is NOT at the raw file name (issue #339).
-  def page_slug(source_path)
-    name = File.basename(source_path, ".md")
+  # A `slug:` in the front matter wins over the file name, exactly as in Jekyll's UrlDrop
+  # (pass the parsed front matter Hash as `front_matter`).
+  def page_slug(source_path, front_matter = nil)
+    override = front_matter.is_a?(Hash) ? front_matter["slug"] : nil
+    name = override.nil? ? File.basename(source_path, ".md") : override.to_s
     begin
       require "jekyll"
       Jekyll::Utils.slugify(name)
@@ -49,7 +52,7 @@ module MediaRules
   end
 
   # Where the built page for a `_media` source file lives under the built site `site_dir`.
-  def page_path(site_dir, source_path)
-    File.join(site_dir, "media", page_slug(source_path), "index.html")
+  def page_path(site_dir, source_path, front_matter = nil)
+    File.join(site_dir, "media", page_slug(source_path, front_matter), "index.html")
   end
 end

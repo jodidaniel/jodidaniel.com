@@ -117,6 +117,16 @@ end
 
 puts(OPEN_PASS ? "#### open-gate pass: site_live forced on in a disposable copy" : "#### committed-gate pass: _site")
 
+# The site-verify reusable (platform-owned) runs only `jekyll build` and this script, so
+# the unit tests for the rules this script applies run from here (issues #338, #339).
+# Committed pass only: the open-gate re-entry would repeat them.
+unless OPEN_PASS
+  puts "== unit tests: scripts/test-media-rules.rb =="
+  $stdout.flush
+  unit_tests_passed = system(RbConfig.ruby, File.join(__dir__, "test-media-rules.rb"))
+  check(failures, "scripts/test-media-rules.rb passes (output above)") { unit_tests_passed == true }
+end
+
 def read(path)
   # Pin every read to UTF-8 explicitly rather than depending on the ambient
   # locale. A bare `File.read` decodes with Encoding.default_external, which
@@ -216,8 +226,8 @@ media_src.each do |src|
   end
   # Jekyll builds `/media/:slug/` from its OWN slug of the file name, which drops
   # characters such as an em dash (issue #339), so the address is not the raw name.
-  check(failures, "/media/#{MediaRules.page_slug(src)}/ is a real page (home page links here)") do
-    File.exist?(MediaRules.page_path(SITE, src))
+  check(failures, "/media/#{MediaRules.page_slug(src, media_front_matter(src))}/ is a real page (home page links here)") do
+    File.exist?(MediaRules.page_path(SITE, src, media_front_matter(src)))
   end
 end
 
@@ -473,7 +483,7 @@ media_src.each do |src|
       puts "         the \"Archived PDF\" field, or untick \"Publish this PDF\"."
     end
   end
-  page = read(MediaRules.page_path(SITE, src))
+  page = read(MediaRules.page_path(SITE, src, media_front_matter(src)))
   next if page.nil?
   gated = page.include?("noindex,nofollow")
   if OPEN_PASS

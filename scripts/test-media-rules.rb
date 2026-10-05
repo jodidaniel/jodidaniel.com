@@ -55,6 +55,13 @@ class MediaRulesTest < Minitest::Test
     assert_equal "1-fda-amicus", MediaRules.page_slug("/repo/_media/1-fda-amicus.md")
   end
 
+  def test_front_matter_slug_overrides_file_name
+    fm = { "slug" => "My Custom—Slug" }
+    assert_equal "my-custom-slug", MediaRules.page_slug(EM_DASH_FILE, fm)
+    assert_equal "/site/media/my-custom-slug/index.html", MediaRules.page_path("/site", EM_DASH_FILE, fm)
+    assert_equal "99-zz-test-delete-me", MediaRules.page_slug(EM_DASH_FILE, { "title" => "T" })
+  end
+
   def test_slug_matches_jekyll_slugify_when_available
     begin
       require "jekyll"
