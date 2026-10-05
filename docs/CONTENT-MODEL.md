@@ -481,7 +481,7 @@ page's links once the site is live.
 
 ## `/admin` (Decap CMS)
 
-`/admin` shows **9 per-section editors** — the 5 folder collections + the 4
+`/admin` shows **10 per-section editors** — the 6 folder collections + the 4
 file collections above — and **nothing else**. The generic platform
 collections (posts / tags / projects / pages / e2e) are hidden by
 `cms.base_collections: []` in `_config.yml` (an empty keep-list hides them all;
