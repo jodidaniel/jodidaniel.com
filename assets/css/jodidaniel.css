@@ -582,6 +582,13 @@ header .tagline {
     margin-bottom: 0.75rem;
 }
 
+/* Issue #359: arriving at a media item's anchor (the item page's back link,
+   /#media-<slug>) must show the item, not a section still fading in. */
+body:has(.media-list li:target) .animate-in {
+    opacity: 1;
+    animation: none;
+}
+
 .media-list a {
     color: #2d5a7b;
     text-decoration: none;

@@ -426,6 +426,13 @@ check(failures, "admin seam offers `date_display` on media entries, and it's opt
   !f.nil? && f["required"] == false
 end
 
+# Issue #359: the fade-in is skipped when a media item anchor is the target, so the
+# item you return to is not washed out. Runs on both gate states (the CSS ships either way).
+check(failures, "jodidaniel.css skips the fade-in when a media item is the :target (issue #359)") do
+  css = read(File.join(SITE, "assets", "css", "jodidaniel.css")).to_s
+  css.match?(/body:has\(\.media-list li:target\)\s+\.animate-in\s*\{[^}]*animation:\s*none/)
+end
+
 # Every media link the home page actually renders must resolve to a built file.
 # Vacuous while site_live is false (the gate hides the section) — the per-item
 # page assertions above cover both gate states.
@@ -507,6 +514,15 @@ media_src.each do |src|
   else
     check(failures, "/media/#{slug}/ links out to its article_url") do
       !article.empty? && page.include?(article)
+    end
+    # Issue #359: the back link returns to THIS item on the home page, not the
+    # top of the section. The home page must carry the matching element id.
+    page_slug = MediaRules.page_slug(src, media_front_matter(src))
+    check(failures, "/media/#{slug}/ back link targets its own item (#media-#{page_slug})") do
+      page.match?(%r{media-detail__back">\s*<a href="[^"]*/#media-#{Regexp.escape(page_slug)}">})
+    end
+    check(failures, "home page has id=\"media-#{page_slug}\" for /media/#{slug}/'s back link") do
+      home_html.to_s.include?(%(id="media-#{page_slug}"))
     end
     label = page[ARTICLE_LABEL_RE, 1]
     article_labels[slug] = label unless article.empty?

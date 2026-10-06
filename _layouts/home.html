@@ -325,7 +325,7 @@
                       </h3>
                       <ul class="media-list">
                           {%- for item in category_items -%}
-                          <li>
+                          <li id="media-{{ item.slug }}">
                               {%- comment -%}
                                 item.url is the item's OWN page (/media/<slug>/),
                                 not the article link — Jekyll's DocumentDrop
@@ -381,7 +381,7 @@
                       </h3>
                       <ul class="media-list">
                           {%- for item in category_items -%}
-                          <li>
+                          <li id="media-{{ item.slug }}">
                               {%- comment -%}
                                 item.url is the item's OWN page (/media/<slug>/),
                                 not the article link — Jekyll's DocumentDrop
