@@ -23,10 +23,13 @@
       and to anyone who looked at the tab. Measured on the deployed preview at
       the gated head, which is what caught it.
 
-      Keeping the branch here rather than neutralising _config.yml/index.html
+      Keeping the branch here rather than neutralising the launch values
       is what lets the go-live change stay a ONE-LINE flip of `site_live`:
-      those two files hold the real values at all times and simply are not
-      consulted while gated. Same shape as _layouts/media.html.
+      the real title and description are held at all times in
+      _data/settings.yml `seo:` (applied by _plugins/site_meta_from_settings.rb)
+      and simply are not consulted while gated. Same shape as _layouts/media.html.
+      The gated <title> is escaped here, since {% seo %} is not there to do it
+      and the site name is editable (an "&" must not reach the page raw).
 
       The gated arm deliberately does NOT add `noindex`: the apex is indexed
       today with a neutral coming-soon string, and de-indexing it is an
@@ -38,8 +41,9 @@
     {%- if live -%}
     {% seo %}
     {%- else -%}
-    <title>{{ site.title }}</title>
+    <title>{{ site.title | escape }}</title>
     {%- assign gated_desc = settings.coming_soon.seo_description -%}
+    {%- assign gated_desc = gated_desc | strip -%}
     {%- if gated_desc and gated_desc != "" -%}
     <meta name="description" content="{{ gated_desc | escape }}" />
     {%- endif -%}
