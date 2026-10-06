@@ -99,32 +99,75 @@ class SiteMetaTest < Minitest::Test
   # Liquid, not scanned, so the check follows the template's real structure.
   LAYOUTS = %w[home media].freeze
 
-  def site_title_variables(layout)
+  # The one `capture` block that builds the JSON-LD document (media.html prints it inside
+  # <script type="application/ld+json">, after turning every "<" into \u003c). Only a
+  # variable inside it may use `jsonify`; everywhere else, HTML context, only `escape` is
+  # right, since jsonify output is not HTML-safe ("&" stays raw) and its quotes break out of
+  # an attribute.
+  JSON_LD_CAPTURES = %w[media_json].freeze
+
+  def parse_layout(layout, source = nil)
     Liquid::Template.register_tag("seo", Class.new(Liquid::Tag))
-    source = File.read(File.join(ROOT, "_layouts", "#{layout}.html"), encoding: "UTF-8")
-    template = Liquid::Template.parse(source)
-    found = []
-    Liquid::ParseTreeVisitor.for(template.root).tap do |visitor|
-      visitor.add_callback_for(Liquid::Variable) do |variable|
-        name = variable.name
-        found << variable if name.is_a?(Liquid::VariableLookup) && name.name == "site" && name.lookups == ["title"]
+    source ||= File.read(File.join(ROOT, "_layouts", "#{layout}.html"), encoding: "UTF-8")
+    Liquid::Template.parse(source)
+  end
+
+  def visit(node, klass, &block)
+    Liquid::ParseTreeVisitor.for(node).tap do |visitor|
+      visitor.add_callback_for(klass) do |found|
+        block.call(found)
         nil
       end
     end.visit
+  end
+
+  # (Liquid 4 has no reader for a capture's target name, so read @to.)
+  # [[variable, inside_json_ld], ...] for every `{{ site.title ... }}` the template prints.
+  def site_title_variables(layout, source = nil)
+    template = parse_layout(layout, source)
+    json_ld = []
+    visit(template.root, Liquid::Capture) do |capture|
+      visit(capture, Liquid::Variable) { |variable| json_ld << variable } if JSON_LD_CAPTURES.include?(capture.instance_variable_get(:@to))
+    end
+    found = []
+    visit(template.root, Liquid::Variable) do |variable|
+      name = variable.name
+      next unless name.is_a?(Liquid::VariableLookup) && name.name == "site" && name.lookups == ["title"]
+
+      found << [variable, json_ld.any? { |candidate| candidate.equal?(variable) }]
+    end
     found
+  end
+
+  def encoder_problems(found)
+    found.filter_map do |variable, in_json_ld|
+      allowed = in_json_ld ? %w[escape jsonify] : %w[escape]
+      "site.title through #{variable.filters.map(&:first).inspect} (needs one of #{allowed.inspect})" if (variable.filters.map(&:first) & allowed).empty?
+    end
   end
 
   def test_layouts_escape_the_site_title_they_print
     LAYOUTS.each do |layout|
       found = site_title_variables(layout)
       refute_empty found, "_layouts/#{layout}.html no longer prints site.title; update this test"
-      found.each do |variable|
-        # `escape` for HTML; `jsonify` for the JSON-LD in media.html, whose script
-        # block also turns every "<" into \u003c, so no value can close the tag.
-        encoders = variable.filters.map(&:first) & %w[escape jsonify]
-        refute_empty encoders, "_layouts/#{layout}.html prints site.title unescaped"
-      end
+      assert_empty encoder_problems(found), "_layouts/#{layout}.html prints site.title with the wrong encoder"
     end
+  end
+
+  def test_media_layout_still_prints_the_site_title_inside_the_json_ld_capture
+    assert site_title_variables("media").any? { |_, in_json_ld| in_json_ld },
+           "media.html no longer prints site.title in the JSON-LD capture (#{JSON_LD_CAPTURES.inspect}); update this test"
+  end
+
+  def test_jsonify_is_not_accepted_for_the_site_title_in_html
+    in_title = "<title>{{ page.title | escape }} | {{ site.title | jsonify }}</title>"
+    refute_empty encoder_problems(site_title_variables("media", in_title)), "jsonify in <title> must be rejected"
+    in_attribute = '<meta property="og:site_name" content="{{ site.title | jsonify }}" />'
+    refute_empty encoder_problems(site_title_variables("media", in_attribute)), "jsonify in an attribute must be rejected"
+    unescaped = "<title>{{ site.title }}</title>"
+    refute_empty encoder_problems(site_title_variables("media", unescaped)), "an unencoded site.title must be rejected"
+    json_ld = "{% capture media_json %}{\"name\":{{ site.title | jsonify }}}{% endcapture %}"
+    assert_empty encoder_problems(site_title_variables("media", json_ld)), "jsonify inside the JSON-LD capture is correct"
   end
 
   # The two literals the fields replaced are gone from where only a commit could
