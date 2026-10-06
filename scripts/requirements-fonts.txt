@@ -1,0 +1,5 @@
+# Pinned exact, for scripts/subset-raleway.py only (not a build or runtime
+# dependency of the site). fonttools 4.66.0 was published 2026-09-23, past the
+# 7-day cooldown; brotli is fontTools' woff2 codec.
+fonttools==4.66.0
+brotli==1.2.0

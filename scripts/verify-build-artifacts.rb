@@ -170,6 +170,11 @@ unless OPEN_PASS
   $stdout.flush
   event_media_polish_passed = system(RbConfig.ruby, File.join(__dir__, "test-event-media-polish.rb"))
   check(failures, "scripts/test-event-media-polish.rb passes (output above)") { event_media_polish_passed == true }
+
+  puts "== unit tests: scripts/test-inline-css.rb =="
+  $stdout.flush
+  inline_css_passed = system(RbConfig.ruby, File.join(__dir__, "test-inline-css.rb"))
+  check(failures, "scripts/test-inline-css.rb passes (output above)") { inline_css_passed == true }
 end
 
 def read(path)
@@ -635,7 +640,10 @@ media_src.each do |src|
   if gated
     # Gate closed: the item page must be the coming-soon shell only.
     check(failures, "/media/#{slug}/ leaks no bio content while gated") do
-      !page.include?(article) && !page.include?("section-title")
+      # The stylesheet is inlined (_plugins/inline_css.rb), and it names `.section-title`
+      # as a selector, so look at the page without its <style> elements.
+      markup = page.gsub(%r{<style\b[^>]*>.*?</style>}m, "")
+      !markup.include?(article) && !markup.include?("section-title")
     end
   else
     check(failures, "/media/#{slug}/ links out to its article_url") do
@@ -853,6 +861,85 @@ font_preload_pages.each do |page|
     (1..2).cover?(hrefs.size) && preloads.all? { |t| t.match?(/\bcrossorigin\b/) && t.match?(/\bas="font"/) } &&
       hrefs.all? { |h| h.end_with?(".woff2") && File.file?(File.join(SITE, h)) }
   end
+end
+
+puts
+puts "== The stylesheet is inlined and minified on the home and media pages =="
+# jodidaniel.css was the only render-blocking request on these pages: a second
+# round trip before first paint, 54% of it comments. _plugins/inline_css.rb now
+# minifies it at build time and the layouts put it in a <style> (measured, slow
+# 4G: first contentful paint 648 -> ~400 ms). The readable file stays the edited
+# source and is still published for the 404 page. Parsed with scans of lexical
+# tokens (<link>, <style>, url(), braces), not a CSS parser.
+css_source = File.read(File.join(ROOT, "assets", "css", "jodidaniel.css"), encoding: "utf-8")
+css_source_rules = css_source.gsub(%r{/\*.*?\*/}m, "").count("{")
+inline_pages = ["index.html"] + Dir.glob(File.join(SITE, "media", "*", "index.html")).sort.map { |f| f.delete_prefix("#{SITE}/") }
+check(failures, "the build has the home page and at least one media page to check (#{inline_pages.size} pages)") do
+  inline_pages.size >= 2
+end
+inline_pages.each do |page|
+  html = read(File.join(SITE, page)).to_s
+  styles = html.scan(%r{<style\b[^>]*>(.*?)</style>}m).flatten
+  inline = styles.find { |s| s.include?("@font-face") }.to_s
+  sheet_links = html.scan(/<link\b[^>]*>/m).select { |t| t.match?(/\brel="stylesheet"/) }
+  check(failures, "#{page} has no <link rel=stylesheet> to jodidaniel.css (nothing render-blocking)") do
+    sheet_links.none? { |t| t.include?("jodidaniel.css") }
+  end
+  check(failures, "#{page} inlines the stylesheet in a <style> element") do
+    !inline.empty? && inline.include?("body") && inline.include?("@media")
+  end
+  check(failures, "#{page} inline CSS is minified: no comments, no newlines, under 60% of the source (#{inline.bytesize} of #{css_source.bytesize} bytes)") do
+    !inline.empty? && !inline.include?("/*") && !inline.include?("\n") && inline.bytesize < css_source.bytesize * 0.6
+  end
+  check(failures, "#{page} inline CSS keeps every rule of the source (#{css_source_rules} braces)") do
+    inline.count("{") == css_source_rules && inline.count("}") == css_source_rules
+  end
+  inline_font_urls = inline.scan(/url\(\s*["']?([^"')\s]+\.woff2)["']?\s*\)/).flatten
+  check(failures, "#{page} inline @font-face urls are root-relative /assets/fonts/ paths to existing woff2 files (#{inline_font_urls.size})") do
+    !inline_font_urls.empty? && !inline.include?("../fonts") && inline_font_urls.all? do |u|
+      u.start_with?("/assets/fonts/") && File.file?(File.join(SITE, u)) && File.binread(File.join(SITE, u), 4) == WOFF2_MAGIC
+    end
+  end
+end
+
+puts
+puts "== Raleway ships limited to the 600-700 weight axis =="
+# Raleway is a variable font (wght 100-900) and the site sets only 600 and 700;
+# limiting the axis cut 48 KB to 33 KB. fontTools' varLib.instancer did it
+# (scripts/subset-raleway.py, pinned in scripts/requirements-fonts.txt) and the
+# result is vendored. The unicode-range stays the Latin one. A .woff2 cannot be
+# opened here without a brotli codec, so the axis is checked from what the
+# build says about the file: its @font-face weight range, its name, its size, and
+# the sha256 SOURCES.txt records for it.
+RALEWAY_MAX_BYTES = 36_000
+raleway_files = Dir.glob(File.join(SITE, "assets", "fonts", "raleway-*.woff2")).map { |f| File.basename(f) }
+check(failures, "exactly one Raleway file ships, and it is the 600-700 axis build (#{raleway_files.join(", ")})") do
+  raleway_files == ["raleway-v37-latin-wght600-700.woff2"]
+end
+check(failures, "the Raleway file is at most #{RALEWAY_MAX_BYTES} bytes (the full 100-900 variable font is 48,264)") do
+  raleway_files.all? { |f| File.size(File.join(SITE, "assets", "fonts", f)) <= RALEWAY_MAX_BYTES }
+end
+raleway_face = font_faces.find { |b| b.include?("'Raleway'") }.to_s
+check(failures, "jodidaniel.css declares the Raleway @font-face at font-weight 600 700 with the Latin-1 unicode-range") do
+  raleway_face.match?(/font-weight:\s*600\s+700\s*;/) && raleway_face.match?(/unicode-range:[^;]*U\+0000-00FF\b/)
+end
+check(failures, "the inline Raleway @font-face (home page) has the same weight range and unicode-range") do
+  inline_home = read(File.join(SITE, "index.html")).to_s.scan(%r{<style\b[^>]*>(.*?)</style>}m).flatten.join
+  face = inline_home.scan(/@font-face\{[^}]*\}/).find { |b| b.include?("Raleway") }.to_s
+  face.match?(/font-weight:600 700[;}]/) && face.match?(/unicode-range:[^;}]*U\+0000-00FF\b/)
+end
+sources_txt = read(File.join(SITE, "assets", "fonts", "SOURCES.txt")).to_s
+check(failures, "SOURCES.txt records the sha256 of every self-hosted font file, matching the shipped bytes") do
+  font_files = Dir.glob(File.join(SITE, "assets", "fonts", "*.woff2"))
+  require "digest"
+  !font_files.empty? && font_files.all? do |f|
+    block = sources_txt[/^#{Regexp.escape(File.basename(f))}\n(.*?)(?=^\S|\z)/m, 1].to_s
+    block.match?(/^  sha256 #{Digest::SHA256.file(f).hexdigest}$/)
+  end
+end
+check(failures, "SOURCES.txt names the subsetting tool, its version and the source font's sha256 for Raleway") do
+  sources_txt.include?("scripts/subset-raleway.py") && sources_txt.include?("fontTools 4.66.0") &&
+    sources_txt.include?("b1bef1f03a77a36fc257c5525e32a1dd621bb6f935b743a419da7ed0b18dc8f5")
 end
 
 puts

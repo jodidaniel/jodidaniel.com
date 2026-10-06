@@ -6,15 +6,26 @@ requires.
 These are the exact files the Google Fonts service delivered to this site
 before it was self-hosted (fonts.googleapis.com css2 request for Raleway
 400/600/700 and Source Sans Pro 300/400/600, "latin" unicode-range block),
-fetched 2026-10-05 and verified to be woff2. Nothing was modified.
+fetched 2026-10-05 and verified to be woff2. Nothing was modified, except the
+derived Raleway file described below.
 
-raleway-v37-latin.woff2
-  Variable font (wght 100-900): one file serves weights 400, 600 and 700.
-  Source: https://fonts.gstatic.com/s/raleway/v37/1Ptug8zYS_SKggPNyC0ITw.woff2
+raleway-v37-latin-wght600-700.woff2
+  Derived, and the one file here that IS modified: Google's variable Raleway
+  (wght 100-900) with the weight axis limited to 600-700, the only weights the
+  site sets. Glyphs, character coverage (the Latin unicode-range in
+  jodidaniel.css) and layout tables are untouched. 48,264 -> 33,348 bytes.
+  Reproduce with scripts/subset-raleway.py (header has the command); the tool
+  is fontTools 4.66.0 (varLib.instancer, limit axis range) with brotli 1.2.0,
+  pinned in scripts/requirements-fonts.txt. The output is byte-for-byte
+  deterministic (verified: two runs, same sha256).
+  Source (upstream, unmodified, not vendored):
+    https://fonts.gstatic.com/s/raleway/v37/1Ptug8zYS_SKggPNyC0ITw.woff2
+    sha256 b1bef1f03a77a36fc257c5525e32a1dd621bb6f935b743a419da7ed0b18dc8f5
+    (variable font, wght 100-900; the script refuses any other input bytes)
   Upstream: https://github.com/google/fonts/tree/main/ofl/raleway
   License: OFL-Raleway.txt
     (https://github.com/google/fonts/blob/main/ofl/raleway/OFL.txt)
-  sha256 b1bef1f03a77a36fc257c5525e32a1dd621bb6f935b743a419da7ed0b18dc8f5
+  sha256 9fa5aa0c7d15abd0cd0973bcd86f743159f97902c4a2b6e8e0d4abf81f639f52
 
 source-sans-pro-v24-latin-300.woff2
   Source: https://fonts.gstatic.com/s/sourcesanspro/v24/6xKydSBYKcSV-LCoeQqfX1RYOo3ik4zwlxdu.woff2
