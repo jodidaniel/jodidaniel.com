@@ -146,7 +146,7 @@
       - { name: start_date,   label: "Start date (sets the order)", widget: string, pattern: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}$', 'Use YYYY-MM-DD, e.g. 2026-10-20'], hint: "Year-month-day, e.g. 2026-10-20. This is what orders the list -- earliest first. It is NOT what visitors see; that is the next field." }
       - { name: date_display, label: "Dates (as shown on the page)", widget: string, hint: "Written however you want it to read, e.g. \"October 20 - 21, 2026\"." }
       - { name: location,     label: "Location", widget: string, hint: "City and state, e.g. \"Kansas City, MO\". The venue lives on the event's own site." }
-      - { name: session,      label: "Your session (optional)", widget: text, required: false, hint: "Optional. The panel or talk you are on, with its own date and time, e.g. \"Panel - Federal and State AI Policies, October 1 at 4:00 PM\". Leave blank if you are attending rather than speaking." }
+      - { name: session,      label: "Your session", widget: text, required: false, hint: "Optional. The panel or talk you are on, with its own date and time, e.g. \"Panel - Federal and State AI Policies, October 1 at 4:00 PM\". Leave blank if you are attending rather than speaking." }
       - { name: event_url,    label: "Event website", widget: string, required: false, pattern: ["^https?://.*", "Must be a valid http(s) URL"] }
 
   # ─────────────────────────────────────────────────────────────────────────────────
@@ -178,8 +178,8 @@
         fields:
           - { name: photo,         label: "Profile Photo", widget: image, required: false, media_library: { config: { multiple: false } } }
           - { name: intro_heading, label: "Intro Heading", widget: string }
-          - { name: lead, label: "Opening line (shown above the nav buttons)", widget: text, hint: "One sentence. This is the only body copy above the fold on a laptop -- everything you add here pushes the nav buttons down the page. The longer bio below the buttons is the next field." }
-          - { name: bio,           label: "Bio Paragraphs", widget: list, summary: "{{fields.paragraph | truncate(60)}}", field: { name: paragraph, label: "Paragraph", widget: text } }
+          - { name: lead, label: "Opening line (shown above the nav buttons)", widget: text, hint: "One sentence. This is the only body copy above the fold on a laptop -- everything you add here pushes the nav buttons down the page. The longer bio below the buttons is the next field. To make words bold on the site, put two asterisks on each side, like \\*\\*this\\*\\*. Those asterisks are formatting, so leave them in." }
+          - { name: bio,           label: "Bio Paragraphs", widget: list, hint: "To make words bold on the site, put two asterisks on each side, like \\*\\*this\\*\\*. Those asterisks are formatting, not stray marks, so leave them in unless you want the bold gone.", summary: "{{fields.paragraph | truncate(60)}}", field: { name: paragraph, label: "Paragraph", widget: text } }
           - name: nav
             label: "In-Page Nav Links"
             widget: list
