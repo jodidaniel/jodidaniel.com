@@ -376,6 +376,36 @@ module A11yRules
     problems
   end
 
+  # The text of a node with character references (`&amp;`, `&#8212;`) decoded: text_of skips the
+  # :entity nodes kramdown makes of them.
+  def decoded_text_of(node)
+    case node.type
+    when :text then node.value.to_s
+    when :entity then node.value.char
+    else node.children.map { |c| decoded_text_of(c) }.join
+    end
+  end
+
+  # Problems with a media item page's heading structure (F4): the item's title, and nothing
+  # else, is the page's one <h1>, and it sits in <main>. The site name above it is a banner
+  # link, not a heading, so every item page does not open with the same h1. `title` is the
+  # item's front-matter title; whitespace is collapsed on both sides. [] when clean.
+  def media_heading_problems(html, title)
+    root = parse_html(html)
+    h1s = find_all(root, "h1")
+    return ["expected exactly one <h1>, found #{h1s.size}"] unless h1s.size == 1
+
+    problems = []
+    h1 = h1s.first
+    want = title.to_s.gsub(/\s+/, " ").strip
+    got = decoded_text_of(h1[:node]).gsub(/\s+/, " ").strip
+    problems << "<h1> is #{got.inspect}, not the item title #{want.inspect}" unless got == want
+    main = find_all(root, "main").first
+    in_main = main && h1[:ancestors].any? { |a| a.equal?(main[:node]) }
+    problems << "<h1> #{got.inspect} is outside <main>" unless in_main
+    problems
+  end
+
   # Whether the stylesheet makes `.animate-in` content visible when prefers-reduced-motion is
   # set: a reduced-motion block that sets opacity: 1 and stops the animation, AFTER the base
   # `.animate-in` rule (same specificity, so source order decides which one wins).

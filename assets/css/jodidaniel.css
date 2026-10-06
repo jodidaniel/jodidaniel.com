@@ -207,12 +207,16 @@ header {
     color: #ffffff;
 }
 
-header h1 a {
+header h1 a,
+header .site-name a {
     color: inherit;
     text-decoration: none;
 }
 
-header h1 {
+/* `.site-name` is the site name on pages whose own h1 is the item title
+   (_layouts/media.html): a <p> that looks exactly like the header h1. */
+header h1,
+header .site-name {
     font-family: 'Raleway', sans-serif;
     font-size: 3rem;
     font-weight: 700;
@@ -714,9 +718,10 @@ body:has(.media-list li:target) .animate-in {
 }
 
 /* Per-item media page (/media/<slug>/) — the target of every entry in the
-   media list above. Reuses .container / .section-title / .contact-link so the
+   media list above. The item title is the page's h1 (the site name above it is
+   a <p class="site-name">, styled as the header h1). Reuses .container / .section-title / .contact-link so the
    detail page reads as the same document as the home page. */
-.media-detail h2 {
+.media-detail h1 {
     font-family: 'Raleway', sans-serif;
     font-size: 1.75rem;
     font-weight: 600;
@@ -922,7 +927,8 @@ footer a:hover {
         padding: 0.75rem 1rem 0.5rem;
     }
 
-    header h1 {
+    header h1,
+    header .site-name {
         font-size: 2rem;
         letter-spacing: 0.1em;
     }
@@ -990,7 +996,7 @@ footer a:hover {
         grid-template-columns: 1fr;
     }
 
-    .media-detail h2 {
+    .media-detail h1 {
         font-size: 1.35rem;
     }
 

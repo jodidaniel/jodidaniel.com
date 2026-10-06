@@ -98,7 +98,16 @@
     {%- endif -%}
     <div class="site-wrapper">
         <header class="animate-in delay-1">
+            {%- comment -%}
+              Live: the item title below is the page's h1, so the site name is a
+              plain banner link (`.site-name` is styled like the header h1).
+              Gated: the coming-soon shell has no item title, so the name stays the h1.
+            {%- endcomment -%}
+            {%- if live -%}
+            <p class="site-name"><a href="{{ '/' | relative_url }}">{{ site.data.header.name }}</a></p>
+            {%- else -%}
             <h1><a href="{{ '/' | relative_url }}">{{ site.data.header.name }}</a></h1>
+            {%- endif -%}
             {%- if live -%}
             {%- if site.data.header.tagline and site.data.header.tagline != "" -%}
             <p class="tagline">{{ site.data.header.tagline }}</p>
@@ -116,7 +125,7 @@
             {%- if page.category and page.category != "" -%}
             <span class="section-title">{{ page.category }}</span>
             {%- endif -%}
-            <h2>{{ page.title }}</h2>
+            <h1>{{ page.title }}</h1>
             {%- if page.source and page.source != "" -%}
             <p class="media-detail__source">{%- if page.date_display and page.date_display != "" %}{{ page.date_display }} · {% endif %}{{ page.source }}</p>
             {%- endif -%}
