@@ -158,15 +158,19 @@ coming-soon shell renders: the name (`_data/header.yml`), `coming_soon.tagline`,
 present in the data/collections but is **not rendered** — so there is zero bio
 leak on prod while gated.
 
-SEO is gated in parallel: `_config.yml` `description:` stays neutral
-("…site coming soon."), and `index.html` sets **no page title** so `{% seo %}`
-renders only the neutral site title — no marketing claim is served until
-sign-off. Both `_config.yml` and `index.html` carry inline comments with the
-real (post-go-live) values to restore.
+SEO is gated in parallel: while `site_live` is false `_layouts/home.html` skips
+`{% seo %}` and serves only the site name and `coming_soon.seo_description`, so
+no marketing claim is served until sign-off. The real (post-go-live) page title
+and Google description are held permanently in `_data/settings.yml` under `seo:`
+(`launch_title`, `launch_description`, plus `site_title`), editable in `/admin`
+under Site Settings; `_plugins/site_meta_from_settings.rb` applies them to
+`site.title`, `site.description` and the home page title, so `{% seo %}` is
+unchanged. `_config.yml` has no `description:` and `index.html` no `title:` —
+do not re-add them, they would be a second, unedited source
+(`scripts/test-site-meta.rb`).
 
-**Go-live = issue #26**: flip `site_live: true` (via `/admin`), restore the real
-`description:` in `_config.yml` and the real page title, and add the headshot —
-after the boss approves the copy. Until then, no bio content reaches prod and
+**Go-live = issue #26**: flip `site_live: true` (via `/admin`) and add the
+headshot — after the boss approves the copy. Until then, no bio content reaches prod and
 no marketing claim ships. Do not flip the gate on your own initiative.
 
 **`/admin` now SAYS the site is gated**, on every screen, instead of leaving it

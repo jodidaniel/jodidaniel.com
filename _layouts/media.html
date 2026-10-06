@@ -29,7 +29,7 @@
     {%- if live -%}
     {% seo %}
     {%- else -%}
-    <title>{{ site.title }}</title>
+    <title>{{ site.title | escape }}</title>
     <meta name="robots" content="noindex,nofollow">
     {%- endif -%}
     {%- comment -%}
