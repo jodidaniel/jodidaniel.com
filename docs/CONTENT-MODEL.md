@@ -12,7 +12,7 @@ data file:
 | `_data/header.yml`   | `name`, `tagline`                              | **Header / Hero** (`site_header`) |
 | `_data/about.yml`    | `photo`, `intro_heading`, `lead`, `bio[]`, `nav[]` | **About** (`site_about`) |
 | `_data/contact.yml`  | `heading`, `intro`, `links[]`                  | **Contact** (`site_contact`) |
-| `_data/settings.yml` | `site_live` GATE, `coming_soon`, `footer`, `back_to_top_label`, `section_headings` | **Site Settings** (`site_settings`) |
+| `_data/settings.yml` | `site_live` GATE, `coming_soon`, `seo` (site name, launch title, Google description), `footer`, `back_to_top_label`, `section_headings` | **Site Settings** (`site_settings`) |
 | `_data/not_found.yml` | `heading`, `message`, `home_link_label`, `skip_link_label` — the 404 page (`404.html` → `_layouts/not-found.html`) | **Site Settings** → "Page-Not-Found Page" (`site_settings` file `not_found`) |
 
 The layout reads these as `site.data.header` / `.about` / `.contact` /
