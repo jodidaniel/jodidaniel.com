@@ -3,7 +3,6 @@
 
 require "yaml"
 require "date"
-require "json"
 
 # Lightweight build-artifact assertion for the platform-chrome fixes that
 # jodidaniel.com owns (issues #28, #31). jodidaniel ships no JS/Playwright
@@ -43,6 +42,9 @@ require "tmpdir"
 require_relative "media_rules"
 require_relative "person_rules"
 require_relative "a11y_rules"
+# After a11y_rules, which may put the bundle on the load path: a `require "json"` before it
+# activates the default json gem, and `bundler/setup` then dies on the Gemfile.lock pin.
+require "json"
 
 REPO_ROOT = File.expand_path("..", __dir__)
 OPEN_PASS = ARGV[0] == "--open-pass"
