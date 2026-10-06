@@ -270,8 +270,11 @@
             label: "Section Headings"
             widget: object
             fields:
+              - { name: events_heading,          label: "Events Heading", widget: string, hint: "The title of the upcoming events section." }
               - { name: expertise_heading,       label: "Expertise Heading", widget: string }
               - { name: experience_heading,      label: "Experience Heading", widget: string }
               - { name: accomplishments_heading, label: "Accomplishments Heading", widget: string }
               - { name: media_heading,           label: "Media Heading", widget: string }
+              - { name: media_authored_heading,  label: "Written Work Label", widget: string, hint: "The small label above the first group in the writing, talks and press section, for the articles, briefs and testimony you wrote." }
+              - { name: media_coverage_heading,  label: "Appearances Label", widget: string, hint: "The small label above the second group in the writing, talks and press section, for the talks, interviews and press about you." }
               - { name: education_heading,       label: "Education Heading", widget: string }

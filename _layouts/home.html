@@ -290,7 +290,7 @@
         {%- assign media_authored_cats = "Articles & Commentary|Briefs, Testimony & Reports" | split: "|" -%}
         {%- assign media_authored_icons = "article|folder" | split: "|" -%}
         {%- assign media_coverage_cats = "Talks & Panels|Podcasts & Interviews|Press Coverage" | split: "|" -%}
-        {%- assign media_coverage_icons = "globe|microphone|globe" | split: "|" -%}
+        {%- assign media_coverage_icons = "globe|microphone|article" | split: "|" -%}
         {%- assign all_media_sorted = site.media | sort: 'weight' -%}
         {%- if all_media_sorted and all_media_sorted != empty -%}
         <section id="media" class="container animate-in delay-7">
