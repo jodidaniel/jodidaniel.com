@@ -108,6 +108,7 @@ class SiteMetaTest < Minitest::Test
 
   def parse_layout(layout, source = nil)
     Liquid::Template.register_tag("seo", Class.new(Liquid::Tag))
+    Liquid::Template.register_tag("inline_css", Class.new(Liquid::Tag))
     source ||= File.read(File.join(ROOT, "_layouts", "#{layout}.html"), encoding: "UTF-8")
     Liquid::Template.parse(source)
   end
