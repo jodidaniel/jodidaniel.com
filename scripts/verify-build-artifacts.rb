@@ -806,10 +806,10 @@ check(failures, "assets/fonts/ ships an OFL license file for each family beside 
     File.file?(File.join(SITE, "assets", "fonts", n))
   end
 end
-# The critical files are preloaded on both layouts so the first paint does not
+# The critical files are preloaded on every layout (home, media, 404) so the first paint does not
 # wait for the stylesheet to discover them; `crossorigin` is required on a font
 # preload or the browser fetches the file twice.
-font_preload_pages = ["index.html"] + Dir.glob(File.join(SITE, "media", "*", "index.html")).sort.first(1).map { |f| f.delete_prefix("#{SITE}/") }
+font_preload_pages = ["index.html", "404.html"] + Dir.glob(File.join(SITE, "media", "*", "index.html")).sort.first(1).map { |f| f.delete_prefix("#{SITE}/") }
 font_preload_pages.each do |page|
   html = read(File.join(SITE, page))
   preloads = html.to_s.scan(/<link\b[^>]*>/m).select { |t| t.match?(/\brel="preload"/) }
