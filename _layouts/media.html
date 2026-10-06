@@ -167,7 +167,7 @@
             {%- endif -%}
 
             <p class="media-detail__back">
-                <a href="{{ '/#media' | relative_url }}">&larr; Back to {{ settings.section_headings.media_heading | default: "Media" }}</a>
+                <a href="{{ '/#media-' | append: page.slug | relative_url }}">&larr; Back to {{ settings.section_headings.media_heading | default: "Media" }}</a>
             </p>
         </article>
         {%- endif -%}
