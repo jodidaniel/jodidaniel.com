@@ -19,7 +19,14 @@
 # as the fallback site title; with no launch title the page serves the site
 # title alone, and with no launch description it serves none.
 #
-# Unit tests: scripts/test-site-meta.rb
+# The same hook also hands {% seo %} the link-preview image (`share.image` in
+# the same file, the "Link preview image" upload in /admin): jekyll-seo-tag
+# reads it from `page.image`, and a `defaults:` entry in _config.yml cannot read
+# a data file, so the plugin sets it on every page that does not carry its own.
+# A blank field means no image tags at all.
+#
+# Unit tests: scripts/test-site-meta.rb (hook) and scripts/test-share-image.rb
+# (built pages)
 
 module JodiSiteMeta
   # Pure data shaping, kept Jekyll-free so the unit tests need no site build.
@@ -36,6 +43,25 @@ module JodiSiteMeta
     }.select { |_, value| value.is_a?(String) && !value.strip.empty? }
   end
 
+  # What {% seo %} should read as `page.image`, or nil when no image is chosen.
+  # `alt` is left out unless she wrote a description.
+  def self.share_image(settings)
+    share = settings.is_a?(Hash) && settings["share"].is_a?(Hash) ? settings["share"] : {}
+    filled = ->(value) { value.is_a?(String) && !value.strip.empty? }
+    return nil unless filled.call(share["image"])
+
+    { "path" => share["image"].strip }.merge(filled.call(share["image_alt"]) ? { "alt" => share["image_alt"].strip } : {})
+  end
+
+  # Applies it to every page or document that has no `image` of its own.
+  def self.apply_share_image(items, settings)
+    found = share_image(settings)
+    return nil unless found
+
+    items.each { |item| item.data["image"] = found.dup if item.data["image"].nil? }
+    found
+  end
+
   def self.apply(config, home_pages, settings)
     found = overrides(settings)
     config["title"] = found["site_title"] if found.key?("site_title")
@@ -48,4 +74,5 @@ end
 Jekyll::Hooks.register :site, :post_read do |site|
   home_pages = site.pages.select { |page| page.data["layout"] == "home" }
   JodiSiteMeta.apply(site.config, home_pages, site.data["settings"])
+  JodiSiteMeta.apply_share_image(site.pages + site.documents, site.data["settings"])
 end

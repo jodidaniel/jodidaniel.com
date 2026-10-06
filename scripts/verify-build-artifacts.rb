@@ -45,6 +45,7 @@ require_relative "a11y_rules"
 # After a11y_rules, which may put the bundle on the load path: a `require "json"` before it
 # activates the default json gem, and `bundler/setup` then dies on the Gemfile.lock pin.
 require "json"
+require "cgi"
 
 REPO_ROOT = File.expand_path("..", __dir__)
 OPEN_PASS = ARGV[0] == "--open-pass"
@@ -140,6 +141,11 @@ unless OPEN_PASS
   $stdout.flush
   person_rules_passed = system(RbConfig.ruby, File.join(__dir__, "test-person-rules.rb"))
   check(failures, "scripts/test-person-rules.rb passes (output above)") { person_rules_passed == true }
+
+  puts "== unit tests: scripts/test-share-image.rb =="
+  $stdout.flush
+  share_image_passed = system(RbConfig.ruby, File.join(__dir__, "test-share-image.rb"))
+  check(failures, "scripts/test-share-image.rb passes (output above)") { share_image_passed == true }
 
   puts "== unit tests: scripts/test-a11y-rules.rb =="
   $stdout.flush
@@ -1162,14 +1168,29 @@ end
 jargon_offenders.each { |(kind, text)| puts "       ^ #{kind}: #{text}" }
 
 # ---------------------------------------------------------------------------
-# Share titles + Person data (audit #4/#5). The Person facts, the share titles
-# and the media pages' schema only exist once the gate is open (open-gate pass);
-# the gated pass checks that none of it leaks.
+# Link-preview image + Person data (audit #4/#5). Runs on BOTH passes: the card
+# has to work on the coming-soon page too, while the Person facts and the media
+# pages' schema only exist once the gate is open (open-gate pass).
 # ---------------------------------------------------------------------------
-puts "== share titles + structured data =="
+puts "== link preview image + structured data =="
 site_url = (YAML.safe_load(read(File.join(ROOT, "_config.yml"))) || {})["url"].to_s
 person_name = (YAML.safe_load(read(File.join(ROOT, "_data", "header.yml"))) || {})["name"].to_s
 author_name = ((YAML.safe_load(read(File.join(ROOT, "_config.yml"))) || {})["author"] || {})["name"].to_s
+# The link preview image is the "Link preview image" upload in /admin
+# (_data/settings.yml `share.image`); blank means no image tags at all. Expected
+# values are derived from that file, never a hardcoded path, so an /admin edit (a
+# new upload, a cleared field) moves the expectation with it.
+share_src = ((YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml"))) || {})["share"]) || {}
+filled_str = ->(v) { v.is_a?(String) && !v.strip.empty? }
+card_path = filled_str.call(share_src["image"]) ? share_src["image"].strip : nil
+card_url = card_path && (card_path.start_with?("/") ? "#{site_url}#{card_path}" : card_path)
+card_alt = share_src["image_alt"].to_s.strip
+if card_path&.start_with?("/")
+  card_file = File.join(SITE, card_path.sub(%r{\A/}, ""))
+  check(failures, "the link preview image #{card_path.inspect} (share.image) is a built file") do
+    File.file?(card_file) && File.size(card_file) > 0
+  end
+end
 
 # Every <meta> (property|name => [content, ...]) in a page's <head>, so a
 # duplicate is visible rather than the first one silently winning.
@@ -1185,26 +1206,46 @@ def ld_json_blocks(html)
   html.to_s.scan(%r{<script type="application/ld\+json">(.*?)</script>}m).flatten.map { |raw| JSON.parse(raw) }
 end
 
+def share_card_problems(html, card_url, card_alt, label)
+  metas = head_metas(html)
+  problems = []
+  if card_url
+    problems << "#{label}: og:image is #{metas['og:image'].inspect}, want [#{card_url.inspect}]" unless metas["og:image"] == [card_url]
+    problems << "#{label}: twitter:image is #{metas['twitter:image'].inspect}, want [#{card_url.inspect}]" unless metas["twitter:image"] == [card_url]
+    problems << "#{label}: twitter:card is #{metas['twitter:card'].inspect}, want summary_large_image" unless metas["twitter:card"] == ["summary_large_image"]
+  else
+    # No image chosen: no image tags, and the small card.
+    %w[og:image twitter:image og:image:alt twitter:image:alt].each { |key| problems << "#{label}: #{key} present with no image chosen" if metas.key?(key) }
+    problems << "#{label}: twitter:card is #{metas['twitter:card'].inspect}, want summary" unless metas["twitter:card"] == ["summary"]
+  end
+  # A written description reaches both alt tags; a blank one (or no image) means neither tag.
+  want_alt = card_url && !card_alt.empty? ? [card_alt] : []
+  %w[og:image:alt twitter:image:alt].each do |key|
+    got = metas[key].to_a.map { |v| CGI.unescapeHTML(v) }
+    problems << "#{label}: #{key} is #{got.inspect}, want #{want_alt.inspect}" unless got == want_alt
+  end
+  problems
+end
+
 home_share_html = read(File.join(SITE, "index.html"))
 home_metas = head_metas(home_share_html)
-# No link preview image is set by this change (whether her headshot belongs on
-# one is an open decision), so neither page type may carry one yet.
-check(failures, "the home page sets no og:image or twitter:image") do
-  !home_metas.key?("og:image") && !home_metas.key?("twitter:image")
+share_problems = share_card_problems(home_share_html, card_url, card_alt, "home")
+check(failures, "home page carries the link preview image from the settings (og:image, twitter:image, twitter:card, alt) -- #{share_problems.first}") do
+  share_problems.empty?
 end
+# The share title leads with her name (a bare role title read as a slogan with
+# no one attached). Exactly one of each: a failed prefix replace would leave the
+# bare title, a double insert would repeat the name.
+%w[og:title twitter:title].each do |key|
+  check(failures, "home #{key} is one value and leads with #{person_name.inspect}: #{home_metas[key].inspect}") do
+    home_metas[key].size == 1 && home_metas[key].first.start_with?(person_name) &&
+      !home_metas[key].first.start_with?("#{person_name} | #{person_name}")
+  end
+end
+
 settings_src = YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml"))) || {}
 if settings_src["site_live"] == true
   # --- open gate: Person on the home page ---------------------------------
-  # The share title leads with her name (a bare role title read as a slogan with
-  # no one attached). Exactly one of each: a failed prefix replace would leave the
-  # bare title, a double insert would repeat the name.
-  %w[og:title twitter:title].each do |key|
-    check(failures, "home #{key} is one value and leads with #{person_name.inspect}: #{home_metas[key].inspect}") do
-      home_metas[key].size == 1 && home_metas[key].first.start_with?(person_name) &&
-        !home_metas[key].first.start_with?("#{person_name} | #{person_name}")
-    end
-  end
-
   home_ld = ld_json_blocks(home_share_html)
   persons = home_ld.select { |b| b["@type"] == "Person" }
   check(failures, "home page emits exactly one top-level Person (JSON-LD), got #{persons.size}") { persons.size == 1 }
@@ -1247,18 +1288,21 @@ if settings_src["site_live"] == true
     check(failures, "media/#{slug}: keeps og:locale and the author meta the tag used to emit") do
       metas["og:locale"] == ["en_US"] && metas["author"] == [author_name]
     end
-    check(failures, "media/#{slug}: sets no og:image or twitter:image, and uses the small card") do
-      !metas.key?("og:image") && !metas.key?("twitter:image") && metas["twitter:card"] == ["summary"]
-    end
+    problems = share_card_problems(html, card_url, card_alt, "media/#{slug}")
+    check(failures, "media/#{slug}: carries the link preview image from the settings -- #{problems.first}") { problems.empty? }
   end
   check(failures, "every media page has its own description (not one site-wide string)") do
     descs.size == descs.uniq.size && descs.none? { |d| d.to_s.empty? }
   end
 else
-  # --- gated: no bio fact ----------------------------------------------------
+  # --- gated: the card works, and no bio fact comes with it ------------------
   check(failures, "gated home page serves NO Person data and no job title (no claim before sign-off)") do
     html = home_share_html.to_s
     ld_json_blocks(html).empty? && !html.include?("jobTitle") && !html.include?("Wilson Sonsini")
+  end
+  check(failures, "gated og:title is the bare name and og:description is the neutral coming-soon line") do
+    home_metas["og:title"] == [person_name] &&
+      home_metas["og:description"] == [settings_src.dig("coming_soon", "seo_description")]
   end
 end
 
@@ -1271,7 +1315,6 @@ end
 # expects what its /admin hint promises: a blank site name falls back to
 # _config.yml's title, a blank launch title leaves the site name alone in the
 # tab, and a blank description means no description tag at all.
-require "cgi"
 seo_data = YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml")))
 seo_config = YAML.safe_load(read(File.join(ROOT, "_config.yml")))
 seo_home = read(File.join(SITE, "index.html")).to_s

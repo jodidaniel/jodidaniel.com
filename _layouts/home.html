@@ -53,6 +53,7 @@
     {%- if gated_desc and gated_desc != "" -%}
     <meta name="description" content="{{ gated_desc | escape }}" />
     {%- endif -%}
+    {% include share-card-meta.html %}
     {%- endif -%}
     {%- comment -%}
       cms-platform#325: the gem emits its favicon <link> from its own default

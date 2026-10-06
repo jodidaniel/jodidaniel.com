@@ -40,7 +40,7 @@
       a third party's article ABOUT her is not her blog post. Here the page is
       a plain WebPage that belongs to the site, with its own description
       (the tag fell back to the site-wide one on all of them) and no
-      article:published_time. No link preview image is set here (none is today).
+      article:published_time. The link preview image comes from _data/settings.yml `share.image` (see _plugins/site_meta_from_settings.rb).
     {%- endcomment -%}
     {%- capture media_desc -%}{{ page.title }}{% if page.source and page.source != "" %} — {{ page.source }}{% endif %}{% if page.date_display and page.date_display != "" %}, {{ page.date_display }}{% endif %}{%- endcapture -%}
     {%- assign media_desc = media_desc | strip_html | normalize_whitespace -%}
@@ -57,7 +57,19 @@
     <meta property="og:url" content="{{ media_canonical }}" />
     <meta property="og:site_name" content="{{ site.title | escape }}" />
     <meta property="og:type" content="website" />
+    {%- if page.image.path %}
+    <meta property="og:image" content="{{ page.image.path | absolute_url }}" />
+    {%- if page.image.alt and page.image.alt != "" %}
+    <meta property="og:image:alt" content="{{ page.image.alt | escape }}" />
+    {%- endif %}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="{{ page.image.path | absolute_url }}" />
+    {%- if page.image.alt and page.image.alt != "" %}
+    <meta name="twitter:image:alt" content="{{ page.image.alt | escape }}" />
+    {%- endif %}
+    {%- else %}
     <meta name="twitter:card" content="summary" />
+    {%- endif %}
     <meta name="twitter:title" content="{{ page.title | strip_html | escape }}" />
     <meta name="twitter:description" content="{{ media_desc | escape }}" />
     {%- capture media_json -%}

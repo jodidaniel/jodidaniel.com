@@ -12,18 +12,34 @@ data file:
 | `_data/header.yml`   | `name`, `tagline`                              | **Header / Hero** (`site_header`) |
 | `_data/about.yml`    | `photo`, `intro_heading`, `lead`, `bio[]`, `nav[]` | **About** (`site_about`) |
 | `_data/contact.yml`  | `heading`, `intro`, `links[]`                  | **Contact** (`site_contact`) |
-| `_data/settings.yml` | `site_live` GATE, `coming_soon`, `seo` (site name, launch title, Google description), `footer`, `back_to_top_label`, `skip_link_label`, `section_headings`, `share` (search-engine-only facts) | **Site Settings** (`site_settings`) |
+| `_data/settings.yml` | `site_live` GATE, `coming_soon`, `seo` (site name, launch title, Google description), `footer`, `back_to_top_label`, `skip_link_label`, `section_headings`, `share` (link-preview image and search-engine-only facts) | **Site Settings** (`site_settings`) |
 
 The layout reads these as `site.data.header` / `.about` / `.contact` /
 `.settings`.
 
-### Share titles, `Person` data and media-page schema (audit #4/#5)
+### Link-preview card and `Person` data (audit #4/#5)
 
-The open home page's `{% seo %}` output is led by her name in the share titles,
-and it carries one `Person` entity; media item pages describe themselves
-honestly. **No link-preview image is set** (that work is separate, and whether
-her headshot belongs on a preview is an open decision).
+Pages that share a link show the image in **Site Settings, "Link Previews and
+Search Facts", "Link Preview Image"** (`share.image` in `_data/settings.yml`,
+with `share.image_alt` as its description). It is an ordinary `/admin` image
+upload, so she can set or replace it without a developer. It ships **blank**:
+until she uploads one, link previews carry no image (the small `summary`
+Twitter card), exactly as before. Whether the preview should show her headshot
+is an open decision, so no default image is committed.
 
+jekyll-seo-tag reads `page.image`, and a `defaults:` entry in `_config.yml`
+cannot read a data file, so `_plugins/site_meta_from_settings.rb` sets
+`page.image` on every page and collection item without its
+own `image`. The gated include and the media layout read the same value.
+
+`scripts/build-share-card.py` is an optional convenience that draws a sample
+1200x630 card (blue gradient, headshot, name; needs Pillow; the Raleway font and
+its license are in `scripts/share-card/`). Nothing requires it and no output is
+committed; it is just a way to produce a file to upload through `/admin`.
+
+- **Gated** (`site_live` false): `_includes/share-card-meta.html` adds the image,
+  the bare name as the share title and the neutral description. No role, no
+  `Person`.
 - **Open**: `_includes/home-seo.html` calls `{% seo %}` with the share titles led
   by her name (the tab `<title>` is unchanged) and adds one `Person` JSON-LD
   built only from repo content: current role and firm (first Experience item
@@ -34,10 +50,13 @@ her headshot belongs on a preview is an open decision).
   that is part of the site, with a per-item description. The tag would type
   every collection document as her `BlogPosting` dated at build time.
 
-`scripts/verify-build-artifacts.rb` ("share titles + structured data") asserts all
-of it, deriving the expected Person from the source files
-(`scripts/person_rules.rb`) rather than hardcoding facts, so ordinary `/admin`
-edits do not trip it; `scripts/test-person-rules.rb` builds the edited cases.
+`scripts/verify-build-artifacts.rb` ("link preview image + structured data")
+asserts all of it on both builds, deriving the expected image from the settings
+and the expected Person from the source files (`scripts/person_rules.rb`)
+rather than hardcoding facts, so ordinary `/admin` edits do not trip it;
+`scripts/test-person-rules.rb` builds the edited Person cases and
+`scripts/test-share-image.rb` builds a changed, a cleared and a gated image
+setting.
 
 ### About nav anchors are a closed set (issue #196)
 

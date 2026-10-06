@@ -40,7 +40,7 @@ require File.join(ROOT, "_plugins", "site_meta_from_settings.rb")
 
 class SiteMetaTest < Minitest::Test
   Page = Struct.new(:data)
-  Site = Struct.new(:config, :data, :pages)
+  Site = Struct.new(:config, :data, :pages, :documents)
 
   SETTINGS = {
     "seo" => {
@@ -59,7 +59,7 @@ class SiteMetaTest < Minitest::Test
 
   def site_with(settings)
     Site.new({ "title" => "Fallback Name" }, { "settings" => settings },
-             [Page.new({ "layout" => "home" }), Page.new({ "layout" => "media" })])
+             [Page.new({ "layout" => "home" }), Page.new({ "layout" => "media" })], [])
   end
 
   def test_settings_values_replace_title_description_and_home_page_title
@@ -84,7 +84,7 @@ class SiteMetaTest < Minitest::Test
   end
 
   def test_missing_settings_file_does_not_raise
-    site = run_hook(Site.new({ "title" => "Fallback Name" }, {}, []))
+    site = run_hook(Site.new({ "title" => "Fallback Name" }, {}, [], []))
     assert_equal "Fallback Name", site.config["title"]
   end
 
@@ -92,6 +92,45 @@ class SiteMetaTest < Minitest::Test
     settings = { "seo" => { "site_title" => "Jodi Daniel & Co" } }
     site = run_hook(site_with(settings))
     assert_equal "Jodi Daniel & Co", site.config["title"]
+  end
+
+  # The link preview image: `share.image` in settings.yml, set as `page.image`
+  # on every page and collection document without its own.
+  SHARE = { "share" => { "image" => " /assets/images/uploads/card.png ", "image_alt" => " A card " } }.freeze
+
+  def share_site(settings)
+    Site.new({ "title" => "T" }, { "settings" => settings },
+             [Page.new({ "layout" => "home" })], [Page.new({ "layout" => "media" }), Page.new({ "layout" => "media", "image" => { "path" => "/own.png" } })])
+  end
+
+  def test_share_image_setting_becomes_page_image
+    site = run_hook(share_site(SHARE))
+    [site.pages[0], site.documents[0]].each do |page|
+      assert_equal({ "path" => "/assets/images/uploads/card.png", "alt" => "A card" }, page.data["image"])
+    end
+  end
+
+  def test_a_page_with_its_own_image_keeps_it
+    site = run_hook(share_site(SHARE))
+    assert_equal({ "path" => "/own.png" }, site.documents[1].data["image"])
+  end
+
+  def test_a_changed_setting_changes_the_image
+    changed = { "share" => SHARE["share"].merge("image" => "/assets/images/uploads/other.png") }
+    assert_equal "/assets/images/uploads/other.png", run_hook(share_site(changed)).pages[0].data["image"]["path"]
+  end
+
+  def test_a_blank_description_sets_no_alt
+    page = run_hook(share_site({ "share" => { "image" => "/a.png", "image_alt" => " " } })).pages[0]
+    assert_equal({ "path" => "/a.png" }, page.data["image"])
+  end
+
+  def test_blank_or_missing_share_image_sets_nothing
+    [{ "share" => { "image" => "" } }, { "share" => { "image" => "  " } }, { "share" => nil }, {}].each do |settings|
+      site = run_hook(share_site(settings))
+      refute site.pages[0].data.key?("image"), settings.inspect
+      refute site.documents[0].data.key?("image"), settings.inspect
+    end
   end
 
   # The gated <title> is printed by the layouts themselves ({% seo %} escapes its

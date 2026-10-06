@@ -72,11 +72,17 @@ section_headings:
   media_coverage_heading: "Appearances & Coverage"
   education_heading: "Education"
 
-# Facts that only search engines read (the Person data in the page source). The
-# job title, firm and schools come from the Experience and Education sections;
-# her profile links come from Contact. These two lists add what has no
-# visible home on the page.
+# What only link previews and search engines read; none of it shows on the page.
+# `image` is the picture a shared link shows (messages, social media): upload one
+# in /admin, 1200x630. Blank (the default) means link previews carry no image,
+# as before.
+# _plugins/site_meta_from_settings.rb hands it to {% seo %} and the layouts.
+# The Person data in the page source reads the lists: the job title, firm and
+# schools come from the Experience and Education sections, and her profile links
+# come from Contact. The two lists add what has no visible home on the page.
 share:
+  image: ""
+  image_alt: ""
   alternate_names:
     - "Jodi Goldstein Daniel"
     - "Jodi G. Daniel"
