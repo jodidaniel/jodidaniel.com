@@ -45,7 +45,7 @@ section_headings:
 
 # Facts that only search engines and link previews read (the Person data in the page source). The
 # job title, firm and schools come from the Experience and Education sections;
-# her WSGR and LinkedIn links come from Contact. These two lists add what has no
+# her profile links come from Contact. These two lists add what has no
 # visible home on the page.
 share:
   alternate_names:

@@ -21,11 +21,19 @@ module PersonRules
   end
 
   # Front matter of every `<root>/<dir>/*.md`, ordered by weight like Liquid's
-  # `sort: "weight"` (stable on equal weights, which the template shares).
+  # `sort: "weight"`. Equal weights have no guaranteed order there, so content
+  # gives every item its own weight; ties here fall back to file name.
+  #
+  # A missing or null `title:` is not blank to Jekyll: it fills one in from the
+  # file name ("2-health-data-privacy.md" -> "2 Health Data Privacy", Jekyll's
+  # Document#populate_title), and the page emits that, so this does too. Only an
+  # explicit empty string stays empty.
   def items(root, dir)
     Dir[File.join(root, dir, "*.md")].sort.map do |f|
       m = read(f).match(/\A---\s*\n(.*?)\n---/m)
-      m && YAML.safe_load(m[1], permitted_classes: [Date, Time])
+      fm = m && YAML.safe_load(m[1], permitted_classes: [Date, Time])
+      fm["title"] ||= File.basename(f, ".*").split("-").map(&:capitalize).join(" ") if fm.is_a?(Hash)
+      fm
     end.compact.each_with_index.sort_by { |fm, i| [fm["weight"].to_i, i] }.map(&:first)
   end
 
