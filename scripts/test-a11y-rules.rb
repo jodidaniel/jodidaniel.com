@@ -70,7 +70,7 @@ class A11yRulesTest < Minitest::Test
 
   GRADIENT = "body { background: linear-gradient(135deg, #1a3a5c 0%, #2d5a7b 25%, #3d7a9c 50%, #4a8dad 75%, #5ba0be 100%); }\n"
   TAGLINE = "header { color: #ffffff; }\nheader .tagline { font-size: 1.25rem; font-weight: 600; opacity: 0.9; }\n" \
-            "@media (max-width: 767px) { header .tagline { font-size: 1rem; } }\n"
+            "@media (max-width: 599px) { header .tagline { font-size: 1rem; } }\n"
   FOOTER = "footer { color: #ffffff; background: rgba(26, 58, 92, 0.7); font-size: 0.9rem; }\n" \
            "footer a { color: #ffffff; text-decoration: underline; }\n"
 
@@ -94,13 +94,13 @@ class A11yRulesTest < Minitest::Test
 
   def test_a_light_weight_tagline_is_normal_text_and_fails
     problems = A11yRules.tagline_problems(GRADIENT + TAGLINE.sub("font-weight: 600", "font-weight: 300"))
-    assert(problems.any? { |p| p.include?("tagline (desktop) 20px weight 300 is normal text") }, problems.inspect)
+    assert(problems.any? { |p| p.include?("tagline (large-screen) 20px weight 300 is normal text") }, problems.inspect)
   end
 
   def test_a_bold_tagline_below_18_66px_is_not_large_text
     css = GRADIENT + TAGLINE.sub("font-size: 1.25rem", "font-size: 1.1rem")
     problems = A11yRules.tagline_problems(css)
-    assert(problems.any? { |p| p.include?("tagline (desktop) 17.6px weight 600 is normal text") }, problems.inspect)
+    assert(problems.any? { |p| p.include?("tagline (large-screen) 17.6px weight 600 is normal text") }, problems.inspect)
   end
 
   def test_a_bold_tagline_that_is_too_faint_fails_even_as_large_text
@@ -110,7 +110,15 @@ class A11yRulesTest < Minitest::Test
 
   def test_the_phone_size_override_is_scored_as_normal_text
     problems = A11yRules.tagline_problems(GRADIENT + TAGLINE.sub("opacity: 0.9", "opacity: 0.75"))
-    assert(problems.any? { |p| p.include?("tagline (phone) 16px") }, problems.inspect)
+    assert(problems.any? { |p| p.include?("tagline (up to 599px wide) 16px") }, problems.inspect)
+  end
+
+  def test_a_16px_tagline_up_to_767px_wide_is_the_gap_that_was_closed
+    # Up to 767px wide the gradient reaches 0.48 behind the tagline (4.3:1 at 16px, weight 600).
+    css = GRADIENT + TAGLINE.sub("599px", "767px")
+    problems = A11yRules.tagline_problems(css)
+    assert(problems.any? { |p| p.include?("tagline (up to 767px wide) 16px weight 600 is normal text") }, problems.inspect)
+    assert_equal [], A11yRules.tagline_problems(GRADIENT + TAGLINE)
   end
 
   def test_the_footer_band_over_every_stop_passes

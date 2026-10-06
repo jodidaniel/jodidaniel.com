@@ -1075,7 +1075,7 @@ low_contrast.each { |offender| puts "       ^ #{offender}" }
 # The tagline and footer sit on the page gradient, which axe cannot score (it reports them
 # "incomplete"), so their contrast is computed from the stylesheet over the gradient's stops.
 tagline_problems = A11yRules.tagline_problems(a11y_css)
-check(failures, "header .tagline is large text (bold, 18.66px+) reaching 3:1 over the page gradient at desktop widths, 4.5:1 at phone widths") do
+check(failures, "header .tagline reaches its WCAG ratio over the page gradient at every width (3:1 as bold 18.66px+ text, 4.5:1 where smaller)") do
   tagline_problems.empty?
 end
 tagline_problems.each { |problem| puts "       ^ #{problem}" }

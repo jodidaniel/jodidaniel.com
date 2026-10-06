@@ -222,7 +222,9 @@ header h1 {
    20px tagline WCAG "large text" (bold, at least 18.66px), so it needs 3:1
    over the page gradient, not 4.5:1. At weight 300 it measured 3.6:1 where it
    crosses the middle of the gradient. The 16px phone size below is not large
-   text and keeps weight 600 too; scripts/a11y_rules.rb asserts both. */
+   text and keeps weight 600 too; scripts/a11y_rules.rb asserts both. The
+   20px size holds down to 600px wide: at 16px, 600-767px wide on a short
+   page, it was 4.30:1, under the 4.5:1 normal text needs. */
 header .tagline {
     font-size: 1.25rem;
     font-weight: 600;
@@ -880,6 +882,12 @@ footer a:hover {
     }
 }
 
+@media (max-width: 599px) {
+    header .tagline {
+        font-size: 1rem;
+    }
+}
+
 /* issue #198 item 2: 767px (not 768px) so a 768px-wide viewport (iPad
    portrait) lands on the >=768 tablet layout above rather than this
    single-column phone layout. The 900px breakpoint above is unrelated and
@@ -914,10 +922,6 @@ footer a:hover {
     header h1 {
         font-size: 2rem;
         letter-spacing: 0.1em;
-    }
-
-    header .tagline {
-        font-size: 1rem;
     }
 
     .intro-section {

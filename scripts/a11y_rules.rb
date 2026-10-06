@@ -127,18 +127,24 @@ module A11yRules
   LARGE_BOLD_TEXT_PX = 18.66
   BOLD_MIN_WEIGHT = 600
   LARGE_TEXT_MIN_RATIO = 3.0
-  PHONE_MEDIA = /max-width:\s*767px/
+  PHONE_MEDIA = /max-width:\s*(\d+)px/
 
   # The tagline is centered at the top of the page, so the part of the gradient behind it is
   # bounded by where it sits: a point (x, y) on the 135deg gradient is at (x + y) / (width +
   # height) of the way along it. Measured in Chromium over the home page and a media item page
-  # (the shortest pages put it furthest along): 0.62 at most from 768 to 1920 wide, and 0.38-0.41
-  # at 320-414 wide. The bounds below leave a little headroom; the lightest stops (0.75, 1.0)
-  # are never behind it, so it is scored against the gradient only up to the bound.
-  # KNOWN GAP, not asserted: between ~600 and 767 wide the phone-size (16px, not large) tagline
-  # reaches 0.48 on a short page, 4.3:1; see the pull request that added this.
+  # (the shortest pages put it furthest along, and the whole text box counts, not just the
+  # words): 0.62 at most from 768 to 1920 wide, 0.55 from 600 to 767 wide in landscape, and
+  # 0.38-0.41 at 320-414 wide in portrait. The bounds below leave a little headroom; the lightest
+  # stops (0.75, 1.0) are never behind it, so it is scored against the gradient only up to the
+  # bound.
   TAGLINE_MAX_GRADIENT_POSITION = 0.7
+  # A smaller (not large text) phone size must reach 4.5:1: 0.43 covers phone widths up to 599,
+  # 0.5 covers an override that reaches 767 wide (0.48 measured at 767x1024; 4.3:1 at 16px, the
+  # gap this rule caught).
   TAGLINE_MAX_GRADIENT_POSITION_PHONE = 0.43
+  TAGLINE_MAX_GRADIENT_POSITION_PHONE_WIDE = 0.5
+  # KNOWN GAP, not asserted: below 600 wide in a squat window (599x900 is 4.43:1, 568x320
+  # landscape 4.16:1) the 16px tagline is a little under 4.5:1; see the pull request.
 
   # "#abc", "#aabbcc", "rgb(r, g, b)" or "rgba(r, g, b, a)" -> [r, g, b, alpha]; nil otherwise.
   def parse_color(value)
@@ -195,7 +201,7 @@ module A11yRules
   end
 
   # Problems with `header .tagline` (white text, so only its `opacity` lowers it) on the page
-  # gradient: one line per viewport class (desktop = base rule, phone = the 767px override).
+  # gradient: one line per viewport class (the base rule, and the max-width override if there is one).
   # [] when it reaches its required ratio, 3:1 as large text else 4.5:1, everywhere it can be.
   def tagline_problems(css)
     stops = gradient_stops(css)
@@ -205,7 +211,7 @@ module A11yRules
     base = rules.find { |_sel, _decls, at| at.nil? }
     return ["no `header .tagline` rule"] unless base
 
-    phone = rules.find { |_sel, _decls, at| at.to_s.match?(PHONE_MEDIA) }
+    phone = rules.find { |_sel, decls, at| decls["font-size"] && at.to_s.match?(PHONE_MEDIA) }
     px = font_px(base[1]["font-size"])
     weight = base[1]["font-weight"].to_i
     opacity = (base[1]["opacity"] || "1").to_f
@@ -214,8 +220,15 @@ module A11yRules
     return ["`header .tagline` has no color of its own and `header` sets none"] unless color
     return ["`header .tagline` font-size #{base[1]['font-size'].inspect} is not rem or px"] unless px
 
-    [["desktop", px, TAGLINE_MAX_GRADIENT_POSITION],
-     ["phone", font_px(phone && phone[1]["font-size"]) || px, TAGLINE_MAX_GRADIENT_POSITION_PHONE]].filter_map do |name, size, limit|
+    # The base size applies above the override's max-width (all widths without one); the
+    # override's size applies at and below it.
+    classes = [["large-screen", px, TAGLINE_MAX_GRADIENT_POSITION]]
+    if phone && font_px(phone[1]["font-size"])
+      max_width = phone[2].match(PHONE_MEDIA)[1].to_i
+      limit = max_width <= 599 ? TAGLINE_MAX_GRADIENT_POSITION_PHONE : TAGLINE_MAX_GRADIENT_POSITION_PHONE_WIDE
+      classes << ["up to #{max_width}px wide", font_px(phone[1]["font-size"]), limit]
+    end
+    classes.filter_map do |name, size, limit|
       large = large_text?(size, weight)
       needed = large ? LARGE_TEXT_MIN_RATIO : MIN_RATIO
       worst = (0..40).map do |i|
