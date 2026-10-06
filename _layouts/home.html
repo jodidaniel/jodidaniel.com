@@ -45,7 +45,7 @@
       with no indexing status to preserve.)
     {%- endcomment -%}
     {%- if live -%}
-    {% seo %}
+    {% include home-seo.html %}
     {%- else -%}
     <title>{{ site.title | escape }}</title>
     {%- assign gated_desc = settings.coming_soon.seo_description -%}
