@@ -69,7 +69,7 @@
     {%- endcapture %}
     <script type="application/ld+json">{{ media_json | replace: "<", "\u003c" }}</script>
     {%- else -%}
-    <title>{{ site.title }}</title>
+    <title>{{ site.title | escape }}</title>
     <meta name="robots" content="noindex,nofollow">
     {%- endif -%}
     {%- comment -%}
