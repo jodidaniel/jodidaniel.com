@@ -119,7 +119,10 @@ class SiteMetaTest < Minitest::Test
       found = site_title_variables(layout)
       refute_empty found, "_layouts/#{layout}.html no longer prints site.title; update this test"
       found.each do |variable|
-        assert_includes variable.filters.map(&:first), "escape", "_layouts/#{layout}.html prints site.title unescaped"
+        # `escape` for HTML; `jsonify` for the JSON-LD in media.html, whose script
+        # block also turns every "<" into \u003c, so no value can close the tag.
+        encoders = variable.filters.map(&:first) & %w[escape jsonify]
+        refute_empty encoders, "_layouts/#{layout}.html prints site.title unescaped"
       end
     end
   end
