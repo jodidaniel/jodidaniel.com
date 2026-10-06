@@ -5,7 +5,7 @@
 # (_data/settings.yml `share.image`, the "Link Preview Image" upload in /admin)
 # and checks that the built pages follow it: a changed setting changes the
 # output, a cleared one means no image tags, and the gated coming-soon page
-# follows it too. The image paths below are invented and need not exist, so
+# is not touched by it. The image paths below are invented and need not exist, so
 # the test never depends on what she has uploaded or published.
 #
 #   ruby scripts/test-share-image.rb
@@ -91,19 +91,10 @@ class ShareImageTest < Minitest::Test
     end
   end
 
-  def test_the_gated_page_with_no_image_serves_the_name_but_no_image
-    m = metas(build(share: { "image" => "" }, live: false)["home"])
-    refute m.key?("og:image")
-    assert_equal ["summary"], m["twitter:card"]
-    assert_equal 1, m["twitter:title"].size
-  end
-
-  def test_the_gated_page_follows_the_setting_and_serves_no_person_data
+  def test_the_coming_soon_page_is_left_alone
     head = build(share: { "image" => UPLOAD, "image_alt" => "A card" }, live: false)["home"]
     m = metas(head)
-    assert_equal ["#{SITE_URL}#{UPLOAD}"], m["og:image"]
-    assert_equal ["#{SITE_URL}#{UPLOAD}"], m["twitter:image"]
-    assert_equal ["summary_large_image"], m["twitter:card"]
+    %w[og:image twitter:image twitter:card og:title og:image:alt].each { |key| refute m.key?(key), "coming-soon page gained #{key}" }
     refute_includes head, "ld+json"
   end
 end
