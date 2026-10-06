@@ -1095,7 +1095,7 @@ if settings_src["site_live"] == true
   end
   current = front.call("_experience/*.md").find { |fm| fm["period"].to_s.include?("Present") } || {}
   contact = (YAML.safe_load(read(File.join(ROOT, "_data", "contact.yml"))) || {})["links"].to_a.map { |l| l["url"] }
-  extra = settings_src.dig("seo", "profile_links").to_a
+  extra = settings_src.dig("share", "profile_links").to_a
   check(failures, "Person name is #{person_name.inspect} and url is the site root") do
     person["name"] == person_name && person["url"] == "#{site_url}/"
   end
@@ -1112,8 +1112,8 @@ if settings_src["site_live"] == true
   check(failures, "Person sameAs links her firm profile and LinkedIn") do
     person["sameAs"].to_a.any? { |u| u.include?("wsgr.com") } && person["sameAs"].to_a.any? { |u| u.include?("linkedin.com") }
   end
-  check(failures, "Person alternateName comes from settings seo.alternate_names") do
-    person["alternateName"] == settings_src.dig("seo", "alternate_names")
+  check(failures, "Person alternateName comes from settings share.alternate_names") do
+    person["alternateName"] == settings_src.dig("share", "alternate_names")
   end
   check(failures, "the Person script holds no raw '<' (so no value can close the script tag)") do
     home_share_html.scan(%r{<script type="application/ld\+json">(.*?)</script>}m).flatten.none? { |raw| raw.include?("<") }

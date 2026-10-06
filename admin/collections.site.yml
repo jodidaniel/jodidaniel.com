@@ -266,8 +266,8 @@
               - { name: accomplishments_heading, label: "Accomplishments Heading", widget: string }
               - { name: media_heading,           label: "Media Heading", widget: string }
               - { name: education_heading,       label: "Education Heading", widget: string }
-          - name: seo
-            label: "Search Engines (not shown on the page)"
+          - name: share
+            label: "Link Previews and Search Facts (not shown on the page)"
             widget: object
             hint: "Facts Google reads to connect this site with you. Nothing here appears on the page itself. Your job title, firm and schools come from the Experience and Education sections, and your Wilson Sonsini and LinkedIn links come from Contact."
             fields:

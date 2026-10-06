@@ -12,7 +12,7 @@ data file:
 | `_data/header.yml`   | `name`, `tagline`                              | **Header / Hero** (`site_header`) |
 | `_data/about.yml`    | `photo`, `intro_heading`, `lead`, `bio[]`, `nav[]` | **About** (`site_about`) |
 | `_data/contact.yml`  | `heading`, `intro`, `links[]`                  | **Contact** (`site_contact`) |
-| `_data/settings.yml` | `site_live` GATE, `coming_soon`, `footer`, `back_to_top_label`, `section_headings`, `seo` (search-engine-only facts) | **Site Settings** (`site_settings`) |
+| `_data/settings.yml` | `site_live` GATE, `coming_soon`, `footer`, `back_to_top_label`, `section_headings`, `share` (link-preview and search-engine-only facts) | **Site Settings** (`site_settings`) |
 
 The layout reads these as `site.data.header` / `.about` / `.contact` /
 `.settings`.
@@ -33,8 +33,8 @@ license are in `scripts/share-card/`; `--check` reports a stale PNG).
   by her name (the tab `<title>` is unchanged) and adds one `Person` JSON-LD
   built only from repo content: current role and firm (first Experience item
   whose `period` contains "Present"), schools (Education), areas (Expertise),
-  `sameAs` from Contact links plus `settings.seo.profile_links`, and
-  `alternateName` from `settings.seo.alternate_names`.
+  `sameAs` from Contact links plus `settings.share.profile_links`, and
+  `alternateName` from `settings.share.alternate_names`.
 - **Media item pages** write their own head (not `{% seo %}`): a `WebPage`
   that is part of the site, with a per-item description. The tag would type
   every collection document as her `BlogPosting` dated at build time.
