@@ -10,9 +10,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Source+Sans+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+    {%- comment -%}
+      Fonts are self-hosted (assets/fonts/, @font-face in jodidaniel.css), so
+      no visitor's IP goes to a third-party font CDN. Preload the two files the
+      first paint needs: Raleway (name/headings) and Source Sans Pro 300
+      (body). `crossorigin` is required even same-origin, or the preload is
+      fetched twice.
+    {%- endcomment -%}
+    <link rel="preload" href="{{ '/assets/fonts/raleway-v37-latin.woff2' | relative_url }}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{{ '/assets/fonts/source-sans-pro-v24-latin-300.woff2' | relative_url }}" as="font" type="font/woff2" crossorigin>
     {%- comment -%}
       SEO is gated in PARALLEL with the body (the contract AGENTS.md states:
       "no marketing claim is served until sign-off"). Until this was added the
@@ -67,6 +73,9 @@
       present in the data and collections but NOT rendered. Flip site_live: true (via
       /admin) to go live.
     {%- endcomment -%}
+    {%- if live -%}
+    <a class="skip-link" href="#main">{{ settings.skip_link_label | default: 'Skip to main content' }}</a>
+    {%- endif -%}
     <div class="site-wrapper">
         <header class="animate-in delay-1">
             <h1>{{ site.data.header.name }}</h1>
@@ -82,6 +91,7 @@
         </header>
 
         {%- if live -%}
+        <main id="main" tabindex="-1">
 
         {%- assign about = site.data.about -%}
         {%- assign has_about = false -%}
@@ -97,7 +107,7 @@
             <div class="intro-section">
                 <div class="profile-placeholder">
                     {%- if about.photo and about.photo != "" -%}
-                    <img class="profile-image" src="{{ about.photo | relative_url }}" alt="{{ site.data.header.name }}">
+                    <img class="profile-image" src="{{ about.photo | relative_url }}" alt="{{ site.data.header.name }}" width="180" height="180">
                     {%- else -%}
                     <svg class="profile-image" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
                         <rect width="300" height="300" fill="#e8f4f8"/>
@@ -183,7 +193,7 @@
         {%- if events_sorted and events_sorted != empty -%}
         <section id="events" class="container animate-in delay-3">
             {%- if settings.section_headings.events_heading and settings.section_headings.events_heading != "" -%}
-            <span class="section-title">{{ settings.section_headings.events_heading }}</span>
+            <h2 class="section-title">{{ settings.section_headings.events_heading }}</h2>
             {%- endif -%}
             <div class="events-list">
                 {%- for ev in events_sorted -%}
@@ -213,7 +223,7 @@
         {%- if expertise_sorted and expertise_sorted != empty -%}
         <section id="expertise" class="container animate-in delay-4">
             {%- if settings.section_headings.expertise_heading and settings.section_headings.expertise_heading != "" -%}
-            <span class="section-title">{{ settings.section_headings.expertise_heading }}</span>
+            <h2 class="section-title">{{ settings.section_headings.expertise_heading }}</h2>
             {%- endif -%}
             <div class="expertise-grid">
                 {%- for e in expertise_sorted -%}
@@ -230,7 +240,7 @@
         {%- if experience_sorted and experience_sorted != empty -%}
         <section id="experience" class="container animate-in delay-5">
             {%- if settings.section_headings.experience_heading and settings.section_headings.experience_heading != "" -%}
-            <span class="section-title">{{ settings.section_headings.experience_heading }}</span>
+            <h2 class="section-title">{{ settings.section_headings.experience_heading }}</h2>
             {%- endif -%}
             <div class="timeline">
                 {%- for x in experience_sorted -%}
@@ -249,7 +259,7 @@
         {%- if accomplishments_sorted and accomplishments_sorted != empty -%}
         <section id="accomplishments" class="container animate-in delay-6">
             {%- if settings.section_headings.accomplishments_heading and settings.section_headings.accomplishments_heading != "" -%}
-            <span class="section-title">{{ settings.section_headings.accomplishments_heading }}</span>
+            <h2 class="section-title">{{ settings.section_headings.accomplishments_heading }}</h2>
             {%- endif -%}
             <ul class="accomplishments-list">
                 {%- for a in accomplishments_sorted -%}
@@ -286,7 +296,7 @@
         {%- if all_media_sorted and all_media_sorted != empty -%}
         <section id="media" class="container animate-in delay-7">
             {%- if settings.section_headings.media_heading and settings.section_headings.media_heading != "" -%}
-            <span class="section-title">{{ settings.section_headings.media_heading }}</span>
+            <h2 class="section-title">{{ settings.section_headings.media_heading }}</h2>
             {%- endif -%}
 
             {%- comment -%}
@@ -326,7 +336,7 @@
                       </h3>
                       <ul class="media-list">
                           {%- for item in category_items -%}
-                          <li>
+                          <li id="media-{{ item.slug }}">
                               {%- comment -%}
                                 item.url is the item's OWN page (/media/<slug>/),
                                 not the article link — Jekyll's DocumentDrop
@@ -382,7 +392,7 @@
                       </h3>
                       <ul class="media-list">
                           {%- for item in category_items -%}
-                          <li>
+                          <li id="media-{{ item.slug }}">
                               {%- comment -%}
                                 item.url is the item's OWN page (/media/<slug>/),
                                 not the article link — Jekyll's DocumentDrop
@@ -409,7 +419,7 @@
         {%- if education_sorted and education_sorted != empty -%}
         <section id="education" class="container animate-in delay-8">
             {%- if settings.section_headings.education_heading and settings.section_headings.education_heading != "" -%}
-            <span class="section-title">{{ settings.section_headings.education_heading }}</span>
+            <h2 class="section-title">{{ settings.section_headings.education_heading }}</h2>
             {%- endif -%}
             <div class="education-grid">
                 {%- for ed in education_sorted -%}
@@ -427,7 +437,7 @@
         {%- if contact and contact.links and contact.links != empty -%}
         <section id="contact" class="container contact-section animate-in delay-9">
             {%- if contact.heading and contact.heading != "" -%}
-            <span class="section-title">{{ contact.heading }}</span>
+            <h2 class="section-title">{{ contact.heading }}</h2>
             {%- endif -%}
             {%- if contact.intro and contact.intro != "" -%}
             <p>{{ contact.intro }}</p>
@@ -516,6 +526,7 @@
             }
         })();
         </script>
+        </main>
         {%- endif -%}{%- comment -%} end: full-site sections (site_live) {%- endcomment -%}
 
         {%- if live -%}
