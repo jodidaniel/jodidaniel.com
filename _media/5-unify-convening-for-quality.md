@@ -5,5 +5,5 @@ source: "UNIFY: Convening for Quality, The Joint Commission, Washington, D.C."
 date_display: "October 2026"
 article_url: "https://www.jointcommission.org/en-us/unify-convening-for-quality"
 link_label: "About the event"
-weight: 5
+weight: 1
 ---

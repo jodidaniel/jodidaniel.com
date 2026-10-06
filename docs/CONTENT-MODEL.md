@@ -118,7 +118,9 @@ moves a finished event out of Upcoming Events herself once it has passed:
 add it under Media Items as a "Talks & Panels" entry (event name or her
 session title, host, month and year, the event page as the link), then delete
 the event entry. UNIFY was moved this way on 2026-10-05 rather than deleted, so
-the panel stays on the record. An in-browser
+the panel stays on the record. Talks & Panels lists newest first, so give the
+moved item the lowest `weight` and bump the others (`scripts/test-content-copy.rb`
+checks the order). An in-browser
 upcoming/past split on one Speaking list is planned for the restructure and
 is not built yet.
 
