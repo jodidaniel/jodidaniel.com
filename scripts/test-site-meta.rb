@@ -10,7 +10,19 @@
 
 require "minitest/autorun"
 require "yaml"
-require "liquid"
+
+# Liquid is a Jekyll dependency, so on a CI runner it exists only in the bundle
+# (`ruby` alone cannot see it), while minitest is a system gem the bundle does
+# not carry. minitest is already loaded above, so a LoadError here means the
+# bundle's gems are not on the load path yet: put them there from the Gemfile
+# (this repo's, wherever the script is run from) and try again.
+begin
+  require "liquid"
+rescue LoadError
+  ENV["BUNDLE_GEMFILE"] ||= File.expand_path("../Gemfile", __dir__)
+  require "bundler/setup"
+  require "liquid"
+end
 
 # The plugin registers a Jekyll hook when loaded; capture it instead of booting
 # Jekyll, so the test runs the real hook body against a stand-in site.

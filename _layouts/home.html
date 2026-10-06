@@ -43,6 +43,7 @@
     {%- else -%}
     <title>{{ site.title | escape }}</title>
     {%- assign gated_desc = settings.coming_soon.seo_description -%}
+    {%- assign gated_desc = gated_desc | strip -%}
     {%- if gated_desc and gated_desc != "" -%}
     <meta name="description" content="{{ gated_desc | escape }}" />
     {%- endif -%}
