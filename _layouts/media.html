@@ -43,6 +43,9 @@
     <link rel="stylesheet" href="{{ '/assets/css/jodidaniel.css' | cachebust }}">
 </head>
 <body>
+    {%- if live -%}
+    <a class="skip-link" href="#main">{{ settings.skip_link_label | default: 'Skip to main content' }}</a>
+    {%- endif -%}
     <div class="site-wrapper">
         <header class="animate-in delay-1">
             <h1><a href="{{ '/' | relative_url }}">{{ site.data.header.name }}</a></h1>
@@ -58,6 +61,7 @@
         </header>
 
         {%- if live -%}
+        <main id="main" tabindex="-1">
         <article class="container media-detail animate-in delay-2">
             {%- if page.category and page.category != "" -%}
             <span class="section-title">{{ page.category }}</span>
@@ -170,6 +174,7 @@
                 <a href="{{ '/#media' | relative_url }}">&larr; Back to {{ settings.section_headings.media_heading | default: "Media" }}</a>
             </p>
         </article>
+        </main>
         {%- endif -%}
 
         {%- if live -%}

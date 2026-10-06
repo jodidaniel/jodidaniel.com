@@ -22,6 +22,11 @@ footer:
 # the site's "every visible string" rule rather than hardcoded in the layout.
 back_to_top_label: "Back to top"
 
+# Keyboard skip link, the first Tab stop on the full site (WCAG 2.4.1): it jumps
+# past the header to the content. Hidden until it has keyboard focus; kept
+# /admin-editable like every other visible string.
+skip_link_label: "Skip to main content"
+
 # Jodi's 2026-08-30 feedback item 1 ("too lawyery/conservative"): the headings
 # read as section labels a person would say out loud rather than CV rubrics.
 # `events_heading` is new with the Upcoming Events section (feedback item 3).

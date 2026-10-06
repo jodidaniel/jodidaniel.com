@@ -40,6 +40,7 @@ require "fileutils"
 require "rbconfig"
 require "tmpdir"
 require_relative "media_rules"
+require_relative "a11y_rules"
 
 REPO_ROOT = File.expand_path("..", __dir__)
 OPEN_PASS = ARGV[0] == "--open-pass"
@@ -130,6 +131,11 @@ unless OPEN_PASS
   $stdout.flush
   admin_config_passed = system(RbConfig.ruby, File.join(__dir__, "test-admin-config.rb"))
   check(failures, "scripts/test-admin-config.rb passes (output above)") { admin_config_passed == true }
+
+  puts "== unit tests: scripts/test-a11y-rules.rb =="
+  $stdout.flush
+  a11y_rules_passed = system(RbConfig.ruby, File.join(__dir__, "test-a11y-rules.rb"))
+  check(failures, "scripts/test-a11y-rules.rb passes (output above)") { a11y_rules_passed == true }
 end
 
 def read(path)
@@ -965,6 +971,37 @@ check(
   "admin seam's events fields == what the layout reads -- seam has #{events_seam_field_names.inspect}, " \
   "expected #{expected_event_fields.inspect}"
 ) { events_seam_field_names == expected_event_fields }
+
+puts "== accessibility: WCAG 2.2 AA (contrast, landmarks, headings, reduced motion) =="
+# The audit's axe-core run found 27 text nodes in #8a9aaa at 2.75-2.88:1 and no <main>,
+# skip link or <h2> section titles, and the entrance fade-in kept content invisible for up to
+# 2.2 s under prefers-reduced-motion. The rules live in scripts/a11y_rules.rb (tested by
+# scripts/test-a11y-rules.rb); the built pages are read with kramdown's HTML parser, not a regex.
+a11y_css = read(File.join(ROOT, "assets", "css", "jodidaniel.css")).to_s
+low_contrast = A11yRules.low_contrast_text(a11y_css)
+check(failures, "every solid text color in jodidaniel.css reaches #{A11yRules::MIN_RATIO}:1 on its surface") do
+  low_contrast.empty?
+end
+low_contrast.each { |offender| puts "       ^ #{offender}" }
+check(failures, "jodidaniel.css shows .animate-in content under prefers-reduced-motion (after the fade-in rule)") do
+  A11yRules.reduced_motion_shows_content?(a11y_css)
+end
+
+a11y_pages = { "home page" => [File.join(SITE, "index.html"), true] }
+media_src.each do |src|
+  a11y_pages["#{File.basename(src, '.md')} item page"] = [MediaRules.page_path(SITE, src, media_front_matter(src)), false]
+end
+a11y_open = home_html.to_s.include?('<section id="about"')
+if a11y_open
+  a11y_pages.each do |label, (path, home)|
+    html = read(path)
+    problems = html ? A11yRules.page_problems(html, home: home) : ["page not built at #{path}"]
+    check(failures, "built #{label}: <main>, skip link, heading order and image sizes are in place") { problems.empty? }
+    problems.each { |problem| puts "       ^ #{problem}" }
+  end
+else
+  gate_hidden(failures, "the built-page landmark/skip-link/heading checks")
+end
 
 puts "== editor-facing admin copy stays out of developer vocabulary =="
 # Every word an editor reads in /admin comes from this seam, and the premise of
