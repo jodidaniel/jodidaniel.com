@@ -40,7 +40,11 @@ require "fileutils"
 require "rbconfig"
 require "tmpdir"
 require_relative "media_rules"
+require_relative "person_rules"
 require_relative "a11y_rules"
+# After a11y_rules, which may put the bundle on the load path: a `require "json"` before it
+# activates the default json gem, and `bundler/setup` then dies on the Gemfile.lock pin.
+require "json"
 
 REPO_ROOT = File.expand_path("..", __dir__)
 OPEN_PASS = ARGV[0] == "--open-pass"
@@ -132,10 +136,16 @@ unless OPEN_PASS
   admin_config_passed = system(RbConfig.ruby, File.join(__dir__, "test-admin-config.rb"))
   check(failures, "scripts/test-admin-config.rb passes (output above)") { admin_config_passed == true }
 
+  puts "== unit tests: scripts/test-person-rules.rb =="
+  $stdout.flush
+  person_rules_passed = system(RbConfig.ruby, File.join(__dir__, "test-person-rules.rb"))
+  check(failures, "scripts/test-person-rules.rb passes (output above)") { person_rules_passed == true }
+
   puts "== unit tests: scripts/test-a11y-rules.rb =="
   $stdout.flush
   a11y_rules_passed = system(RbConfig.ruby, File.join(__dir__, "test-a11y-rules.rb"))
   check(failures, "scripts/test-a11y-rules.rb passes (output above)") { a11y_rules_passed == true }
+
   puts "== unit tests: scripts/test-site-meta.rb =="
   $stdout.flush
   site_meta_passed = system(RbConfig.ruby, File.join(__dir__, "test-site-meta.rb"))
@@ -1141,6 +1151,126 @@ check(failures, "no admin label/hint/validation message uses developer vocabular
 end
 jargon_offenders.each { |(kind, text)| puts "       ^ #{kind}: #{text}" }
 
+# ---------------------------------------------------------------------------
+# Link-preview card + Person data (audit #4/#5). Runs on BOTH passes: the card
+# has to work on the coming-soon page too, while the Person facts and the media
+# pages' schema only exist once the gate is open (open-gate pass).
+# ---------------------------------------------------------------------------
+puts "== share card + structured data =="
+site_url = (YAML.safe_load(read(File.join(ROOT, "_config.yml"))) || {})["url"].to_s
+person_name = (YAML.safe_load(read(File.join(ROOT, "_data", "header.yml"))) || {})["name"].to_s
+author_name = ((YAML.safe_load(read(File.join(ROOT, "_config.yml"))) || {})["author"] || {})["name"].to_s
+card_url = "#{site_url}/assets/images/share-card.png"
+card_file = File.join(SITE, "assets", "images", "share-card.png")
+card_head = File.file?(card_file) ? File.binread(card_file, 24) : "".b
+check(failures, "assets/images/share-card.png is built and is a 1200x630 PNG") do
+  card_head.bytesize == 24 && card_head.start_with?("\x89PNG\r\n\x1a\n".b) && card_head[16, 8].unpack("N2") == [1200, 630]
+end
+
+# Every <meta> (property|name => [content, ...]) in a page's <head>, so a
+# duplicate is visible rather than the first one silently winning.
+def head_metas(html)
+  head = html.to_s[%r{<head>.*?</head>}m].to_s
+  head.scan(/<meta\s+([^>]*?)\s*\/?>/m).each_with_object(Hash.new { |h, k| h[k] = [] }) do |(attrs), acc|
+    key = attrs[/(?:property|name)="([^"]+)"/, 1]
+    acc[key] << attrs[/content="([^"]*)"/, 1] if key
+  end
+end
+
+def ld_json_blocks(html)
+  html.to_s.scan(%r{<script type="application/ld\+json">(.*?)</script>}m).flatten.map { |raw| JSON.parse(raw) }
+end
+
+def share_card_problems(html, card_url, label)
+  metas = head_metas(html)
+  problems = []
+  problems << "#{label}: og:image is #{metas['og:image'].inspect}, want [#{card_url.inspect}]" unless metas["og:image"] == [card_url]
+  problems << "#{label}: og:image:width/height are not 1200/630" unless metas["og:image:width"] == ["1200"] && metas["og:image:height"] == ["630"]
+  problems << "#{label}: twitter:image is #{metas['twitter:image'].inspect}" unless metas["twitter:image"] == [card_url]
+  problems << "#{label}: twitter:card is #{metas['twitter:card'].inspect}, want summary_large_image" unless metas["twitter:card"] == ["summary_large_image"]
+  problems << "#{label}: twitter:image:alt is #{metas['twitter:image:alt'].inspect}" unless metas["twitter:image:alt"].to_a.size == 1 && !metas["twitter:image:alt"].first.to_s.empty?
+  problems
+end
+
+home_share_html = read(File.join(SITE, "index.html"))
+home_metas = head_metas(home_share_html)
+share_problems = share_card_problems(home_share_html, card_url, "home")
+check(failures, "home page carries the share card (og:image, twitter:image, summary_large_image) -- #{share_problems.first}") do
+  share_problems.empty?
+end
+# The share title leads with her name (a bare role title read as a slogan with
+# no one attached). Exactly one of each: a failed prefix replace would leave the
+# bare title, a double insert would repeat the name.
+%w[og:title twitter:title].each do |key|
+  check(failures, "home #{key} is one value and leads with #{person_name.inspect}: #{home_metas[key].inspect}") do
+    home_metas[key].size == 1 && home_metas[key].first.start_with?(person_name) &&
+      !home_metas[key].first.start_with?("#{person_name} | #{person_name}")
+  end
+end
+
+settings_src = YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml"))) || {}
+if settings_src["site_live"] == true
+  # --- open gate: Person on the home page ---------------------------------
+  home_ld = ld_json_blocks(home_share_html)
+  persons = home_ld.select { |b| b["@type"] == "Person" }
+  check(failures, "home page emits exactly one top-level Person (JSON-LD), got #{persons.size}") { persons.size == 1 }
+  person = persons.first || {}
+  want = PersonRules.expected(ROOT)
+  got = PersonRules.observed(person)
+  check(failures, "Person name is #{person_name.inspect} and url is the site root") do
+    person["name"] == person_name && person["url"] == "#{site_url}/"
+  end
+  # One comparison per field, derived from the source files (scripts/person_rules.rb),
+  # so an /admin edit (a changed Contact link, "present" in any case, no current
+  # job) moves the expectation with it instead of tripping a hardcoded fact.
+  %w[jobTitle worksFor alumniOf knowsAbout sameAs alternateName].each do |field|
+    check(failures, "Person #{field} matches the source content: want #{want[field].inspect}, got #{got[field].inspect}") do
+      got[field] == want[field]
+    end
+  end
+  check(failures, "Person sameAs entries are all https") { person["sameAs"].to_a.all? { |u| u.start_with?("https://") } }
+  check(failures, "the Person script holds no raw '<' (so no value can close the script tag)") do
+    home_share_html.scan(%r{<script type="application/ld\+json">(.*?)</script>}m).flatten.none? { |raw| raw.include?("<") }
+  end
+
+  # --- open gate: media pages are WebPages, not her blog posts ---------------
+  media_pages = Dir[File.join(SITE, "media", "*", "index.html")].sort
+  check(failures, "open-gate build has media pages to check (#{media_pages.size})") { media_pages.size > 0 }
+  descs = []
+  media_pages.each do |f|
+    slug = File.basename(File.dirname(f))
+    html = read(f)
+    blocks = ld_json_blocks(html)
+    metas = head_metas(html)
+    descs << metas["description"].first
+    check(failures, "media/#{slug}: schema is one WebPage with no BlogPosting, datePublished or author") do
+      blocks.size == 1 && blocks.first["@type"] == "WebPage" &&
+        !html.include?("BlogPosting") && !html.include?("datePublished") && !blocks.first.key?("author")
+    end
+    check(failures, "media/#{slug}: not typed as an article (og:type website, no article:published_time)") do
+      metas["og:type"] == ["website"] && !metas.key?("article:published_time")
+    end
+    check(failures, "media/#{slug}: keeps og:locale and the author meta the tag used to emit") do
+      metas["og:locale"] == ["en_US"] && metas["author"] == [author_name]
+    end
+    problems = share_card_problems(html, card_url, "media/#{slug}")
+    check(failures, "media/#{slug}: carries the share card -- #{problems.first}") { problems.empty? }
+  end
+  check(failures, "every media page has its own description (not one site-wide string)") do
+    descs.size == descs.uniq.size && descs.none? { |d| d.to_s.empty? }
+  end
+else
+  # --- gated: the card works, and no bio fact comes with it ------------------
+  check(failures, "gated home page serves NO Person data and no job title (no claim before sign-off)") do
+    html = home_share_html.to_s
+    ld_json_blocks(html).empty? && !html.include?("jobTitle") && !html.include?("Wilson Sonsini")
+  end
+  check(failures, "gated og:title is the bare name and og:description is the neutral coming-soon line") do
+    home_metas["og:title"] == [person_name] &&
+      home_metas["og:description"] == [settings_src.dig("coming_soon", "seo_description")]
+  end
+end
+
 # The tab title and meta description on the built home page come from
 # _data/settings.yml `seo:` (applied by _plugins/site_meta_from_settings.rb), so
 # an /admin edit reaches the page. Gated: the site name plus the coming-soon
@@ -1158,7 +1288,9 @@ seo_title = seo_home[%r{<title>(.*?)</title>}m, 1]
 seo_desc = seo_home[/<meta name="description" content="([^"]*)"/, 1]
 filled = ->(value) { value.is_a?(String) && !value.strip.empty? }
 site_name = filled.call(seo_data.dig("seo", "site_title")) ? seo_data.dig("seo", "site_title") : seo_config["title"].to_s
-if OPEN_PASS
+# The gate is open on the committed build too once `site_live: true` is committed
+# (go-live), so the open expectation applies there as well as on the open pass.
+if OPEN_PASS || seo_data["site_live"] == true
   launch_title = seo_data.dig("seo", "launch_title")
   expected_title = filled.call(launch_title) ? "#{launch_title} | #{site_name}" : site_name
   expected_desc = seo_data.dig("seo", "launch_description")

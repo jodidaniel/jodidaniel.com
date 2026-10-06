@@ -71,3 +71,14 @@ section_headings:
   media_authored_heading: "Written by Jodi"
   media_coverage_heading: "Appearances & Coverage"
   education_heading: "Education"
+
+# Facts that only search engines and link previews read (the Person data in the page source). The
+# job title, firm and schools come from the Experience and Education sections;
+# her profile links come from Contact. These two lists add what has no
+# visible home on the page.
+share:
+  alternate_names:
+    - "Jodi Goldstein Daniel"
+    - "Jodi G. Daniel"
+  profile_links:
+    - "https://medicine.yale.edu/profile/jodi-daniel/"

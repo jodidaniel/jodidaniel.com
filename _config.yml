@@ -86,6 +86,10 @@ collections:
   events: { output: false }
 
 defaults:
+  # The link-preview card (headshot + name; rebuild with
+  # scripts/build-share-card.py). Site-wide so every page's og:image /
+  # twitter:image resolves; jekyll-seo-tag reads it from page.image.
+  - { scope: { path: "" }, values: { image: { path: /assets/images/share-card.png, width: 1200, height: 630, alt: "Portrait of Jodi Daniel" } } }
   - { scope: { path: "", type: "posts" },    values: { layout: "post" } }
   - { scope: { path: "", type: "projects" }, values: { layout: "project" } }
   - { scope: { path: "", type: "tags" },     values: { layout: "tag" } }
