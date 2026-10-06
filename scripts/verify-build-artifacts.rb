@@ -1241,6 +1241,21 @@ if settings_src["site_live"] == true
       blocks.size == 1 && blocks.first["@type"] == "WebPage" &&
         !html.include?("BlogPosting") && !html.include?("datePublished") && !blocks.first.key?("author")
     end
+    # {% seo %} ran smartify on these titles, so a contraction showed a curly
+    # apostrophe in the tab and the share titles; the hand-written head has to keep that.
+    source_title = (media_front_matter(File.join(ROOT, "_media", "#{slug}.md")) || {})["title"].to_s.gsub(/\s+/, " ").strip
+    unless source_title.empty?
+      want_title = source_title.gsub(/(?<=\w)'(?=\w)/, "\u2019")
+      tab_title = CGI.unescapeHTML(html[%r{<title>(.*?)</title>}m, 1].to_s)
+      shown = [tab_title.sub(/ \| [^|]*\z/, ""), CGI.unescapeHTML(metas["og:title"].first.to_s), CGI.unescapeHTML(metas["twitter:title"].first.to_s)]
+      check(failures, "media/#{slug}: tab, og and twitter titles keep smart apostrophes: want #{want_title.inspect}, got #{shown.inspect}") do
+        if source_title.include?('"')
+          shown.none? { |t| t.include?("'") || t.include?('"') }
+        else
+          shown.all? { |t| t == want_title }
+        end
+      end
+    end
     check(failures, "media/#{slug}: not typed as an article (og:type website, no article:published_time)") do
       metas["og:type"] == ["website"] && !metas.key?("article:published_time")
     end

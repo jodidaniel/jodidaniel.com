@@ -43,25 +43,34 @@
       article:published_time. No link preview image is set here (none is today).
     {%- endcomment -%}
     {%- capture media_desc -%}{{ page.title }}{% if page.source and page.source != "" %} — {{ page.source }}{% endif %}{% if page.date_display and page.date_display != "" %}, {{ page.date_display }}{% endif %}{%- endcapture -%}
-    {%- assign media_desc = media_desc | strip_html | normalize_whitespace -%}
+    {%- comment -%}
+      Smart quotes, as {% seo %} gave these titles (it runs smartify). smartify
+      returns entity-escaped HTML text, so the HTML spots (<title>, og:title,
+      twitter:title) use `escape_once`, and the plain-text spots (meta description,
+      JSON-LD, which escape or JSON-encode themselves) get the entities decoded,
+      `&amp;` last so it cannot create a second decode.
+    {%- endcomment -%}
+    {%- assign media_title_html = page.title | strip_html | normalize_whitespace | smartify -%}
+    {%- assign media_title = media_title_html | replace: "&lt;", "<" | replace: "&gt;", ">" | replace: "&quot;", '"' | replace: "&amp;", "&" -%}
+    {%- assign media_desc = media_desc | strip_html | normalize_whitespace | smartify | replace: "&lt;", "<" | replace: "&gt;", ">" | replace: "&quot;", '"' | replace: "&amp;", "&" -%}
     {%- assign media_canonical = page.url | absolute_url -%}
-    <title>{{ page.title | strip_html | escape }} | {{ site.title | escape }}</title>
+    <title>{{ media_title_html | escape_once }} | {{ site.title | escape }}</title>
     <meta name="description" content="{{ media_desc | escape }}" />
     <link rel="canonical" href="{{ media_canonical }}" />
     {%- if site.author.name %}
     <meta name="author" content="{{ site.author.name | escape }}" />
     {%- endif %}
     <meta property="og:locale" content="en_US" />
-    <meta property="og:title" content="{{ page.title | strip_html | escape }}" />
+    <meta property="og:title" content="{{ media_title_html | escape_once }}" />
     <meta property="og:description" content="{{ media_desc | escape }}" />
     <meta property="og:url" content="{{ media_canonical }}" />
     <meta property="og:site_name" content="{{ site.title | escape }}" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="{{ page.title | strip_html | escape }}" />
+    <meta name="twitter:title" content="{{ media_title_html | escape_once }}" />
     <meta name="twitter:description" content="{{ media_desc | escape }}" />
     {%- capture media_json -%}
-    {"@context":"https://schema.org","@type":"WebPage","name":{{ page.title | strip_html | jsonify }},"url":{{ media_canonical | jsonify }},"description":{{ media_desc | jsonify }},"isPartOf":{"@type":"WebSite","name":{{ site.title | jsonify }},"url":{{ "/" | absolute_url | jsonify }}}}
+    {"@context":"https://schema.org","@type":"WebPage","name":{{ media_title | jsonify }},"url":{{ media_canonical | jsonify }},"description":{{ media_desc | jsonify }},"isPartOf":{"@type":"WebSite","name":{{ site.title | jsonify }},"url":{{ "/" | absolute_url | jsonify }}}}
     {%- endcapture %}
     <script type="application/ld+json">{{ media_json | replace: "<", "\u003c" }}</script>
     {%- else -%}
