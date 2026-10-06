@@ -12,10 +12,35 @@ data file:
 | `_data/header.yml`   | `name`, `tagline`                              | **Header / Hero** (`site_header`) |
 | `_data/about.yml`    | `photo`, `intro_heading`, `lead`, `bio[]`, `nav[]` | **About** (`site_about`) |
 | `_data/contact.yml`  | `heading`, `intro`, `links[]`                  | **Contact** (`site_contact`) |
-| `_data/settings.yml` | `site_live` GATE, `coming_soon`, `footer`, `back_to_top_label`, `section_headings` | **Site Settings** (`site_settings`) |
+| `_data/settings.yml` | `site_live` GATE, `coming_soon`, `footer`, `back_to_top_label`, `section_headings`, `seo` (search-engine-only facts) | **Site Settings** (`site_settings`) |
 
 The layout reads these as `site.data.header` / `.about` / `.contact` /
 `.settings`.
+
+### Link-preview card and `Person` data (audit #4/#5)
+
+Pages that share a link show `assets/images/share-card.png` (1200x630: her
+headshot and name, **name only** so it is safe on the coming-soon page). It is
+declared once, site-wide, in `_config.yml` `defaults` (`image:`), which is where
+jekyll-seo-tag reads it. Rebuild it after changing the headshot or her name:
+`python3 scripts/build-share-card.py` (needs Pillow; the Raleway font and its
+license are in `scripts/share-card/`; `--check` reports a stale PNG).
+
+- **Gated** (`site_live` false): `_includes/share-card-meta.html` adds the card,
+  the bare name as the share title and the neutral description. No role, no
+  `Person`.
+- **Open**: `_includes/home-seo.html` calls `{% seo %}` with the share titles led
+  by her name (the tab `<title>` is unchanged) and adds one `Person` JSON-LD
+  built only from repo content: current role and firm (first Experience item
+  whose `period` contains "Present"), schools (Education), areas (Expertise),
+  `sameAs` from Contact links plus `settings.seo.profile_links`, and
+  `alternateName` from `settings.seo.alternate_names`.
+- **Media item pages** write their own head (not `{% seo %}`): a `WebPage`
+  that is part of the site, with a per-item description. The tag would type
+  every collection document as her `BlogPosting` dated at build time.
+
+`scripts/verify-build-artifacts.rb` ("share card + structured data") asserts all
+of it on both builds.
 
 ### About nav anchors are a closed set (issue #196)
 

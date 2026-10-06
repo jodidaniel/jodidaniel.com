@@ -36,13 +36,14 @@
       with no indexing status to preserve.)
     {%- endcomment -%}
     {%- if live -%}
-    {% seo %}
+    {% include home-seo.html %}
     {%- else -%}
     <title>{{ site.title }}</title>
     {%- assign gated_desc = settings.coming_soon.seo_description -%}
     {%- if gated_desc and gated_desc != "" -%}
     <meta name="description" content="{{ gated_desc | escape }}" />
     {%- endif -%}
+    {% include share-card-meta.html %}
     {%- endif -%}
     {%- comment -%}
       cms-platform#325: the gem emits its favicon <link> from its own default

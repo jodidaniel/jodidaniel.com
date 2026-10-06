@@ -1,0 +1,57 @@
+{%- comment -%}
+  Head SEO for the OPEN home page (called from _layouts/home.html in the
+  `site_live` arm only -- the gated arm must not serve any of this).
+
+  1. {% seo %} with the share title led by her name. jekyll-seo-tag's og:title
+     and twitter:title are the bare page title ("Digital Health Law & Policy
+     Leader"), so a shared link read as a slogan with no one attached. The tab
+     <title> is left exactly as the tag renders it. We capture the tag's output
+     and insert "<name> | " in front of the two share-title values; a prefix, not
+     a rewrite, so the tag's own escaping of the title is untouched.
+     scripts/verify-build-artifacts.rb fails if either meta tag stops leading
+     with her name (a gem upgrade that renames them would make the replace a
+     silent no-op).
+  2. A `Person` entity (JSON-LD) built only from content already in the repo:
+     name and photo (header/about), current role + firm (the first Experience
+     item whose period says "Present"), schools (Education), areas (Expertise),
+     her profile links (Contact) plus `seo` in _data/settings.yml.
+{%- endcomment -%}
+{%- assign person_name = site.data.header.name | default: site.title -%}
+{%- capture seo_html -%}{% seo %}{%- endcapture -%}
+{%- assign title_head = page.title | slice: 0, person_name.size -%}
+{%- if page.title and page.title != "" and title_head != person_name -%}
+  {%- assign share_prefix = person_name | escape | append: " | " -%}
+  {%- capture og_open %}<meta property="og:title" content="{% endcapture -%}
+  {%- capture og_led %}<meta property="og:title" content="{{ share_prefix }}{% endcapture -%}
+  {%- capture tw_open %}<meta name="twitter:title" content="{% endcapture -%}
+  {%- capture tw_led %}<meta name="twitter:title" content="{{ share_prefix }}{% endcapture -%}
+  {%- assign seo_html = seo_html | replace: og_open, og_led | replace: tw_open, tw_led -%}
+{%- endif -%}
+{{ seo_html }}
+
+{%- assign current_job = nil -%}
+{%- assign experience_sorted = site.experience | sort: "weight" -%}
+{%- for job in experience_sorted -%}
+  {%- if current_job == nil and job.period contains "Present" -%}{%- assign current_job = job -%}{%- endif -%}
+{%- endfor -%}
+{%- assign same_as = "" | split: "," -%}
+{%- for link in site.data.contact.links -%}
+  {%- if link.url contains "https://" -%}{%- assign same_as = same_as | push: link.url -%}{%- endif -%}
+{%- endfor -%}
+{%- for link in site.data.settings.seo.profile_links -%}
+  {%- if link contains "https://" -%}{%- assign same_as = same_as | push: link -%}{%- endif -%}
+{%- endfor -%}
+{%- assign same_as = same_as | uniq -%}
+{%- assign schools = site.education | sort: "weight" -%}
+{%- assign areas = site.expertise | sort: "weight" -%}
+{%- capture person_json -%}
+{"@context":"https://schema.org","@type":"Person","@id":{{ "/#person" | absolute_url | jsonify }},"name":{{ person_name | jsonify }},"url":{{ "/" | absolute_url | jsonify }}
+{%- if site.data.about.photo and site.data.about.photo != "" -%},"image":{{ site.data.about.photo | absolute_url | jsonify }}{%- endif -%}
+{%- if site.data.settings.seo.alternate_names and site.data.settings.seo.alternate_names.size > 0 -%},"alternateName":{{ site.data.settings.seo.alternate_names | jsonify }}{%- endif -%}
+{%- if current_job -%},"jobTitle":{{ current_job.title | jsonify }},"worksFor":{"@type":"Organization","name":{{ current_job.org | jsonify }}}{%- endif -%}
+{%- if schools.size > 0 -%},"alumniOf":[{%- for school in schools -%}{"@type":"EducationalOrganization","name":{{ school.school | jsonify }}}{%- unless forloop.last -%},{%- endunless -%}{%- endfor -%}]{%- endif -%}
+{%- if areas.size > 0 -%},"knowsAbout":[{%- for area in areas -%}{{ area.title | jsonify }}{%- unless forloop.last -%},{%- endunless -%}{%- endfor -%}]{%- endif -%}
+{%- if same_as.size > 0 -%},"sameAs":{{ same_as | jsonify }}{%- endif -%}
+}
+{%- endcapture %}
+<script type="application/ld+json">{{ person_json | replace: "<", "\u003c" }}</script>

@@ -1,0 +1,26 @@
+{%- comment -%}
+  Link-preview tags for the GATED home page (`site_live` false), where {% seo %}
+  is skipped so the launch description and role title stay unpublished. Name,
+  neutral description and the share card only; no role, no claim. The card
+  itself (assets/images/share-card.png) is the headshot and her name, and is
+  declared once in _config.yml `defaults` so the open pages' {% seo %} output and
+  this block agree. Rebuild it with scripts/build-share-card.py.
+{%- endcomment -%}
+{%- assign share_image = page.image -%}
+<meta property="og:site_name" content="{{ site.title | escape }}" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="{{ site.data.header.name | default: site.title | escape }}" />
+{%- assign gated_share_desc = site.data.settings.coming_soon.seo_description -%}
+{%- if gated_share_desc and gated_share_desc != "" %}
+<meta property="og:description" content="{{ gated_share_desc | escape }}" />
+{%- endif %}
+<meta property="og:url" content="{{ page.url | absolute_url }}" />
+{%- if share_image.path %}
+<meta property="og:image" content="{{ share_image.path | absolute_url }}" />
+<meta property="og:image:width" content="{{ share_image.width }}" />
+<meta property="og:image:height" content="{{ share_image.height }}" />
+<meta property="og:image:alt" content="{{ share_image.alt | escape }}" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="{{ site.data.header.name | default: site.title | escape }}" />
+<meta name="twitter:image" content="{{ share_image.path | absolute_url }}" />
+{%- endif %}

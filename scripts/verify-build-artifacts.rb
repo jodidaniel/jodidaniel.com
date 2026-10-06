@@ -3,6 +3,7 @@
 
 require "yaml"
 require "date"
+require "json"
 
 # Lightweight build-artifact assertion for the platform-chrome fixes that
 # jodidaniel.com owns (issues #28, #31). jodidaniel ships no JS/Playwright
@@ -1024,6 +1025,134 @@ check(failures, "no admin label/hint/validation message uses developer vocabular
   jargon_offenders.empty?
 end
 jargon_offenders.each { |(kind, text)| puts "       ^ #{kind}: #{text}" }
+
+# ---------------------------------------------------------------------------
+# Link-preview card + Person data (audit #4/#5). Runs on BOTH passes: the card
+# has to work on the coming-soon page too, while the Person facts and the media
+# pages' schema only exist once the gate is open (open-gate pass).
+# ---------------------------------------------------------------------------
+puts "== share card + structured data =="
+site_url = (YAML.safe_load(read(File.join(ROOT, "_config.yml"))) || {})["url"].to_s
+person_name = (YAML.safe_load(read(File.join(ROOT, "_data", "header.yml"))) || {})["name"].to_s
+card_url = "#{site_url}/assets/images/share-card.png"
+card_file = File.join(SITE, "assets", "images", "share-card.png")
+card_head = File.file?(card_file) ? File.binread(card_file, 24) : "".b
+check(failures, "assets/images/share-card.png is built and is a 1200x630 PNG") do
+  card_head.bytesize == 24 && card_head.start_with?("\x89PNG\r\n\x1a\n".b) && card_head[16, 8].unpack("N2") == [1200, 630]
+end
+
+# Every <meta> (property|name => [content, ...]) in a page's <head>, so a
+# duplicate is visible rather than the first one silently winning.
+def head_metas(html)
+  head = html.to_s[%r{<head>.*?</head>}m].to_s
+  head.scan(/<meta\s+([^>]*?)\s*\/?>/m).each_with_object(Hash.new { |h, k| h[k] = [] }) do |(attrs), acc|
+    key = attrs[/(?:property|name)="([^"]+)"/, 1]
+    acc[key] << attrs[/content="([^"]*)"/, 1] if key
+  end
+end
+
+def ld_json_blocks(html)
+  html.to_s.scan(%r{<script type="application/ld\+json">(.*?)</script>}m).flatten.map { |raw| JSON.parse(raw) }
+end
+
+def share_card_problems(html, card_url, label)
+  metas = head_metas(html)
+  problems = []
+  problems << "#{label}: og:image is #{metas['og:image'].inspect}, want [#{card_url.inspect}]" unless metas["og:image"] == [card_url]
+  problems << "#{label}: og:image:width/height are not 1200/630" unless metas["og:image:width"] == ["1200"] && metas["og:image:height"] == ["630"]
+  problems << "#{label}: twitter:image is #{metas['twitter:image'].inspect}" unless metas["twitter:image"] == [card_url]
+  problems << "#{label}: twitter:card is #{metas['twitter:card'].inspect}, want summary_large_image" unless metas["twitter:card"] == ["summary_large_image"]
+  problems
+end
+
+home_share_html = read(File.join(SITE, "index.html"))
+home_metas = head_metas(home_share_html)
+share_problems = share_card_problems(home_share_html, card_url, "home")
+check(failures, "home page carries the share card (og:image, twitter:image, summary_large_image) -- #{share_problems.first}") do
+  share_problems.empty?
+end
+# The share title leads with her name (a bare role title read as a slogan with
+# no one attached). Exactly one of each: a failed prefix replace would leave the
+# bare title, a double insert would repeat the name.
+%w[og:title twitter:title].each do |key|
+  check(failures, "home #{key} is one value and leads with #{person_name.inspect}: #{home_metas[key].inspect}") do
+    home_metas[key].size == 1 && home_metas[key].first.start_with?(person_name) && home_metas[key].first.scan(person_name).size == 1
+  end
+end
+
+settings_src = YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml"))) || {}
+if settings_src["site_live"] == true
+  # --- open gate: Person on the home page ---------------------------------
+  home_ld = ld_json_blocks(home_share_html)
+  persons = home_ld.select { |b| b["@type"] == "Person" }
+  check(failures, "home page emits exactly one top-level Person (JSON-LD), got #{persons.size}") { persons.size == 1 }
+  person = persons.first || {}
+  front = lambda do |glob|
+    Dir[File.join(ROOT, glob)].sort.map do |f|
+      m = read(f).match(/\A---\s*\n(.*?)\n---/m)
+      m && YAML.safe_load(m[1])
+    end.compact.sort_by { |fm| fm["weight"].to_i }
+  end
+  current = front.call("_experience/*.md").find { |fm| fm["period"].to_s.include?("Present") } || {}
+  contact = (YAML.safe_load(read(File.join(ROOT, "_data", "contact.yml"))) || {})["links"].to_a.map { |l| l["url"] }
+  extra = settings_src.dig("seo", "profile_links").to_a
+  check(failures, "Person name is #{person_name.inspect} and url is the site root") do
+    person["name"] == person_name && person["url"] == "#{site_url}/"
+  end
+  check(failures, "Person jobTitle/worksFor come from the current Experience item (#{current['title'].inspect} at #{current['org'].inspect})") do
+    !current["title"].to_s.empty? && person["jobTitle"] == current["title"] && person.dig("worksFor", "name") == current["org"]
+  end
+  check(failures, "Person alumniOf is the Education schools, in order") do
+    person["alumniOf"].to_a.map { |o| o["name"] } == front.call("_education/*.md").map { |fm| fm["school"] }
+  end
+  check(failures, "Person sameAs holds the Contact links and the extra profile links, all https") do
+    want = (contact + extra).uniq
+    !want.empty? && person["sameAs"] == want && person["sameAs"].all? { |u| u.start_with?("https://") }
+  end
+  check(failures, "Person sameAs links her firm profile and LinkedIn") do
+    person["sameAs"].to_a.any? { |u| u.include?("wsgr.com") } && person["sameAs"].to_a.any? { |u| u.include?("linkedin.com") }
+  end
+  check(failures, "Person alternateName comes from settings seo.alternate_names") do
+    person["alternateName"] == settings_src.dig("seo", "alternate_names")
+  end
+  check(failures, "the Person script holds no raw '<' (so no value can close the script tag)") do
+    home_share_html.scan(%r{<script type="application/ld\+json">(.*?)</script>}m).flatten.none? { |raw| raw.include?("<") }
+  end
+
+  # --- open gate: media pages are WebPages, not her blog posts ---------------
+  media_pages = Dir[File.join(SITE, "media", "*", "index.html")].sort
+  check(failures, "open-gate build has media pages to check (#{media_pages.size})") { media_pages.size > 0 }
+  descs = []
+  media_pages.each do |f|
+    slug = File.basename(File.dirname(f))
+    html = read(f)
+    blocks = ld_json_blocks(html)
+    metas = head_metas(html)
+    descs << metas["description"].first
+    check(failures, "media/#{slug}: schema is one WebPage with no BlogPosting, datePublished or author") do
+      blocks.size == 1 && blocks.first["@type"] == "WebPage" &&
+        !html.include?("BlogPosting") && !html.include?("datePublished") && !blocks.first.key?("author")
+    end
+    check(failures, "media/#{slug}: not typed as an article (og:type website, no article:published_time)") do
+      metas["og:type"] == ["website"] && !metas.key?("article:published_time")
+    end
+    problems = share_card_problems(html, card_url, "media/#{slug}")
+    check(failures, "media/#{slug}: carries the share card -- #{problems.first}") { problems.empty? }
+  end
+  check(failures, "every media page has its own description (not one site-wide string)") do
+    descs.size == descs.uniq.size && descs.none? { |d| d.to_s.empty? }
+  end
+else
+  # --- gated: the card works, and no bio fact comes with it ------------------
+  check(failures, "gated home page serves NO Person data and no job title (no claim before sign-off)") do
+    html = home_share_html.to_s
+    ld_json_blocks(html).empty? && !html.include?("jobTitle") && !html.include?("Wilson Sonsini")
+  end
+  check(failures, "gated og:title is the bare name and og:description is the neutral coming-soon line") do
+    home_metas["og:title"] == [person_name] &&
+      home_metas["og:description"] == [settings_src.dig("coming_soon", "seo_description")]
+  end
+end
 
 if OPEN_PASS
   puts

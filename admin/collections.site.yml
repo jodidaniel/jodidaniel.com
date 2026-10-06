@@ -266,3 +266,10 @@
               - { name: accomplishments_heading, label: "Accomplishments Heading", widget: string }
               - { name: media_heading,           label: "Media Heading", widget: string }
               - { name: education_heading,       label: "Education Heading", widget: string }
+          - name: seo
+            label: "Search Engines (not shown on the page)"
+            widget: object
+            hint: "Facts Google reads to connect this site with you. Nothing here appears on the page itself. Your job title, firm and schools come from the Experience and Education sections, and your Wilson Sonsini and LinkedIn links come from Contact."
+            fields:
+              - { name: alternate_names, label: "Other Names You Publish Under", widget: list, required: false, summary: "{{fields.name}}", hint: "For example, a name with a middle initial. One name per line.", field: { name: name, label: "Name", widget: string } }
+              - { name: profile_links, label: "Other Profile Pages About You", widget: list, required: false, summary: "{{fields.link}}", hint: "Web addresses of your profile pages elsewhere, such as your university page. Each one starts with https://.", field: { name: link, label: "Web Address", widget: string, pattern: ["^https://", "Start with https://"] } }
