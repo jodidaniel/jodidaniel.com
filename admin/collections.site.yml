@@ -251,12 +251,21 @@
               - { name: tagline,   label: "Coming Soon Tagline", widget: string }
               - { name: copyright, label: "Copyright", widget: string }
               - { name: seo_description, label: "Search-Result Description (while coming soon)", widget: string, required: false, hint: "What Google and link previews show while the full site is hidden. Keep it neutral — the launch description takes over on its own once you show the full site. Leave blank to serve no description at all." }
+          - name: seo
+            label: "Browser Tab and Google Listing"
+            widget: object
+            hint: "The words in the browser tab and in Google results. Changing them does nothing until you select Publish."
+            fields:
+              - { name: site_title, label: "Site Name in the Tab", widget: string, hint: "Shown in the browser tab while the full site is hidden, and after the page title once it is visible (for example, \"Digital Health Law & Policy Leader | Jodi Daniel\")." }
+              - { name: launch_title, label: "Page Title (once the full site is visible)", widget: string, required: false, hint: "Your role or focus, without your name, because the site name is added after it. Takes over from the plain site name once you show the full site. Leave blank to show only the site name." }
+              - { name: launch_description, label: "Google Description (once the full site is visible)", widget: text, required: false, hint: "The sentence or two Google and link previews show under your name. Takes over from the coming-soon description once you show the full site. About 150 characters reads best. Leave blank to serve no description." }
           - name: footer
             label: "Footer (shown on {{CMS_CURRENT_HOST}} once the full site is visible)"
             widget: object
             fields:
               - { name: copyright, label: "Copyright", widget: string }
           - { label: "Back to Top Button Label", name: "back_to_top_label", widget: "string", hint: "Accessible label for the floating back-to-top button (screen readers only; it's an icon)." }
+          - { label: "Skip Link Label", name: "skip_link_label", widget: "string", required: false, hint: "The first thing a keyboard visitor reaches when they press Tab: a link that jumps past the header to the content. It stays hidden until it is focused. Leave blank to use \"Skip to main content\"." }
           - name: section_headings
             label: "Section Headings"
             widget: object

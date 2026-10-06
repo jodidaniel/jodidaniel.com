@@ -14,6 +14,30 @@ coming_soon:
   # (issue #26). Blank it and the gated page simply serves no description.
   seo_description: "Jodi Daniel — site coming soon."
 
+# The site title and the LAUNCH search-result title + description, editable in
+# /admin (Site Settings). _plugins/site_meta_from_settings.rb applies them to
+# the values {% seo %} reads (site.title, page.title, site.description), so
+# the tags it writes are unchanged; it is the only place they come from.
+#
+# The launch title and description are the real, post-sign-off copy and they
+# stay here permanently -- but they only reach a page when the gate is OPEN.
+# While `site_live` is false, _layouts/home.html skips {% seo %} entirely and
+# serves `site_title` plus `coming_soon.seo_description` instead, so neither is
+# published ahead of the copy sign-off (issue #26). Keeping the real values
+# here, gated at the point of use, is what keeps go-live a one-line flag flip.
+#
+# `launch_title` is the ROLE ONLY, deliberately. {% seo %} composes the tab title
+# as "<launch_title> | <site_title>", and site_title is already "Jodi Daniel" --
+# so this renders "Digital Health Law & Policy Leader | Jodi Daniel". Setting the
+# full "Jodi Daniel | Digital Health Law & Policy Leader" here instead renders
+# "Jodi Daniel Digital Health Law & Policy Leader | Jodi Daniel": jekyll-seo-tag
+# strips the "|" out of a page title and then appends the site title anyway, so
+# the name duplicates and the separator vanishes. Measured on the built _site.
+seo:
+  site_title: "Jodi Daniel"
+  launch_title: "Digital Health Law & Policy Leader"
+  launch_description: "Jodi Daniel — nationally recognized leader in digital health law and policy. Regulatory strategy, health data privacy, FDA and telehealth counsel for healthcare organizations and technology innovators."
+
 footer:
   copyright: "© 2026 Jodi Daniel. All rights reserved."
 
@@ -21,6 +45,11 @@ footer:
 # (an aria-label, since the button is icon-only) — kept /admin-editable per
 # the site's "every visible string" rule rather than hardcoded in the layout.
 back_to_top_label: "Back to top"
+
+# Keyboard skip link, the first Tab stop on the full site (WCAG 2.4.1): it jumps
+# past the header to the content. Hidden until it has keyboard focus; kept
+# /admin-editable like every other visible string.
+skip_link_label: "Skip to main content"
 
 # Jodi's 2026-08-30 feedback item 1 ("too lawyery/conservative"): the headings
 # read as section labels a person would say out loud rather than CV rubrics.

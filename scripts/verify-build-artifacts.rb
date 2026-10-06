@@ -40,6 +40,7 @@ require "fileutils"
 require "rbconfig"
 require "tmpdir"
 require_relative "media_rules"
+require_relative "a11y_rules"
 
 REPO_ROOT = File.expand_path("..", __dir__)
 OPEN_PASS = ARGV[0] == "--open-pass"
@@ -118,7 +119,7 @@ end
 puts(OPEN_PASS ? "#### open-gate pass: site_live forced on in a disposable copy" : "#### committed-gate pass: _site")
 
 # The site-verify reusable (platform-owned) runs only `jekyll build` and this script, so
-# the unit tests for the rules this script applies run from here (issues #338, #339, #358, and the copy-consistency checks).
+# the unit tests for the rules this script applies run from here (issues #338, #339, #358, #360, and the copy-consistency checks).
 # Committed pass only: the open-gate re-entry would repeat them.
 unless OPEN_PASS
   puts "== unit tests: scripts/test-media-rules.rb =="
@@ -130,6 +131,20 @@ unless OPEN_PASS
   $stdout.flush
   admin_config_passed = system(RbConfig.ruby, File.join(__dir__, "test-admin-config.rb"))
   check(failures, "scripts/test-admin-config.rb passes (output above)") { admin_config_passed == true }
+
+  puts "== unit tests: scripts/test-a11y-rules.rb =="
+  $stdout.flush
+  a11y_rules_passed = system(RbConfig.ruby, File.join(__dir__, "test-a11y-rules.rb"))
+  check(failures, "scripts/test-a11y-rules.rb passes (output above)") { a11y_rules_passed == true }
+  puts "== unit tests: scripts/test-site-meta.rb =="
+  $stdout.flush
+  site_meta_passed = system(RbConfig.ruby, File.join(__dir__, "test-site-meta.rb"))
+  check(failures, "scripts/test-site-meta.rb passes (output above)") { site_meta_passed == true }
+
+  puts "== unit tests: scripts/test-back-to-top-clearance.rb =="
+  $stdout.flush
+  back_to_top_passed = system(RbConfig.ruby, File.join(__dir__, "test-back-to-top-clearance.rb"))
+  check(failures, "scripts/test-back-to-top-clearance.rb passes (output above)") { back_to_top_passed == true }
 
   puts "== unit tests: scripts/test-content-copy.rb =="
   $stdout.flush
@@ -426,6 +441,13 @@ check(failures, "admin seam offers `date_display` on media entries, and it's opt
   !f.nil? && f["required"] == false
 end
 
+# Issue #359: the fade-in is skipped when a media item anchor is the target, so the
+# item you return to is not washed out. Runs on both gate states (the CSS ships either way).
+check(failures, "jodidaniel.css skips the fade-in when a media item is the :target (issue #359)") do
+  css = read(File.join(SITE, "assets", "css", "jodidaniel.css")).to_s
+  css.match?(/body:has\(\.media-list li:target\)\s+\.animate-in\s*\{[^}]*animation:\s*none/)
+end
+
 # Every media link the home page actually renders must resolve to a built file.
 # Vacuous while site_live is false (the gate hides the section) — the per-item
 # page assertions above cover both gate states.
@@ -507,6 +529,15 @@ media_src.each do |src|
   else
     check(failures, "/media/#{slug}/ links out to its article_url") do
       !article.empty? && page.include?(article)
+    end
+    # Issue #359: the back link returns to THIS item on the home page, not the
+    # top of the section. The home page must carry the matching element id.
+    page_slug = MediaRules.page_slug(src, media_front_matter(src))
+    check(failures, "/media/#{slug}/ back link targets its own item (#media-#{page_slug})") do
+      page.match?(%r{media-detail__back">\s*<a href="[^"]*/#media-#{Regexp.escape(page_slug)}">})
+    end
+    check(failures, "home page has id=\"media-#{page_slug}\" for /media/#{slug}/'s back link") do
+      home_html.to_s.include?(%(id="media-#{page_slug}"))
     end
     label = page[ARTICLE_LABEL_RE, 1]
     article_labels[slug] = label unless article.empty?
@@ -657,6 +688,60 @@ check(failures, "no PDF bytes are committed to this public repo") do
 end
 unless pdf_bytes_in_repo.empty?
   pdf_bytes_in_repo.first(5).each { |f| puts "       stray PDF: #{f}" }
+end
+
+puts
+puts "== Fonts are self-hosted, not fetched from Google =="
+# A visitor's browser asking fonts.googleapis.com / fonts.gstatic.com sends that
+# visitor's IP to Google, which is a poor fit for a privacy lawyer's site and
+# costs a render-blocking third-party round trip. The two families live in
+# assets/fonts/ (sources and OFL licenses in SOURCES.txt) and are declared by
+# @font-face in jodidaniel.css. The hostnames are a lexical token, so this is a
+# plain scan of every built text file rather than a parse.
+GOOGLE_FONT_HOST_RE = /fonts\.(?:googleapis|gstatic)\.com/i
+built_text_files = Dir.glob(File.join(SITE, "**", "*.{html,css,js,svg,xml,json}"))
+google_font_refs = built_text_files.select do |f|
+  File.read(f, encoding: "utf-8", invalid: :replace, undef: :replace).match?(GOOGLE_FONT_HOST_RE)
+end
+check(failures, "no built page or asset references fonts.googleapis.com / fonts.gstatic.com (#{built_text_files.size} files scanned)") do
+  !built_text_files.empty? && google_font_refs.empty?
+end
+google_font_refs.first(5).each { |f| puts "       Google Fonts reference: #{f.delete_prefix("#{SITE}/")}" }
+
+site_css = read(File.join(SITE, "assets", "css", "jodidaniel.css"))
+font_faces = site_css.to_s.scan(/@font-face\s*\{[^}]*\}/m)
+check(failures, "jodidaniel.css declares @font-face rules for Raleway and Source Sans Pro") do
+  font_faces.any? { |b| b.include?("'Raleway'") } && font_faces.any? { |b| b.include?("'Source Sans Pro'") }
+end
+check(failures, "every @font-face sets font-display: swap (no invisible text while it loads)") do
+  !font_faces.empty? && font_faces.all? { |b| b.match?(/font-display:\s*swap\b/) }
+end
+WOFF2_MAGIC = "wOF2".b
+font_urls = font_faces.flat_map { |b| b.scan(/url\(\s*['"]?([^'")\s]+)['"]?\s*\)/).flatten }
+check(failures, "every @font-face url() is a same-site woff2 file that exists and starts with the woff2 magic") do
+  !font_urls.empty? && font_urls.all? do |u|
+    path = File.expand_path(u, File.join(SITE, "assets", "css"))
+    !u.match?(%r{\A[a-z]+:|\A//}i) && path.start_with?("#{SITE}/") && path.end_with?(".woff2") &&
+      File.file?(path) && File.binread(path, 4) == WOFF2_MAGIC
+  end
+end
+check(failures, "assets/fonts/ ships an OFL license file for each family beside the fonts") do
+  %w[OFL-Raleway.txt OFL-SourceSansPro.txt SOURCES.txt].all? do |n|
+    File.file?(File.join(SITE, "assets", "fonts", n))
+  end
+end
+# The critical files are preloaded on both layouts so the first paint does not
+# wait for the stylesheet to discover them; `crossorigin` is required on a font
+# preload or the browser fetches the file twice.
+font_preload_pages = ["index.html"] + Dir.glob(File.join(SITE, "media", "*", "index.html")).sort.first(1).map { |f| f.delete_prefix("#{SITE}/") }
+font_preload_pages.each do |page|
+  html = read(File.join(SITE, page))
+  preloads = html.to_s.scan(/<link\b[^>]*>/m).select { |t| t.match?(/\brel="preload"/) }
+  hrefs = preloads.map { |t| t[/\bhref="([^"]+)"/, 1] }.compact
+  check(failures, "#{page} preloads 1-2 self-hosted woff2 files, each with crossorigin, each present in the build") do
+    (1..2).cover?(hrefs.size) && preloads.all? { |t| t.match?(/\bcrossorigin\b/) && t.match?(/\bas="font"/) } &&
+      hrefs.all? { |h| h.end_with?(".woff2") && File.file?(File.join(SITE, h)) }
+  end
 end
 
 puts
@@ -971,6 +1056,37 @@ check(
   "expected #{expected_event_fields.inspect}"
 ) { events_seam_field_names == expected_event_fields }
 
+puts "== accessibility: WCAG 2.2 AA (contrast, landmarks, headings, reduced motion) =="
+# The audit's axe-core run found 27 text nodes in #8a9aaa at 2.75-2.88:1 and no <main>,
+# skip link or <h2> section titles, and the entrance fade-in kept content invisible for up to
+# 2.2 s under prefers-reduced-motion. The rules live in scripts/a11y_rules.rb (tested by
+# scripts/test-a11y-rules.rb); the built pages are read with kramdown's HTML parser, not a regex.
+a11y_css = read(File.join(ROOT, "assets", "css", "jodidaniel.css")).to_s
+low_contrast = A11yRules.low_contrast_text(a11y_css)
+check(failures, "every solid text color in jodidaniel.css reaches #{A11yRules::MIN_RATIO}:1 on its surface") do
+  low_contrast.empty?
+end
+low_contrast.each { |offender| puts "       ^ #{offender}" }
+check(failures, "jodidaniel.css shows .animate-in content under prefers-reduced-motion (after the fade-in rule)") do
+  A11yRules.reduced_motion_shows_content?(a11y_css)
+end
+
+a11y_pages = { "home page" => [File.join(SITE, "index.html"), true] }
+media_src.each do |src|
+  a11y_pages["#{File.basename(src, '.md')} item page"] = [MediaRules.page_path(SITE, src, media_front_matter(src)), false]
+end
+a11y_open = home_html.to_s.include?('<section id="about"')
+if a11y_open
+  a11y_pages.each do |label, (path, home)|
+    html = read(path)
+    problems = html ? A11yRules.page_problems(html, home: home) : ["page not built at #{path}"]
+    check(failures, "built #{label}: <main>, skip link, heading order and image sizes are in place") { problems.empty? }
+    problems.each { |problem| puts "       ^ #{problem}" }
+  end
+else
+  gate_hidden(failures, "the built-page landmark/skip-link/heading checks")
+end
+
 puts "== editor-facing admin copy stays out of developer vocabulary =="
 # Every word an editor reads in /admin comes from this seam, and the premise of
 # this site (AGENTS.md, "Keep every visible string /admin-editable") is that its
@@ -1029,6 +1145,42 @@ check(failures, "no admin label/hint/validation message uses developer vocabular
   jargon_offenders.empty?
 end
 jargon_offenders.each { |(kind, text)| puts "       ^ #{kind}: #{text}" }
+
+# The tab title and meta description on the built home page come from
+# _data/settings.yml `seo:` (applied by _plugins/site_meta_from_settings.rb), so
+# an /admin edit reaches the page. Gated: the site name plus the coming-soon
+# description. Open: "<launch title> | <site name>" plus the launch description.
+# Compared against the data file itself, so editing the copy never breaks this --
+# only a wiring break (a hardcoded literal, a dead plugin) does. A BLANK field
+# expects what its /admin hint promises: a blank site name falls back to
+# _config.yml's title, a blank launch title leaves the site name alone in the
+# tab, and a blank description means no description tag at all.
+require "cgi"
+seo_data = YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml")))
+seo_config = YAML.safe_load(read(File.join(ROOT, "_config.yml")))
+seo_home = read(File.join(SITE, "index.html")).to_s
+seo_title = seo_home[%r{<title>(.*?)</title>}m, 1]
+seo_desc = seo_home[/<meta name="description" content="([^"]*)"/, 1]
+filled = ->(value) { value.is_a?(String) && !value.strip.empty? }
+site_name = filled.call(seo_data.dig("seo", "site_title")) ? seo_data.dig("seo", "site_title") : seo_config["title"].to_s
+if OPEN_PASS
+  launch_title = seo_data.dig("seo", "launch_title")
+  expected_title = filled.call(launch_title) ? "#{launch_title} | #{site_name}" : site_name
+  expected_desc = seo_data.dig("seo", "launch_description")
+else
+  expected_title = site_name
+  expected_desc = seo_data.dig("coming_soon", "seo_description")
+end
+check(failures, "home <title> is the /admin-editable value (#{expected_title.inspect})") do
+  !expected_title.empty? && seo_title == CGI.escapeHTML(expected_title)
+end
+check(failures, "home meta description is the /admin-editable value (blank means no tag)") do
+  if filled.call(expected_desc)
+    seo_desc == CGI.escapeHTML(expected_desc)
+  else
+    seo_desc.nil?
+  end
+end
 
 if OPEN_PASS
   puts
