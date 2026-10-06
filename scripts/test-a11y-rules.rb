@@ -211,4 +211,37 @@ class A11yRulesTest < Minitest::Test
     html = html.sub(/<a class="skip-link".*?<\/a>/m, "").sub("</a>", '</a><a class="skip-link" href="#main">Skip</a>')
     assert(A11yRules.page_problems(html, home: true).any? { |p| p.include?("not the first link") })
   end
+
+  # --- media item page headings (F4) ------------------------------------------------------
+
+  GOOD_MEDIA = <<~HTML
+    <!DOCTYPE html><html lang="en"><head><title>t</title></head><body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <div class="site-wrapper"><header><p class="site-name"><a href="/">Name</a></p></header>
+    <main id="main" tabindex="-1"><article><span class="section-title">Articles</span>
+    <h1>AI &amp; Privacy &#8212; Part 1</h1></article></main></div></body></html>
+  HTML
+
+  def test_a_media_page_with_the_item_title_as_its_h1_has_no_problems
+    assert_equal [], A11yRules.media_heading_problems(GOOD_MEDIA, "AI & Privacy \u2014 Part 1")
+  end
+
+  def test_the_site_name_as_the_only_h1_is_reported
+    html = GOOD_MEDIA.sub('<p class="site-name"><a href="/">Name</a></p>', '<h1><a href="/">Name</a></h1>')
+                     .sub("<h1>AI &amp; Privacy &#8212; Part 1</h1>", "<h2>AI &amp; Privacy &#8212; Part 1</h2>")
+    problems = A11yRules.media_heading_problems(html, "AI & Privacy \u2014 Part 1")
+    assert(problems.any? { |p| p.include?("not the item title") }, problems.inspect)
+    assert(problems.any? { |p| p.include?("outside <main>") }, problems.inspect)
+  end
+
+  def test_two_h1s_are_reported
+    html = GOOD_MEDIA.sub('<p class="site-name"><a href="/">Name</a></p>', '<h1><a href="/">Name</a></h1>')
+    problems = A11yRules.media_heading_problems(html, "AI & Privacy \u2014 Part 1")
+    assert(problems.any? { |p| p.include?("found 2") }, problems.inspect)
+  end
+
+  def test_a_title_that_differs_from_the_h1_is_reported
+    problems = A11yRules.media_heading_problems(GOOD_MEDIA, "Some other title")
+    assert(problems.any? { |p| p.include?("not the item title") }, problems.inspect)
+  end
 end

@@ -1281,6 +1281,7 @@ check(failures, "jodidaniel.css shows .animate-in content under prefers-reduced-
   A11yRules.reduced_motion_shows_content?(a11y_css)
 end
 
+header_name = YAML.safe_load(read(File.join(ROOT, "_data", "header.yml")) || "")["name"].to_s
 a11y_pages = { "home page" => [File.join(SITE, "index.html"), true] }
 media_src.each do |src|
   a11y_pages["#{File.basename(src, '.md')} item page"] = [MediaRules.page_path(SITE, src, media_front_matter(src)), false]
@@ -1295,6 +1296,27 @@ if a11y_open
   end
 else
   gate_hidden(failures, "the built-page landmark/skip-link/heading checks")
+end
+
+puts "== headings: each media page's h1 is its item title; the home page keeps the site name =="
+# F4 (UX r5): the media layout's only h1 used to be the site name, so a screen-reader heading list
+# gave every item page the same h1. Now the item title is the h1 and the site name is a banner link.
+# The built home page keeps the site name as its h1 (and the gated coming-soon shell too).
+check(failures, "built home page has exactly one h1, the site name (#{header_name.inspect})") do
+  h1s = A11yRules.find_all(A11yRules.parse_html(home_html.to_s), "h1")
+  h1s.size == 1 && A11yRules.decoded_text_of(h1s.first[:node]).strip == header_name
+end
+if a11y_open
+  media_src.each do |src|
+    slug = File.basename(src, ".md")
+    html = read(MediaRules.page_path(SITE, src, media_front_matter(src)))
+    title = (media_front_matter(src) || {})["title"]
+    problems = html ? A11yRules.media_heading_problems(html, title) : ["page not built"]
+    check(failures, "built #{slug} item page: its one h1 is the item title, in <main>") { problems.empty? }
+    problems.each { |problem| puts "       ^ #{problem}" }
+  end
+else
+  gate_hidden(failures, "the media pages' item-title h1 checks")
 end
 
 puts "== editor-facing admin copy stays out of developer vocabulary =="
