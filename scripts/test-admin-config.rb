@@ -57,4 +57,20 @@ class AdminConfigTest < Minitest::Test
       assert_match(/bold/i, hint, "about.#{name} hint must say what the asterisks do")
     end
   end
+
+  # --- Launch title and Google description are editable in /admin, not only in
+  # _config.yml / index.html. Each field must exist in the Site Settings file,
+  # match a key in _data/settings.yml (so the plugin that applies it has a value),
+  # and carry a label and a hint.
+
+  def test_browser_tab_and_google_fields_are_editable_in_site_settings
+    settings = YAML.safe_load(File.read(File.expand_path("../_data/settings.yml", __dir__), encoding: "UTF-8"))
+    %w[site_title launch_title launch_description].each do |name|
+      field = find_in_file("settings", name)
+      refute_nil field, "settings.seo.#{name} is missing from the admin config"
+      refute_empty field["label"].to_s, "settings.seo.#{name} needs a label"
+      refute_empty field["hint"].to_s, "settings.seo.#{name} needs a hint"
+      assert settings.dig("seo", name), "_data/settings.yml has no seo.#{name} for the field to edit"
+    end
+  end
 end

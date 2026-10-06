@@ -130,6 +130,11 @@ unless OPEN_PASS
   $stdout.flush
   admin_config_passed = system(RbConfig.ruby, File.join(__dir__, "test-admin-config.rb"))
   check(failures, "scripts/test-admin-config.rb passes (output above)") { admin_config_passed == true }
+
+  puts "== unit tests: scripts/test-site-meta.rb =="
+  $stdout.flush
+  site_meta_passed = system(RbConfig.ruby, File.join(__dir__, "test-site-meta.rb"))
+  check(failures, "scripts/test-site-meta.rb passes (output above)") { site_meta_passed == true }
 end
 
 def read(path)
@@ -1024,6 +1029,32 @@ check(failures, "no admin label/hint/validation message uses developer vocabular
   jargon_offenders.empty?
 end
 jargon_offenders.each { |(kind, text)| puts "       ^ #{kind}: #{text}" }
+
+# The tab title and meta description on the built home page come from
+# _data/settings.yml `seo:` (applied by _plugins/site_meta_from_settings.rb), so
+# an /admin edit reaches the page. Gated: the plain site name plus the
+# coming-soon description. Open: "<launch title> | <site name>" plus the launch
+# description. Compared against the data file itself, so editing the copy never
+# breaks this -- only a wiring break (a hardcoded literal, a dead plugin) does.
+require "cgi"
+seo_data = YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml")))
+seo_home = read(File.join(SITE, "index.html")).to_s
+seo_title = seo_home[%r{<title>(.*?)</title>}m, 1]
+seo_desc = seo_home[/<meta name="description" content="([^"]*)"/, 1]
+site_name = seo_data.dig("seo", "site_title").to_s
+if OPEN_PASS
+  expected_title = "#{seo_data.dig('seo', 'launch_title')} | #{site_name}"
+  expected_desc = seo_data.dig("seo", "launch_description").to_s
+else
+  expected_title = site_name
+  expected_desc = seo_data.dig("coming_soon", "seo_description").to_s
+end
+check(failures, "home <title> is the /admin-editable value (#{expected_title.inspect})") do
+  !expected_title.empty? && seo_title == CGI.escapeHTML(expected_title)
+end
+check(failures, "home meta description is the /admin-editable value") do
+  !expected_desc.empty? && seo_desc == CGI.escapeHTML(expected_desc)
+end
 
 if OPEN_PASS
   puts
