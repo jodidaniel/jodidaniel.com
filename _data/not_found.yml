@@ -4,3 +4,4 @@
 heading: "Page not found"
 message: "The page you were looking for doesn't exist, or it may have moved."
 home_link_label: "Return to the homepage"
+skip_link_label: "Skip to content"

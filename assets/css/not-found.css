@@ -47,3 +47,28 @@ header .site-name a {
 .not-found__actions {
     margin-top: 2rem;
 }
+
+/* Skip link: hidden until it takes keyboard focus (the theme's default layout,
+   which the 404 used to have, shipped one). The target <main> is focusable so
+   activating the link moves focus there, without painting a ring on the card. */
+.skip-link {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    transform: translateY(-120%);
+    padding: 0.6rem 1rem;
+    background: #ffffff;
+    color: #1a3a5c;
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.skip-link:focus {
+    transform: translateY(0);
+}
+
+main:focus {
+    outline: none;
+}

@@ -11,8 +11,11 @@
 
   Copy comes from _data/not_found.yml (editable in /admin), not from here.
 
-  `.site-header` / `.site-footer` / `main h1` are the hooks cms-platform's
-  e2e/not-found.spec.js asserts on every consumer, so they stay.
+  cms-platform's e2e/not-found.spec.js (which asserts `.site-header`,
+  `.site-footer` and a `main h1`) SKIPS for this site: it only runs for a 404
+  on the theme's layout. The checks it would make live in this site's own
+  scripts/verify-build-artifacts.rb ("404 page is the site's own" group), which
+  is why the header, footer and h1 hooks stay.
 {%- endcomment -%}
 {%- assign settings = site.data.settings -%}
 {%- assign live = settings.site_live -%}
@@ -32,6 +35,7 @@
     <link rel="stylesheet" href="{{ '/assets/css/not-found.css' | cachebust }}">
 </head>
 <body>
+    <a class="skip-link" href="#main">{{ nf.skip_link_label }}</a>
     <div class="site-wrapper">
         <header class="site-header animate-in delay-1">
             <p class="site-name"><a href="{{ '/' | relative_url }}">{{ site.data.header.name }}</a></p>
@@ -46,7 +50,7 @@
             {%- endif -%}
         </header>
 
-        <main id="main">
+        <main id="main" tabindex="-1">
             <div class="container not-found animate-in delay-2">
                 <h1>{{ nf.heading }}</h1>
                 <p class="not-found__message">{{ nf.message }}</p>

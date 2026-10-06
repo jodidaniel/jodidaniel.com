@@ -130,6 +130,11 @@ unless OPEN_PASS
   $stdout.flush
   admin_config_passed = system(RbConfig.ruby, File.join(__dir__, "test-admin-config.rb"))
   check(failures, "scripts/test-admin-config.rb passes (output above)") { admin_config_passed == true }
+
+  puts "== unit tests: scripts/test-favicon-include.rb =="
+  $stdout.flush
+  favicon_include_passed = system(RbConfig.ruby, File.join(__dir__, "test-favicon-include.rb"))
+  check(failures, "scripts/test-favicon-include.rb passes (output above)") { favicon_include_passed == true }
 end
 
 def read(path)
@@ -204,13 +209,20 @@ check(failures, "404.html advertises no feed (no RSS link, no alternate feed <li
   notfound_html && !notfound_html.include?("feed.xml") && !notfound_html.match?(/>\s*RSS\s*</) &&
     !notfound_html.include?("application/atom+xml")
 end
-check(failures, "404.html keeps the hooks cms-platform's not-found e2e spec asserts (.site-header, .site-footer, main h1)") do
+# cms-platform's e2e/not-found.spec.js skips for this site (its 404 is not on the theme
+# layout), so these are the checks that stand in for it: header, footer, a heading that
+# says not found inside <main>, and a link home.
+check(failures, "404.html has a site header, a site footer, and an h1 saying 'not found' inside <main>") do
   notfound_html&.match?(/class="site-header[ "]/) && notfound_html.match?(/<footer class="site-footer[ "]/) &&
     notfound_body&.match?(/<h1>[^<]*not found/i)
 end
+check(failures, "404.html has a skip link whose target is a focusable <main>") do
+  target = notfound_html.to_s[/<a class="skip-link" href="#([^"]+)"/, 1]
+  !target.nil? && notfound_html.match?(/<main id="#{Regexp.escape(target)}" tabindex="-1"/)
+end
 not_found_data = YAML.safe_load(read(File.join(ROOT, "_data", "not_found.yml")) || "") || {}
-check(failures, "404.html copy comes from _data/not_found.yml (heading, message, button text)") do
-  %w[heading message home_link_label].all? do |key|
+check(failures, "404.html copy comes from _data/not_found.yml (heading, message, button text, skip link)") do
+  %w[heading message home_link_label skip_link_label].all? do |key|
     value = not_found_data[key].to_s
     !value.strip.empty? && notfound_html&.include?(value)
   end
