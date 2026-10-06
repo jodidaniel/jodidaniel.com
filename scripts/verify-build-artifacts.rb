@@ -890,15 +890,15 @@ else
 end
 
 puts "== Past events live in Talks & Panels, not Upcoming Events =="
-# 2026-10-05: the DHNY Summit and UNIFY had already happened but still sat in
-# Upcoming Events. They were moved to the Talks & Panels list rather than
-# deleted (the record of a talk is worth keeping). The layout deliberately has
+# 2026-10-05: UNIFY had already happened but still sat in Upcoming Events. It
+# was moved to the Talks & Panels list rather than deleted (the record of a
+# talk is worth keeping). The DHNY Summit stays in Upcoming Events until Jodi
+# says whether she spoke there (its session is blank, meaning attended). The layout deliberately has
 # no date filter (docs/CONTENT-MODEL.md, "Past events are not auto-hidden"), so
 # this is a fixed-list source check, never a comparison with today's date: each
 # moved event must still be a Talks & Panels media item carrying its original
 # event page, and must not be back in _events/.
 MOVED_PAST_EVENTS = {
-  "DHNY Summit" => "https://www.dhnysummit.com/",
   "UNIFY: Convening for Quality" => "https://www.jointcommission.org/en-us/unify-convening-for-quality",
 }.freeze
 talk_urls = media_src.filter_map do |src|

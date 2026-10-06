@@ -117,8 +117,8 @@ test rules (AGENTS.md: "no reliance on wall-clock time") forbid. The owner
 moves a finished event out of Upcoming Events herself once it has passed:
 add it under Media Items as a "Talks & Panels" entry (event name or her
 session title, host, month and year, the event page as the link), then delete
-the event entry. The DHNY Summit and UNIFY were moved this way on 2026-10-05
-rather than deleted, so the talk stays on the record. An in-browser
+the event entry. UNIFY was moved this way on 2026-10-05 rather than deleted, so
+the panel stays on the record. An in-browser
 upcoming/past split on one Speaking list is planned for the restructure and
 is not built yet.
 
