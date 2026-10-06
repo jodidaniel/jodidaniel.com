@@ -308,8 +308,13 @@ check(failures, "/favicon.ico is an ICO of PNG images that includes 16 and 32 px
   ico_sizes.all? && ([16, 32] - ico_sizes).empty?
 end
 favicon_svg = read(File.join(SITE, "assets", "favicon.svg"))
-check(failures, "/assets/favicon.svg is Jodi's JD monogram in the site's navy and cyan, not the theme placeholder") do
-  favicon_svg&.include?('aria-label="JD"') && favicon_svg.include?("#1a3a5c") && favicon_svg.include?("#5dd9e8")
+# Jodi chose monogram option 8, "Navy to steel gradient": a #2d5a7b to #1a3a5c
+# gradient tile (id g8) under two #5dd9e8 strokes of width 6.5 that draw the J and D.
+check(failures, "/assets/favicon.svg is Jodi's chosen JD monogram (navy-to-steel gradient tile, cyan strokes), not the theme placeholder") do
+  favicon_svg&.include?('<linearGradient id="g8"') &&
+    favicon_svg.include?('stop-color="#2d5a7b"') && favicon_svg.include?('stop-color="#1a3a5c"') &&
+    favicon_svg.include?('fill="url(#g8)"') &&
+    favicon_svg.scan('stroke="#5dd9e8"').size == 2 && favicon_svg.include?('stroke-width="6.5"')
 end
 [["/", "index.html"], ["/404.html", "404.html"]].each do |label, rel|
   html = read(File.join(SITE, rel))
