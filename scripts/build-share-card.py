@@ -16,7 +16,10 @@ neither the font nor this script is published. Output is deterministic for a
 given Pillow/FreeType; if a different version moves a pixel, rerun this and
 commit the PNG.
 
-Re-run it after changing the headshot or the name in _data/header.yml.
+NOT /admin-editable: the name (NAME_LINES) and the headshot path are baked into
+this script, and the PNG is a committed file. Changing her name or swapping the
+photo in /admin does NOT update the card; a developer has to edit this script (if
+the name changed), rerun it, and commit the PNG.
 """
 import os
 import sys

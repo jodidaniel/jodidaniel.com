@@ -41,6 +41,7 @@ require "fileutils"
 require "rbconfig"
 require "tmpdir"
 require_relative "media_rules"
+require_relative "person_rules"
 
 REPO_ROOT = File.expand_path("..", __dir__)
 OPEN_PASS = ARGV[0] == "--open-pass"
@@ -131,6 +132,11 @@ unless OPEN_PASS
   $stdout.flush
   admin_config_passed = system(RbConfig.ruby, File.join(__dir__, "test-admin-config.rb"))
   check(failures, "scripts/test-admin-config.rb passes (output above)") { admin_config_passed == true }
+
+  puts "== unit tests: scripts/test-person-rules.rb =="
+  $stdout.flush
+  person_rules_passed = system(RbConfig.ruby, File.join(__dir__, "test-person-rules.rb"))
+  check(failures, "scripts/test-person-rules.rb passes (output above)") { person_rules_passed == true }
 end
 
 def read(path)
@@ -1034,6 +1040,7 @@ jargon_offenders.each { |(kind, text)| puts "       ^ #{kind}: #{text}" }
 puts "== share card + structured data =="
 site_url = (YAML.safe_load(read(File.join(ROOT, "_config.yml"))) || {})["url"].to_s
 person_name = (YAML.safe_load(read(File.join(ROOT, "_data", "header.yml"))) || {})["name"].to_s
+author_name = ((YAML.safe_load(read(File.join(ROOT, "_config.yml"))) || {})["author"] || {})["name"].to_s
 card_url = "#{site_url}/assets/images/share-card.png"
 card_file = File.join(SITE, "assets", "images", "share-card.png")
 card_head = File.file?(card_file) ? File.binread(card_file, 24) : "".b
@@ -1062,6 +1069,7 @@ def share_card_problems(html, card_url, label)
   problems << "#{label}: og:image:width/height are not 1200/630" unless metas["og:image:width"] == ["1200"] && metas["og:image:height"] == ["630"]
   problems << "#{label}: twitter:image is #{metas['twitter:image'].inspect}" unless metas["twitter:image"] == [card_url]
   problems << "#{label}: twitter:card is #{metas['twitter:card'].inspect}, want summary_large_image" unless metas["twitter:card"] == ["summary_large_image"]
+  problems << "#{label}: twitter:image:alt is #{metas['twitter:image:alt'].inspect}" unless metas["twitter:image:alt"].to_a.size == 1 && !metas["twitter:image:alt"].first.to_s.empty?
   problems
 end
 
@@ -1076,7 +1084,8 @@ end
 # bare title, a double insert would repeat the name.
 %w[og:title twitter:title].each do |key|
   check(failures, "home #{key} is one value and leads with #{person_name.inspect}: #{home_metas[key].inspect}") do
-    home_metas[key].size == 1 && home_metas[key].first.start_with?(person_name) && home_metas[key].first.scan(person_name).size == 1
+    home_metas[key].size == 1 && home_metas[key].first.start_with?(person_name) &&
+      !home_metas[key].first.start_with?("#{person_name} | #{person_name}")
   end
 end
 
@@ -1087,34 +1096,20 @@ if settings_src["site_live"] == true
   persons = home_ld.select { |b| b["@type"] == "Person" }
   check(failures, "home page emits exactly one top-level Person (JSON-LD), got #{persons.size}") { persons.size == 1 }
   person = persons.first || {}
-  front = lambda do |glob|
-    Dir[File.join(ROOT, glob)].sort.map do |f|
-      m = read(f).match(/\A---\s*\n(.*?)\n---/m)
-      m && YAML.safe_load(m[1])
-    end.compact.sort_by { |fm| fm["weight"].to_i }
-  end
-  current = front.call("_experience/*.md").find { |fm| fm["period"].to_s.include?("Present") } || {}
-  contact = (YAML.safe_load(read(File.join(ROOT, "_data", "contact.yml"))) || {})["links"].to_a.map { |l| l["url"] }
-  extra = settings_src.dig("share", "profile_links").to_a
+  want = PersonRules.expected(ROOT)
+  got = PersonRules.observed(person)
   check(failures, "Person name is #{person_name.inspect} and url is the site root") do
     person["name"] == person_name && person["url"] == "#{site_url}/"
   end
-  check(failures, "Person jobTitle/worksFor come from the current Experience item (#{current['title'].inspect} at #{current['org'].inspect})") do
-    !current["title"].to_s.empty? && person["jobTitle"] == current["title"] && person.dig("worksFor", "name") == current["org"]
+  # One comparison per field, derived from the source files (scripts/person_rules.rb),
+  # so an /admin edit (a changed Contact link, "present" in any case, no current
+  # job) moves the expectation with it instead of tripping a hardcoded fact.
+  %w[jobTitle worksFor alumniOf knowsAbout sameAs alternateName].each do |field|
+    check(failures, "Person #{field} matches the source content: want #{want[field].inspect}, got #{got[field].inspect}") do
+      got[field] == want[field]
+    end
   end
-  check(failures, "Person alumniOf is the Education schools, in order") do
-    person["alumniOf"].to_a.map { |o| o["name"] } == front.call("_education/*.md").map { |fm| fm["school"] }
-  end
-  check(failures, "Person sameAs holds the Contact links and the extra profile links, all https") do
-    want = (contact + extra).uniq
-    !want.empty? && person["sameAs"] == want && person["sameAs"].all? { |u| u.start_with?("https://") }
-  end
-  check(failures, "Person sameAs links her firm profile and LinkedIn") do
-    person["sameAs"].to_a.any? { |u| u.include?("wsgr.com") } && person["sameAs"].to_a.any? { |u| u.include?("linkedin.com") }
-  end
-  check(failures, "Person alternateName comes from settings share.alternate_names") do
-    person["alternateName"] == settings_src.dig("share", "alternate_names")
-  end
+  check(failures, "Person sameAs entries are all https") { person["sameAs"].to_a.all? { |u| u.start_with?("https://") } }
   check(failures, "the Person script holds no raw '<' (so no value can close the script tag)") do
     home_share_html.scan(%r{<script type="application/ld\+json">(.*?)</script>}m).flatten.none? { |raw| raw.include?("<") }
   end
@@ -1135,6 +1130,9 @@ if settings_src["site_live"] == true
     end
     check(failures, "media/#{slug}: not typed as an article (og:type website, no article:published_time)") do
       metas["og:type"] == ["website"] && !metas.key?("article:published_time")
+    end
+    check(failures, "media/#{slug}: keeps og:locale and the author meta the tag used to emit") do
+      metas["og:locale"] == ["en_US"] && metas["author"] == [author_name]
     end
     problems = share_card_problems(html, card_url, "media/#{slug}")
     check(failures, "media/#{slug}: carries the share card -- #{problems.first}") { problems.empty? }

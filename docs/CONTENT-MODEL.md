@@ -22,9 +22,12 @@ The layout reads these as `site.data.header` / `.about` / `.contact` /
 Pages that share a link show `assets/images/share-card.png` (1200x630: her
 headshot and name, **name only** so it is safe on the coming-soon page). It is
 declared once, site-wide, in `_config.yml` `defaults` (`image:`), which is where
-jekyll-seo-tag reads it. Rebuild it after changing the headshot or her name:
-`python3 scripts/build-share-card.py` (needs Pillow; the Raleway font and its
-license are in `scripts/share-card/`; `--check` reports a stale PNG).
+jekyll-seo-tag reads it. **The card is not `/admin`-editable**: her name and the
+headshot path are baked into `scripts/build-share-card.py` and the PNG is a
+committed file, so changing the name or photo in `/admin` does not update it.
+A developer reruns `python3 scripts/build-share-card.py` and commits the PNG
+(needs Pillow; the Raleway font and its license are in `scripts/share-card/`;
+`--check` reports a stale PNG).
 
 - **Gated** (`site_live` false): `_includes/share-card-meta.html` adds the card,
   the bare name as the share title and the neutral description. No role, no
@@ -32,7 +35,7 @@ license are in `scripts/share-card/`; `--check` reports a stale PNG).
 - **Open**: `_includes/home-seo.html` calls `{% seo %}` with the share titles led
   by her name (the tab `<title>` is unchanged) and adds one `Person` JSON-LD
   built only from repo content: current role and firm (first Experience item
-  whose `period` contains "Present"), schools (Education), areas (Expertise),
+  whose `period` contains "present", any case; none means no job title), schools (Education), areas (Expertise),
   `sameAs` from Contact links plus `settings.share.profile_links`, and
   `alternateName` from `settings.share.alternate_names`.
 - **Media item pages** write their own head (not `{% seo %}`): a `WebPage`
@@ -40,7 +43,9 @@ license are in `scripts/share-card/`; `--check` reports a stale PNG).
   every collection document as her `BlogPosting` dated at build time.
 
 `scripts/verify-build-artifacts.rb` ("share card + structured data") asserts all
-of it on both builds.
+of it on both builds, deriving the expected Person from the source files
+(`scripts/person_rules.rb`) rather than hardcoding facts, so ordinary `/admin`
+edits do not trip it; `scripts/test-person-rules.rb` builds the edited cases.
 
 ### About nav anchors are a closed set (issue #196)
 
