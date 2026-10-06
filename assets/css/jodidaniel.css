@@ -218,9 +218,14 @@ header h1 {
     margin-bottom: 0.5rem;
 }
 
+/* Weight 600 (the heaviest Source Sans Pro file the site ships) makes the
+   20px tagline WCAG "large text" (bold, at least 18.66px), so it needs 3:1
+   over the page gradient, not 4.5:1. At weight 300 it measured 3.6:1 where it
+   crosses the middle of the gradient. The 16px phone size below is not large
+   text and keeps weight 600 too; scripts/a11y_rules.rb asserts both. */
 header .tagline {
     font-size: 1.25rem;
-    font-weight: 300;
+    font-weight: 600;
     opacity: 0.9;
     letter-spacing: 0.05em;
 }
@@ -843,20 +848,29 @@ body:has(.media-list li:target) .animate-in {
     fill: currentColor;
 }
 
+/* Footer text sits on the page gradient, up to its lightest stop (#5ba0be).
+   White at 70% opacity was 2.2:1 there. A navy band (#1a3a5c, the gradient's
+   darkest stop, at 70%) under full-white text keeps every footer text at
+   4.5:1 or better over every stop; scripts/a11y_rules.rb computes it. The
+   band only backs the footer: the page gradient is unchanged. */
 footer {
     text-align: center;
     padding: 2rem;
-    color: rgba(255, 255, 255, 0.7);
+    color: #ffffff;
+    background: rgba(26, 58, 92, 0.7);
+    border-radius: 0.5rem;
     font-size: 0.9rem;
 }
 
+/* White like the footer text, so the underline (always on, not only on
+   hover) is what marks a link. */
 footer a {
-    color: #5dd9e8;
-    text-decoration: none;
+    color: #ffffff;
+    text-decoration: underline;
 }
 
 footer a:hover {
-    text-decoration: underline;
+    text-decoration-thickness: 2px;
 }
 
 @media (max-width: 900px) {

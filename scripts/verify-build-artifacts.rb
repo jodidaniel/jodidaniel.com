@@ -1072,6 +1072,18 @@ check(failures, "every solid text color in jodidaniel.css reaches #{A11yRules::M
   low_contrast.empty?
 end
 low_contrast.each { |offender| puts "       ^ #{offender}" }
+# The tagline and footer sit on the page gradient, which axe cannot score (it reports them
+# "incomplete"), so their contrast is computed from the stylesheet over the gradient's stops.
+tagline_problems = A11yRules.tagline_problems(a11y_css)
+check(failures, "header .tagline is large text (bold, 18.66px+) reaching 3:1 over the page gradient at desktop widths, 4.5:1 at phone widths") do
+  tagline_problems.empty?
+end
+tagline_problems.each { |problem| puts "       ^ #{problem}" }
+footer_problems = A11yRules.footer_problems(a11y_css)
+check(failures, "footer text and links reach #{A11yRules::MIN_RATIO}:1 over the footer band on every page gradient stop") do
+  footer_problems.empty?
+end
+footer_problems.each { |problem| puts "       ^ #{problem}" }
 check(failures, "jodidaniel.css shows .animate-in content under prefers-reduced-motion (after the fade-in rule)") do
   A11yRules.reduced_motion_shows_content?(a11y_css)
 end

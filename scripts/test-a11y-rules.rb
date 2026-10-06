@@ -66,6 +66,74 @@ class A11yRulesTest < Minitest::Test
     assert_empty A11yRules.low_contrast_text("header { color: #ffffff; } footer { color: rgba(255, 255, 255, 0.7); }")
   end
 
+  # --- text on the page gradient ----------------------------------------------------------
+
+  GRADIENT = "body { background: linear-gradient(135deg, #1a3a5c 0%, #2d5a7b 25%, #3d7a9c 50%, #4a8dad 75%, #5ba0be 100%); }\n"
+  TAGLINE = "header { color: #ffffff; }\nheader .tagline { font-size: 1.25rem; font-weight: 600; opacity: 0.9; }\n" \
+            "@media (max-width: 767px) { header .tagline { font-size: 1rem; } }\n"
+  FOOTER = "footer { color: #ffffff; background: rgba(26, 58, 92, 0.7); font-size: 0.9rem; }\n" \
+           "footer a { color: #ffffff; text-decoration: underline; }\n"
+
+  def test_gradient_stops_are_read_from_the_body_rule
+    stops = A11yRules.gradient_stops(GRADIENT)
+    assert_equal [0.0, 0.25, 0.5, 0.75, 1.0], stops.map(&:first)
+    assert_equal [0x5b, 0xa0, 0xbe], stops.last[1]
+    assert_nil A11yRules.gradient_stops("body { background: #fff; }")
+  end
+
+  def test_color_parsing_and_compositing
+    assert_equal [255, 255, 255, 0.7], A11yRules.parse_color("rgba(255, 255, 255, 0.7)")
+    assert_equal [0x1a, 0x3a, 0x5c, 1.0], A11yRules.parse_color("#1a3a5c")
+    assert_nil A11yRules.parse_color("inherit")
+    assert_equal [127.5, 127.5, 127.5], A11yRules.composite([255, 255, 255, 0.5], [0, 0, 0])
+  end
+
+  def test_the_bold_tagline_counts_as_large_text_and_passes
+    assert_equal [], A11yRules.tagline_problems(GRADIENT + TAGLINE)
+  end
+
+  def test_a_light_weight_tagline_is_normal_text_and_fails
+    problems = A11yRules.tagline_problems(GRADIENT + TAGLINE.sub("font-weight: 600", "font-weight: 300"))
+    assert(problems.any? { |p| p.include?("tagline (desktop) 20px weight 300 is normal text") }, problems.inspect)
+  end
+
+  def test_a_bold_tagline_below_18_66px_is_not_large_text
+    css = GRADIENT + TAGLINE.sub("font-size: 1.25rem", "font-size: 1.1rem")
+    problems = A11yRules.tagline_problems(css)
+    assert(problems.any? { |p| p.include?("tagline (desktop) 17.6px weight 600 is normal text") }, problems.inspect)
+  end
+
+  def test_a_bold_tagline_that_is_too_faint_fails_even_as_large_text
+    problems = A11yRules.tagline_problems(GRADIENT + TAGLINE.sub("opacity: 0.9", "opacity: 0.4"))
+    assert(problems.any? { |p| p.include?("is large text") }, problems.inspect)
+  end
+
+  def test_the_phone_size_override_is_scored_as_normal_text
+    problems = A11yRules.tagline_problems(GRADIENT + TAGLINE.sub("opacity: 0.9", "opacity: 0.75"))
+    assert(problems.any? { |p| p.include?("tagline (phone) 16px") }, problems.inspect)
+  end
+
+  def test_the_footer_band_over_every_stop_passes
+    assert_equal [], A11yRules.footer_problems(GRADIENT + FOOTER)
+  end
+
+  def test_seventy_percent_white_with_no_band_fails_on_the_lighter_stops
+    css = GRADIENT + FOOTER.sub("color: #ffffff; background: rgba(26, 58, 92, 0.7);", "color: rgba(255, 255, 255, 0.7);")
+    problems = A11yRules.footer_problems(css)
+    assert(problems.any? { |p| p.include?("100% gradient stop (band none)") }, problems.inspect)
+  end
+
+  def test_a_faint_band_fails_on_the_lightest_stop
+    problems = A11yRules.footer_problems(GRADIENT + FOOTER.sub("0.7)", "0.3)"))
+    assert(problems.any? { |p| p.include?("100% gradient stop") }, problems.inspect)
+  end
+
+  def test_footer_opacity_and_a_cyan_link_are_reported
+    problems = A11yRules.footer_problems(GRADIENT + FOOTER.sub("footer { ", "footer { opacity: 0.7; ").sub("footer a { color: #ffffff", "footer a { color: #5dd9e8"))
+    assert(problems.any? { |p| p.include?("footer opacity") }, problems.inspect)
+    assert(problems.any? { |p| p.include?("footer link #5dd9e8") }, problems.inspect)
+  end
+
   # --- reduced motion ---------------------------------------------------------------------
 
   FADE = ".animate-in { opacity: 0; animation: fadeSlideIn 0.8s ease-out forwards; }\n"
