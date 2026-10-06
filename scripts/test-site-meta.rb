@@ -10,6 +10,7 @@
 
 require "minitest/autorun"
 require "yaml"
+require "liquid"
 
 # The plugin registers a Jekyll hook when loaded; capture it instead of booting
 # Jekyll, so the test runs the real hook body against a stand-in site.
@@ -75,16 +76,52 @@ class SiteMetaTest < Minitest::Test
     assert_equal "Fallback Name", site.config["title"]
   end
 
-  # The committed values: the three fields exist, are filled in, and the two
-  # literals they replaced are gone from where only a commit could edit them.
+  def test_an_ampersand_in_the_site_title_is_kept_as_data
+    settings = { "seo" => { "site_title" => "Jodi Daniel & Co" } }
+    site = run_hook(site_with(settings))
+    assert_equal "Jodi Daniel & Co", site.config["title"]
+  end
+
+  # The gated <title> is printed by the layouts themselves ({% seo %} escapes its
+  # own), so a site name with an "&" must go through `escape` there. Parsed with
+  # Liquid, not scanned, so the check follows the template's real structure.
+  LAYOUTS = %w[home media].freeze
+
+  def site_title_variables(layout)
+    Liquid::Template.register_tag("seo", Class.new(Liquid::Tag))
+    source = File.read(File.join(ROOT, "_layouts", "#{layout}.html"), encoding: "UTF-8")
+    template = Liquid::Template.parse(source)
+    found = []
+    Liquid::ParseTreeVisitor.for(template.root).tap do |visitor|
+      visitor.add_callback_for(Liquid::Variable) do |variable|
+        name = variable.name
+        found << variable if name.is_a?(Liquid::VariableLookup) && name.name == "site" && name.lookups == ["title"]
+        nil
+      end
+    end.visit
+    found
+  end
+
+  def test_layouts_escape_the_site_title_they_print
+    LAYOUTS.each do |layout|
+      found = site_title_variables(layout)
+      refute_empty found, "_layouts/#{layout}.html no longer prints site.title; update this test"
+      found.each do |variable|
+        assert_includes variable.filters.map(&:first), "escape", "_layouts/#{layout}.html prints site.title unescaped"
+      end
+    end
+  end
+
+  # The two literals the fields replaced are gone from where only a commit could
+  # edit them. (The fields themselves may be blank: the admin hints promise a
+  # fallback, so nothing here requires them filled in.)
   def settings
     @settings ||= YAML.safe_load(File.read(File.join(ROOT, "_data", "settings.yml"), encoding: "UTF-8"))
   end
 
-  def test_committed_settings_hold_all_three_values
+  def test_settings_file_declares_the_seo_keys
     %w[site_title launch_title launch_description].each do |key|
-      value = settings.dig("seo", key)
-      assert value.is_a?(String) && !value.strip.empty?, "_data/settings.yml seo.#{key} must be filled in"
+      assert settings["seo"].is_a?(Hash) && settings["seo"].key?(key), "_data/settings.yml seo.#{key} must exist"
     end
   end
 

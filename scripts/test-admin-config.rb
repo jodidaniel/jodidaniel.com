@@ -70,7 +70,7 @@ class AdminConfigTest < Minitest::Test
       refute_nil field, "settings.seo.#{name} is missing from the admin config"
       refute_empty field["label"].to_s, "settings.seo.#{name} needs a label"
       refute_empty field["hint"].to_s, "settings.seo.#{name} needs a hint"
-      assert settings.dig("seo", name), "_data/settings.yml has no seo.#{name} for the field to edit"
+      assert settings["seo"].key?(name), "_data/settings.yml has no seo.#{name} for the field to edit"
     end
   end
 end
