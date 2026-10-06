@@ -75,12 +75,34 @@ html {
     }
 }
 
+/* Skip link (WCAG 2.4.1): the first tab stop, hidden until it has focus. */
+.skip-link {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 0.75rem 1.25rem;
+    background: #1a3a5c;
+    color: #ffffff;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    text-decoration: none;
+    transform: translateY(-120%);
+}
+
+.skip-link:focus {
+    transform: translateY(0);
+    z-index: 10;
+    outline: 3px solid #5dd9e8;
+    outline-offset: 2px;
+}
+
 /* issue #198 item 3 (companion to the JS focus handoff in _layouts/home.html):
    activating a nav pill moves focus to the target section so keyboard Tab
    resumes from there. That section is focused programmatically, not tabbed to,
    so it must not paint a focus ring around the whole box -- the visitor did not
    navigate to it by keyboard. Scoped tightly to the roving tabindex="-1" targets
    so it can never suppress a real, user-initiated focus indicator elsewhere. */
+main[tabindex="-1"]:focus,
 section[tabindex="-1"]:focus,
 body[tabindex="-1"]:focus {
     outline: none;
@@ -151,6 +173,18 @@ body::after {
 .delay-7 { animation-delay: 1.2s; }
 .delay-8 { animation-delay: 1.4s; }
 .delay-9 { animation-delay: 1.6s; }
+
+/* WCAG 2.2 AA: the fade-in above starts every block at opacity 0 and reveals
+   it over up to ~2.2 s (0.8 s animation + the longest delay). A visitor who
+   asked for reduced motion gets the content at once, with no fade or slide.
+   After the rules it overrides, so the cascade order decides it. */
+@media (prefers-reduced-motion: reduce) {
+    .animate-in {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+}
 
 .site-wrapper {
     max-width: 74rem;
@@ -227,6 +261,7 @@ header .tagline {
 .profile-image {
     width: 100%;
     max-width: 180px;
+    height: auto; /* the width/height attributes only reserve the box */
     border-radius: 0.5rem;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -419,7 +454,7 @@ header .tagline {
 
 .event-location {
     font-size: 0.85rem;
-    color: #8a9aaa;
+    color: #5f6f7f;
     margin-bottom: 0.25rem;
 }
 
@@ -515,7 +550,7 @@ header .tagline {
 
 .timeline-item .period {
     font-size: 0.85rem;
-    color: #8a9aaa;
+    color: #5f6f7f;
     margin-bottom: 0.5rem;
 }
 
@@ -648,7 +683,7 @@ body:has(.media-list li:target) .animate-in {
 
 .media-list .source {
     font-size: 0.8rem;
-    color: #8a9aaa;
+    color: #5f6f7f;
     display: block;
     margin-top: 0.15rem;
 }
@@ -680,7 +715,7 @@ body:has(.media-list li:target) .animate-in {
 }
 
 .media-detail__source {
-    color: #6a7a8a;
+    color: #5f6f7f;
     font-size: 1rem;
     margin-top: 0.5rem;
 }

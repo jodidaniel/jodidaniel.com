@@ -265,6 +265,7 @@
             fields:
               - { name: copyright, label: "Copyright", widget: string }
           - { label: "Back to Top Button Label", name: "back_to_top_label", widget: "string", hint: "Accessible label for the floating back-to-top button (screen readers only; it's an icon)." }
+          - { label: "Skip Link Label", name: "skip_link_label", widget: "string", required: false, hint: "The first thing a keyboard visitor reaches when they press Tab: a link that jumps past the header to the content. It stays hidden until it is focused. Leave blank to use \"Skip to main content\"." }
           - name: section_headings
             label: "Section Headings"
             widget: object
