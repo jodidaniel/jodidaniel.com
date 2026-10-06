@@ -1,0 +1,13 @@
+{%- comment -%}
+  Site-owned icon links; shadows the cms-platform theme's include of the same
+  name, so the three site layouts (home, media, not-found), which already
+  `{% include favicon.html %}`, pick up the full set without being edited.
+  The theme's version emits only the SVG; this adds the two raster icons the
+  SVG cannot cover: favicon.ico for browsers that ignore SVG icons (and the
+  automatic /favicon.ico probe), and the Apple touch icon iOS looks for when
+  a visitor adds the site to the Home Screen. All are rendered from
+  assets/favicon.svg by scripts/render-icons.mjs.
+{%- endcomment -%}
+<link rel="icon" href="{{ '/favicon.ico' | relative_url }}" sizes="32x32">
+<link rel="icon" type="image/svg+xml" href="{{ '/assets/favicon.svg' | relative_url }}">
+<link rel="apple-touch-icon" href="{{ '/apple-touch-icon.png' | relative_url }}">

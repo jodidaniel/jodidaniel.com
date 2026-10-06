@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="JD">
+  <!-- Jodi Daniel's "JD" monogram: the site's navy (#1a3a5c) and cyan (#5dd9e8),
+       the same pair as assets/images/logo.svg. The letters are drawn as strokes,
+       not <text>, because a browser tab has no Raleway to draw them with.
+       This file shadows the cms-platform theme's placeholder favicon.svg.
+       favicon.ico, favicon-32x32.png and apple-touch-icon.png are rendered from
+       it by scripts/render-icons.mjs; rerun that after editing this. -->
+  <rect width="64" height="64" rx="14" fill="#1a3a5c"/>
+  <g fill="none" stroke="#5dd9e8" stroke-width="6" stroke-linejoin="miter" transform="translate(-2 0)">
+    <path d="M25 17V36A9 9 0 0 1 16 45H13"/>
+    <path d="M35 17H40A12 14.5 0 0 1 40 46H35Z"/>
+  </g>
+</svg>

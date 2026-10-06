@@ -194,6 +194,85 @@ check(failures, "404.html copy is generic chrome (says 'not found')") do
   notfound_html&.downcase&.include?("not found")
 end
 
+puts "== 404 page is the site's own, and the icon set is Jodi's =="
+# The 404 used to take the cms-platform theme's `default` layout: dark, unrelated
+# to this site, with an "RSS" link to a feed that has no entries.
+check(failures, "404.html uses the site's own stylesheet, not the theme's main.css") do
+  notfound_html&.include?("/assets/css/jodidaniel.css") && !notfound_html.include?("/assets/css/main.css")
+end
+check(failures, "404.html advertises no feed (no RSS link, no alternate feed <link>)") do
+  notfound_html && !notfound_html.include?("feed.xml") && !notfound_html.match?(/>\s*RSS\s*</) &&
+    !notfound_html.include?("application/atom+xml")
+end
+check(failures, "404.html keeps the hooks cms-platform's not-found e2e spec asserts (.site-header, .site-footer, main h1)") do
+  notfound_html&.match?(/class="site-header[ "]/) && notfound_html.match?(/<footer class="site-footer[ "]/) &&
+    notfound_body&.match?(/<h1>[^<]*not found/i)
+end
+not_found_data = YAML.safe_load(read(File.join(ROOT, "_data", "not_found.yml")) || "") || {}
+check(failures, "404.html copy comes from _data/not_found.yml (heading, message, button text)") do
+  %w[heading message home_link_label].all? do |key|
+    value = not_found_data[key].to_s
+    !value.strip.empty? && notfound_html&.include?(value)
+  end
+end
+# The page is served for EVERY missing address, gated or not, so it must carry no
+# bio copy, and its header must follow the gate like every other page's.
+%w[Wilson\ Sonsini Crowell\ &\ Moring nationally\ recognized\ leader digital\ health\ law].each do |marker|
+  check(failures, "404.html does NOT leak bio text: #{marker.inspect}") do
+    notfound_html && !notfound_html.include?(marker)
+  end
+end
+gate_settings = YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml")) || "") || {}
+gate_tagline = if gate_settings["site_live"] == true
+                 (YAML.safe_load(read(File.join(ROOT, "_data", "header.yml")) || "") || {})["tagline"].to_s
+               else
+                 gate_settings.dig("coming_soon", "tagline").to_s
+               end
+check(failures, "404.html header tagline follows the gate (#{gate_tagline.inspect})") do
+  gate_tagline.empty? ? !notfound_html.to_s.include?('class="tagline"') : notfound_html.to_s.include?(">#{gate_tagline}<")
+end
+
+# PNG width/height from the IHDR chunk; nil when the bytes are not a PNG.
+def png_size(bytes)
+  return nil unless bytes && bytes.byteslice(0, 8) == "\x89PNG\r\n\x1a\n".b && bytes.byteslice(12, 4) == "IHDR"
+
+  bytes.byteslice(16, 8).unpack("NN")
+end
+
+def site_bytes(rel)
+  path = File.join(SITE, rel)
+  File.exist?(path) ? File.binread(path) : nil
+end
+
+{ "favicon-32x32.png" => [32, 32], "apple-touch-icon.png" => [180, 180] }.each do |rel, size|
+  check(failures, "/#{rel} is a #{size.join('x')} PNG") { png_size(site_bytes(rel)) == size }
+end
+ico = site_bytes("favicon.ico")
+ico_sizes =
+  if ico && ico.bytesize >= 6 && ico.unpack("vvv") == [0, 1, ico.unpack("vvv")[2]]
+    (0...ico.unpack("vvv")[2]).map do |i|
+      w, h, _c, _r, _planes, _bpp, len, off = ico.byteslice(6 + 16 * i, 16).unpack("CCCCvvVV")
+      png_size(ico.byteslice(off, len)) == [w, h] ? w : nil
+    end
+  else
+    []
+  end
+check(failures, "/favicon.ico is an ICO of PNG images that includes 16 and 32 px (got #{ico_sizes.inspect})") do
+  ico_sizes.all? && ([16, 32] - ico_sizes).empty?
+end
+favicon_svg = read(File.join(SITE, "assets", "favicon.svg"))
+check(failures, "/assets/favicon.svg is Jodi's JD monogram in the site's navy and cyan, not the theme placeholder") do
+  favicon_svg&.include?('aria-label="JD"') && favicon_svg.include?("#1a3a5c") && favicon_svg.include?("#5dd9e8")
+end
+[["/", "index.html"], ["/404.html", "404.html"]].each do |label, rel|
+  html = read(File.join(SITE, rel))
+  check(failures, "#{label} <head> links favicon.ico, the SVG icon and the Apple touch icon") do
+    html&.match?(%r{<link rel="icon" href="/favicon\.ico"}) &&
+      html.match?(%r{<link rel="icon" type="image/svg\+xml" href="/assets/favicon\.svg"}) &&
+      html.match?(%r{<link rel="apple-touch-icon" href="/apple-touch-icon\.png"})
+  end
+end
+
 puts "== #31 Jodi's logo (no 'AD' leak) =="
 logo_svg = read(logo)
 check(failures, "_site/assets/images/logo.svg exists (site file shadows the gem)") { !logo_svg.nil? }

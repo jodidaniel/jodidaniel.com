@@ -13,9 +13,19 @@ data file:
 | `_data/about.yml`    | `photo`, `intro_heading`, `lead`, `bio[]`, `nav[]` | **About** (`site_about`) |
 | `_data/contact.yml`  | `heading`, `intro`, `links[]`                  | **Contact** (`site_contact`) |
 | `_data/settings.yml` | `site_live` GATE, `coming_soon`, `footer`, `back_to_top_label`, `section_headings` | **Site Settings** (`site_settings`) |
+| `_data/not_found.yml` | `heading`, `message`, `home_link_label` — the 404 page (`404.html` → `_layouts/not-found.html`) | **Site Settings** → "Page-Not-Found Page" (`site_settings` file `not_found`) |
 
 The layout reads these as `site.data.header` / `.about` / `.contact` /
-`.settings`.
+`.settings`. The 404 page reads `site.data.not_found`. It is a site-owned layout
+(the theme's dark `default` layout and its "RSS" link are gone from it); it
+renders no bio content, so it is safe while `site_live` is false, and
+cms-platform's `e2e/not-found.spec.js` needs it to keep `.site-header`,
+`.site-footer` and an `h1` inside `main`. The icon set (`assets/favicon.svg`
+plus `favicon.ico`, `favicon-32x32.png`, `apple-touch-icon.png`) is rendered by
+`scripts/render-icons.mjs`; `_includes/favicon.html` shadows the theme's and
+links all of it. `assets/images/uploads/e2e-preview-media-probe.png` looks like
+a stray test image but is a sentinel cms-platform's `preview-media` gate and
+pin-consistency check require: do not delete it.
 
 ### About nav anchors are a closed set (issue #196)
 

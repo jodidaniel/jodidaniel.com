@@ -1,0 +1,69 @@
+{%- comment -%}
+  The 404 page, in the site's own look (the same chrome as _layouts/media.html).
+  404.html used to take the cms-platform theme's `default` layout, which drew a
+  dark, unrelated page plus an "RSS" link to a feed with no entries.
+
+  Gating: this page carries NO bio content in either mode, so it is safe to
+  render while `site_live` is false -- it says only that the address does not
+  exist. The header follows the same gate as every other page (the coming-soon
+  tagline while gated), and {% seo %} is never emitted: the page is noindex and
+  its title is just the heading plus the site name.
+
+  Copy comes from _data/not_found.yml (editable in /admin), not from here.
+
+  `.site-header` / `.site-footer` / `main h1` are the hooks cms-platform's
+  e2e/not-found.spec.js asserts on every consumer, so they stay.
+{%- endcomment -%}
+{%- assign settings = site.data.settings -%}
+{%- assign live = settings.site_live -%}
+{%- assign nf = site.data.not_found -%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="{{ page.robots | default: 'noindex,nofollow' }}">
+    <title>{{ nf.heading | escape }} | {{ site.title | escape }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Source+Sans+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+    {% include favicon.html %}
+    <link rel="stylesheet" href="{{ '/assets/css/jodidaniel.css' | cachebust }}">
+    <link rel="stylesheet" href="{{ '/assets/css/not-found.css' | cachebust }}">
+</head>
+<body>
+    <div class="site-wrapper">
+        <header class="site-header animate-in delay-1">
+            <p class="site-name"><a href="{{ '/' | relative_url }}">{{ site.data.header.name }}</a></p>
+            {%- if live -%}
+            {%- if site.data.header.tagline and site.data.header.tagline != "" -%}
+            <p class="tagline">{{ site.data.header.tagline }}</p>
+            {%- endif -%}
+            {%- else -%}
+            {%- if settings.coming_soon.tagline and settings.coming_soon.tagline != "" -%}
+            <p class="tagline">{{ settings.coming_soon.tagline }}</p>
+            {%- endif -%}
+            {%- endif -%}
+        </header>
+
+        <main id="main">
+            <div class="container not-found animate-in delay-2">
+                <h1>{{ nf.heading }}</h1>
+                <p class="not-found__message">{{ nf.message }}</p>
+                <p class="not-found__actions">
+                    <a class="contact-link" href="{{ '/' | relative_url }}">{{ nf.home_link_label }}</a>
+                </p>
+            </div>
+        </main>
+
+        {%- if live -%}
+        {%- assign copyright = settings.footer.copyright -%}
+        {%- else -%}
+        {%- assign copyright = settings.coming_soon.copyright -%}
+        {%- endif -%}
+        <footer class="site-footer animate-in delay-2">
+            <p>{{ copyright }}</p>
+        </footer>
+    </div>
+</body>
+</html>
