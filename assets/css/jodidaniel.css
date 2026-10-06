@@ -872,12 +872,17 @@ footer a:hover {
    still applies on top of this one at narrower widths. */
 @media (max-width: 767px) {
     /* issue #198 item 1: smaller + tucked further into the corner so it
-       stays clear of content on narrow viewports. */
+       stays clear of content on narrow viewports. Issue #360: it must sit
+       entirely in the gutter beside the card text, which ends 3.5rem from
+       the viewport edge (2rem .site-wrapper + 1.5rem .container padding
+       below), so right + width stays within that 3.5rem. 0.5rem + 2.5rem
+       leaves 0.5rem clear; scripts/test-back-to-top-clearance.rb holds
+       the line. */
     .back-to-top {
-        right: 1rem;
+        right: 0.5rem;
         bottom: 1rem;
-        width: 2.75rem;
-        height: 2.75rem;
+        width: 2.5rem;
+        height: 2.5rem;
     }
 
     /* Feedback item 2, phone half: the header/photo/gap trims that only
