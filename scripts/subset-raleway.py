@@ -4,8 +4,11 @@
 The site sets Raleway at weight 600 and 700 only. Google ships one variable
 font with a wght axis of 100-900; the 100-599 and 701-900 ranges are dead
 weight on the wire. This pins the axis to 600-700 (fontTools varLib.instancer,
-"limit axis range") and touches nothing else: every glyph, the Latin-1
-unicode-range coverage and the layout tables stay as shipped.
+"limit axis range"). Character coverage (the Latin-1 unicode-range) stays
+the same, but the outlines are not byte-identical: the source default weight
+is 100, outside 600-700, so fontTools re-bases the font at wght 600 and rounds
+outlines to integer units (at most 1/1000 em at 600, 2/1000 at 700; at 700,
+123 advance widths differ by 1 unit; the kern table is not byte-identical).
 
   python3 -m venv /tmp/venv && /tmp/venv/bin/pip install -r scripts/requirements-fonts.txt
   /tmp/venv/bin/python scripts/subset-raleway.py <source.woff2> assets/fonts/raleway-v37-latin-wght600-700.woff2
