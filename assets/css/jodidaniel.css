@@ -653,6 +653,10 @@ header .tagline {
 
 .media-list li {
     margin-bottom: 0.75rem;
+    /* Issue #376: the item page's back link (/#media-<slug>) scrolls the item
+       to the viewport's top edge. Leave room above it so the card's category
+       heading is usually still in view and the reader can tell where they are. */
+    scroll-margin-top: 6rem;
 }
 
 /* Issue #359: arriving at a media item's anchor (the item page's back link,
