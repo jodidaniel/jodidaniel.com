@@ -31,7 +31,8 @@ module A11yRules
   MIN_RATIO = 4.5
 
   # Rules whose text sits on the page's gradient, not on a card. axe cannot compute a contrast
-  # over a gradient (it reports "incomplete"), so these are checked in a browser, not here.
+  # over a gradient (it reports "incomplete"), so low_contrast_text skips them and
+  # tagline_problems / footer_problems score the tagline and footer against the gradient.
   ON_GRADIENT_SELECTORS = ["header", "header h1 a", "footer", "footer a"].freeze
 
   module_function
@@ -112,6 +113,171 @@ module A11yRules
         format("%s %s on %s = %.2f:1", selector, color, bg, ratio) if ratio < MIN_RATIO
       end
     end
+  end
+
+  # ---- text on the page gradient -----------------------------------------------------------
+
+  # The header tagline and the footer sit directly on the body's gradient, which axe cannot
+  # score (it reports them "incomplete"), so the contrast is computed here from the stylesheet.
+  #
+  # WCAG 1.4.3: large text (at least 24px, or bold at least 18.66px = 14pt) needs 3:1, other
+  # text 4.5:1. 600 is the heaviest Source Sans Pro file the site ships (assets/fonts), so it is
+  # the lowest weight counted as bold; 700 would be a faux bold.
+  LARGE_TEXT_PX = 24.0
+  LARGE_BOLD_TEXT_PX = 18.66
+  BOLD_MIN_WEIGHT = 600
+  LARGE_TEXT_MIN_RATIO = 3.0
+  PHONE_MEDIA = /max-width:\s*(\d+)px/
+
+  # The tagline is centered at the top of the page, so the part of the gradient behind it is
+  # bounded by where it sits: a point (x, y) on the 135deg gradient is at (x + y) / (width +
+  # height) of the way along it. Measured in Chromium over the home page and a media item page
+  # (the shortest pages put it furthest along, and the whole text box counts, not just the
+  # words): 0.62 at most from 768 to 1920 wide, 0.55 from 600 to 767 wide in landscape, and
+  # 0.38-0.41 at 320-414 wide in portrait. The bounds below leave a little headroom; the lightest
+  # stops (0.75, 1.0) are never behind it, so it is scored against the gradient only up to the
+  # bound.
+  TAGLINE_MAX_GRADIENT_POSITION = 0.7
+  # A smaller (not large text) phone size must reach 4.5:1: 0.43 covers phone widths up to 599,
+  # 0.5 covers an override that reaches 767 wide (0.48 measured at 767x1024; 4.3:1 at 16px, the
+  # gap this rule caught).
+  TAGLINE_MAX_GRADIENT_POSITION_PHONE = 0.43
+  TAGLINE_MAX_GRADIENT_POSITION_PHONE_WIDE = 0.5
+  # KNOWN GAP, not asserted: below 600 wide in a squat window (599x900 is 4.43:1, 568x320
+  # landscape 4.16:1) the 16px tagline is a little under 4.5:1; see the pull request.
+
+  # "#abc", "#aabbcc", "rgb(r, g, b)" or "rgba(r, g, b, a)" -> [r, g, b, alpha]; nil otherwise.
+  def parse_color(value)
+    value = value.to_s.strip
+    if (rgb = parse_hex(value))
+      return rgb + [1.0]
+    end
+
+    m = value.match(/\Argba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)\z/i)
+    m && [m[1].to_i, m[2].to_i, m[3].to_i, (m[4] || "1").to_f]
+  end
+
+  # `fg` ([r, g, b, alpha]) painted over the opaque `bg` ([r, g, b]) -> [r, g, b].
+  def composite(fg, bg)
+    alpha = fg[3]
+    (0..2).map { |i| (fg[i] * alpha) + (bg[i] * (1 - alpha)) }
+  end
+
+  def rgb_contrast(fg_rgb, bg_rgb)
+    lighter, darker = [relative_luminance(fg_rgb), relative_luminance(bg_rgb)].sort.reverse
+    (lighter + 0.05) / (darker + 0.05)
+  end
+
+  # The body's gradient as [[position 0..1, [r, g, b]], ...], or nil when it has none. Stops
+  # without a percentage are not used by this stylesheet and are not read.
+  def gradient_stops(css)
+    body = css_rules(css).find { |sel, decls, at| sel == "body" && at.nil? && decls["background"].to_s.include?("linear-gradient") }
+    return nil unless body
+
+    stops = body[1]["background"].scan(/(#[0-9a-f]{3,6})\s+(\d+(?:\.\d+)?)%/i).map do |hex, pct|
+      [pct.to_f / 100, parse_hex(hex)]
+    end
+    stops.empty? || stops.any? { |_pos, rgb| rgb.nil? } ? nil : stops
+  end
+
+  # The gradient's color at `position`, linearly interpolated between the stops either side.
+  def gradient_color_at(stops, position)
+    return stops.first[1] if position <= stops.first[0]
+    return stops.last[1] if position >= stops.last[0]
+
+    lo, hi = stops.each_cons(2).find { |a, b| position >= a[0] && position <= b[0] }
+    k = (position - lo[0]) / (hi[0] - lo[0])
+    (0..2).map { |i| lo[1][i] + ((hi[1][i] - lo[1][i]) * k) }
+  end
+
+  # "1.25rem" or "20px" -> px (1rem = 16px); nil for anything else.
+  def font_px(value)
+    m = value.to_s.strip.match(/\A([\d.]+)(rem|px)\z/)
+    m && (m[2] == "rem" ? m[1].to_f * 16 : m[1].to_f)
+  end
+
+  def large_text?(px, weight)
+    px >= LARGE_TEXT_PX || (px >= LARGE_BOLD_TEXT_PX && weight >= BOLD_MIN_WEIGHT)
+  end
+
+  # Problems with `header .tagline` (white text, so only its `opacity` lowers it) on the page
+  # gradient: one line per viewport class (the base rule, and the max-width override if there is one).
+  # [] when it reaches its required ratio, 3:1 as large text else 4.5:1, everywhere it can be.
+  def tagline_problems(css)
+    stops = gradient_stops(css)
+    return ["body has no readable linear-gradient background"] unless stops
+
+    rules = css_rules(css).select { |sel, _decls, _at| sel == "header .tagline" }
+    base = rules.find { |_sel, _decls, at| at.nil? }
+    return ["no `header .tagline` rule"] unless base
+
+    phone = rules.find { |_sel, decls, at| decls["font-size"] && at.to_s.match?(PHONE_MEDIA) }
+    px = font_px(base[1]["font-size"])
+    weight = base[1]["font-weight"].to_i
+    opacity = (base[1]["opacity"] || "1").to_f
+    header = css_rules(css).find { |sel, _decls, at| sel == "header" && at.nil? }
+    color = parse_color(base[1]["color"] || (header && header[1]["color"]))
+    return ["`header .tagline` has no color of its own and `header` sets none"] unless color
+    return ["`header .tagline` font-size #{base[1]['font-size'].inspect} is not rem or px"] unless px
+
+    # The base size applies above the override's max-width (all widths without one); the
+    # override's size applies at and below it.
+    classes = [["large-screen", px, TAGLINE_MAX_GRADIENT_POSITION]]
+    if phone && font_px(phone[1]["font-size"])
+      max_width = phone[2].match(PHONE_MEDIA)[1].to_i
+      limit = max_width <= 599 ? TAGLINE_MAX_GRADIENT_POSITION_PHONE : TAGLINE_MAX_GRADIENT_POSITION_PHONE_WIDE
+      classes << ["up to #{max_width}px wide", font_px(phone[1]["font-size"]), limit]
+    end
+    classes.filter_map do |name, size, limit|
+      large = large_text?(size, weight)
+      needed = large ? LARGE_TEXT_MIN_RATIO : MIN_RATIO
+      worst = (0..40).map do |i|
+        bg = gradient_color_at(stops, limit * i / 40.0)
+        rgb_contrast(composite(color[0, 3] + [color[3] * opacity], bg), bg)
+      end.min
+      next if worst >= needed
+
+      format("tagline (%s) %gpx weight %d is %s text: %.2f:1 over the gradient up to %g, needs %g:1",
+             name, size, weight, large ? "large" : "normal", worst, limit, needed)
+    end
+  end
+
+  # Problems with `footer`: its text and links (4.5:1: 14px-ish text is never large) over its own
+  # backing band composited over EVERY gradient stop. The band may be translucent, and then the
+  # lightest stop is the worst case. [] when every combination passes.
+  def footer_problems(css)
+    stops = gradient_stops(css)
+    return ["body has no readable linear-gradient background"] unless stops
+
+    rules = css_rules(css).select { |_sel, _decls, at| at.nil? }
+    footer = rules.find { |sel, _decls, _at| sel == "footer" }
+    return ["no `footer` rule"] unless footer
+
+    link = rules.find { |sel, _decls, _at| sel == "footer a" }
+    problems = []
+    if footer[1]["opacity"] && footer[1]["opacity"].to_f < 1
+      problems << "footer opacity #{footer[1]['opacity']} lowers its text contrast"
+    end
+    band = parse_color(footer[1]["background"] || footer[1]["background-color"]) || [0, 0, 0, 0.0]
+    texts = [["footer text", footer[1]["color"]]]
+    texts << ["footer link", link[1]["color"]] if link && link[1]["color"]
+    texts.each do |label, value|
+      color = parse_color(value)
+      unless color
+        problems << "#{label} color #{value.inspect} is not a color this check can read"
+        next
+      end
+
+      stops.each do |position, stop_rgb|
+        under = composite(band, stop_rgb)
+        ratio = rgb_contrast(composite(color, under), under)
+        next if ratio >= MIN_RATIO
+
+        problems << format("%s %s over the %g%% gradient stop (band %s) is %.2f:1, needs %g:1",
+                           label, value, position * 100, footer[1]["background"] || "none", ratio, MIN_RATIO)
+      end
+    end
+    problems
   end
 
   # ---- built pages ------------------------------------------------------------------------
