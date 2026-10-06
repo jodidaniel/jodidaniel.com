@@ -9,7 +9,17 @@
 #   ruby scripts/test-favicon-include.rb
 
 require "minitest/autorun"
-require "liquid"
+
+# Liquid ships with Jekyll, so it is a bundle gem, not a system one: plain `ruby`
+# (how site-verify runs this, through verify-build-artifacts.rb) may not see it.
+# Fall back to the repo's bundle when it is missing.
+begin
+  require "liquid"
+rescue LoadError
+  ENV["BUNDLE_GEMFILE"] ||= File.expand_path("../Gemfile", __dir__)
+  require "bundler/setup"
+  require "liquid"
+end
 
 class FaviconIncludeTest < Minitest::Test
   SOURCE = File.read(File.expand_path("../_includes/favicon.html", __dir__), encoding: "UTF-8")
