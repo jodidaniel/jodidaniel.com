@@ -150,6 +150,11 @@ unless OPEN_PASS
   $stdout.flush
   content_copy_passed = system(RbConfig.ruby, File.join(__dir__, "test-content-copy.rb"))
   check(failures, "scripts/test-content-copy.rb passes (output above)") { content_copy_passed == true }
+
+  puts "== unit tests: scripts/test-event-media-polish.rb =="
+  $stdout.flush
+  event_media_polish_passed = system(RbConfig.ruby, File.join(__dir__, "test-event-media-polish.rb"))
+  check(failures, "scripts/test-event-media-polish.rb passes (output above)") { event_media_polish_passed == true }
 end
 
 def read(path)

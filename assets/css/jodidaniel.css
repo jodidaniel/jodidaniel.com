@@ -386,10 +386,12 @@ header .tagline {
 
 /* Upcoming Events (feedback item 3). Reuses the .expertise-card visual
    language rather than inventing a new one: same #f8fafc panel, 0.5rem
-   radius, teal left accent border, and translateY(-3px)+shadow hover. Each
-   item is a two-column grid -- a fixed-width date column beside the body --
-   collapsing to one column at the same 767px breakpoint the rest of the
-   mobile layout uses (see @media (max-width: 767px) below). */
+   radius and teal left accent border. Unlike .expertise-card it does NOT
+   lift on hover: the card is not a link (only the title is), and a lift
+   suggests the whole card is clickable (#375). Each item is a two-column
+   grid -- a fixed-width date column beside the body -- collapsing to one
+   column at the same 767px breakpoint the rest of the mobile layout uses
+   (see @media (max-width: 767px) below). */
 .events-list {
     display: flex;
     flex-direction: column;
@@ -405,12 +407,6 @@ header .tagline {
     background: #f8fafc;
     border-radius: 0.5rem;
     border-left: 4px solid #5dd9e8;
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-
-.event-item:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
 }
 
 .event-date {
@@ -428,19 +424,20 @@ header .tagline {
     margin-bottom: 0.25rem;
 }
 
-/* Same underline-on-hover idiom as .intro-nav a: the link inherits the
-   heading's own color rather than switching to the usual link blue, so an
-   event without a URL (plain text heading) and one with a URL (linked
-   heading) read as the same visual weight. */
+/* A linked title must read as a link before anyone hovers (#375): there is
+   no hover on a phone. It takes the link color the media list uses and a
+   resting underline (not color alone), and darkens and thickens on hover. An
+   event without a URL stays a plain heading. */
 .event-body h3 a {
-    color: inherit;
-    text-decoration: none;
-    border-bottom: 2px solid transparent;
-    transition: border-color 0.25s ease;
+    color: #2d5a7b;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
 }
 
 .event-body h3 a:hover {
-    border-bottom-color: #5dd9e8;
+    color: #1a3a5c;
+    text-decoration-thickness: 2px;
 }
 
 /* Colors lifted from .timeline-item .org / .timeline-item .period -- the
