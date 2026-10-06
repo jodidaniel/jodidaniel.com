@@ -1,0 +1,33 @@
+Self-hosted web fonts (latin subset, woff2). Both families are licensed under
+the SIL Open Font License 1.1; the license texts sit beside the files
+(OFL-Raleway.txt, OFL-SourceSansPro.txt) and travel with them, as the license
+requires.
+
+These are the exact files the Google Fonts service delivered to this site
+before it was self-hosted (fonts.googleapis.com css2 request for Raleway
+400/600/700 and Source Sans Pro 300/400/600, "latin" unicode-range block),
+fetched 2026-10-05 and verified to be woff2. Nothing was modified.
+
+raleway-v37-latin.woff2
+  Variable font (wght 100-900): one file serves weights 400, 600 and 700.
+  Source: https://fonts.gstatic.com/s/raleway/v37/1Ptug8zYS_SKggPNyC0ITw.woff2
+  Upstream: https://github.com/google/fonts/tree/main/ofl/raleway
+  License: OFL-Raleway.txt
+    (https://github.com/google/fonts/blob/main/ofl/raleway/OFL.txt)
+  sha256 b1bef1f03a77a36fc257c5525e32a1dd621bb6f935b743a419da7ed0b18dc8f5
+
+source-sans-pro-v24-latin-300.woff2
+  Source: https://fonts.gstatic.com/s/sourcesanspro/v24/6xKydSBYKcSV-LCoeQqfX1RYOo3ik4zwlxdu.woff2
+  sha256 a327a082ad3f8b9d4691d019a8a825df5951f9e0b6fa3e416e711dbe7574dfd4
+source-sans-pro-v24-latin-400.woff2
+  Source: https://fonts.gstatic.com/s/sourcesanspro/v24/6xK3dSBYKcSV-LCoeQqfX1RYOo3qOK7l.woff2
+  sha256 fb7b366bd65fb747ebc7d6e2af9d8a25b056c27c4551db320fe68799ca43dc91
+source-sans-pro-v24-latin-600.woff2
+  Source: https://fonts.gstatic.com/s/sourcesanspro/v24/6xKydSBYKcSV-LCoeQqfX1RYOo3i54rwlxdu.woff2
+  sha256 a2fe82406659ad9ab5fc997e99f26dc63614f3f6fc474a1a8a2483e5248b8800
+  Upstream: Adobe's Source Sans Pro (now Source Sans 3,
+  https://github.com/adobe-fonts/source-sans); Google delisted the old name
+  in 2023 but still serves these v24 files.
+  License: OFL-SourceSansPro.txt, the copy google/fonts carried before the
+    delisting, line endings normalized to LF
+    (https://github.com/google/fonts/blob/a7bc06df72f7e1b4e20342e2b04423e579222316/ofl/sourcesanspro/OFL.txt)
