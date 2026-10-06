@@ -151,6 +151,11 @@ unless OPEN_PASS
   site_meta_passed = system(RbConfig.ruby, File.join(__dir__, "test-site-meta.rb"))
   check(failures, "scripts/test-site-meta.rb passes (output above)") { site_meta_passed == true }
 
+  puts "== unit tests: scripts/test-favicon-include.rb =="
+  $stdout.flush
+  favicon_include_passed = system(RbConfig.ruby, File.join(__dir__, "test-favicon-include.rb"))
+  check(failures, "scripts/test-favicon-include.rb passes (output above)") { favicon_include_passed == true }
+
   puts "== unit tests: scripts/test-back-to-top-clearance.rb =="
   $stdout.flush
   back_to_top_passed = system(RbConfig.ruby, File.join(__dir__, "test-back-to-top-clearance.rb"))
@@ -227,6 +232,97 @@ end
 # 404 chrome must be generic, never marketing/bio copy.
 check(failures, "404.html copy is generic chrome (says 'not found')") do
   notfound_html&.downcase&.include?("not found")
+end
+
+puts "== 404 page is the site's own, and the icon set is Jodi's =="
+# The 404 used to take the cms-platform theme's `default` layout: dark, unrelated
+# to this site, with an "RSS" link to a feed that has no entries.
+check(failures, "404.html uses the site's own stylesheet, not the theme's main.css") do
+  notfound_html&.include?("/assets/css/jodidaniel.css") && !notfound_html.include?("/assets/css/main.css")
+end
+check(failures, "404.html advertises no feed (no RSS link, no alternate feed <link>)") do
+  notfound_html && !notfound_html.include?("feed.xml") && !notfound_html.match?(/>\s*RSS\s*</) &&
+    !notfound_html.include?("application/atom+xml")
+end
+# cms-platform's e2e/not-found.spec.js skips for this site (its 404 is not on the theme
+# layout), so these are the checks that stand in for it: header, footer, a heading that
+# says not found inside <main>, and a link home.
+check(failures, "404.html has a site header, a site footer, and an h1 saying 'not found' inside <main>") do
+  notfound_html&.match?(/class="site-header[ "]/) && notfound_html.match?(/<footer class="site-footer[ "]/) &&
+    notfound_body&.match?(/<h1>[^<]*not found/i)
+end
+check(failures, "404.html has a skip link whose target is a focusable <main>") do
+  target = notfound_html.to_s[/<a class="skip-link" href="#([^"]+)"/, 1]
+  !target.nil? && notfound_html.match?(/<main id="#{Regexp.escape(target)}" tabindex="-1"/)
+end
+not_found_data = YAML.safe_load(read(File.join(ROOT, "_data", "not_found.yml")) || "") || {}
+check(failures, "404.html copy comes from _data/not_found.yml (heading, message, button text, skip link)") do
+  %w[heading message home_link_label skip_link_label].all? do |key|
+    value = not_found_data[key].to_s
+    !value.strip.empty? && notfound_html&.include?(value)
+  end
+end
+# The page is served for EVERY missing address, gated or not, so it must carry no
+# bio copy, and its header must follow the gate like every other page's.
+%w[Wilson\ Sonsini Crowell\ &\ Moring nationally\ recognized\ leader digital\ health\ law].each do |marker|
+  check(failures, "404.html does NOT leak bio text: #{marker.inspect}") do
+    notfound_html && !notfound_html.include?(marker)
+  end
+end
+gate_settings = YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml")) || "") || {}
+gate_tagline = if gate_settings["site_live"] == true
+                 (YAML.safe_load(read(File.join(ROOT, "_data", "header.yml")) || "") || {})["tagline"].to_s
+               else
+                 gate_settings.dig("coming_soon", "tagline").to_s
+               end
+check(failures, "404.html header tagline follows the gate (#{gate_tagline.inspect})") do
+  gate_tagline.empty? ? !notfound_html.to_s.include?('class="tagline"') : notfound_html.to_s.include?(">#{gate_tagline}<")
+end
+
+# PNG width/height from the IHDR chunk; nil when the bytes are not a PNG.
+def png_size(bytes)
+  return nil unless bytes && bytes.byteslice(0, 8) == "\x89PNG\r\n\x1a\n".b && bytes.byteslice(12, 4) == "IHDR"
+
+  bytes.byteslice(16, 8).unpack("NN")
+end
+
+def site_bytes(rel)
+  path = File.join(SITE, rel)
+  File.exist?(path) ? File.binread(path) : nil
+end
+
+{ "favicon-32x32.png" => [32, 32], "apple-touch-icon.png" => [180, 180] }.each do |rel, size|
+  check(failures, "/#{rel} is a #{size.join('x')} PNG") { png_size(site_bytes(rel)) == size }
+end
+ico = site_bytes("favicon.ico")
+ico_sizes =
+  if ico && ico.bytesize >= 6 && ico.unpack("vvv") == [0, 1, ico.unpack("vvv")[2]]
+    (0...ico.unpack("vvv")[2]).map do |i|
+      w, h, _c, _r, _planes, _bpp, len, off = ico.byteslice(6 + 16 * i, 16).unpack("CCCCvvVV")
+      png_size(ico.byteslice(off, len)) == [w, h] ? w : nil
+    end
+  else
+    []
+  end
+check(failures, "/favicon.ico is an ICO of PNG images that includes 16 and 32 px (got #{ico_sizes.inspect})") do
+  ico_sizes.all? && ([16, 32] - ico_sizes).empty?
+end
+favicon_svg = read(File.join(SITE, "assets", "favicon.svg"))
+# Jodi chose monogram option 8, "Navy to steel gradient": a #2d5a7b to #1a3a5c
+# gradient tile (id g8) under two #5dd9e8 strokes of width 6.5 that draw the J and D.
+check(failures, "/assets/favicon.svg is Jodi's chosen JD monogram (navy-to-steel gradient tile, cyan strokes), not the theme placeholder") do
+  favicon_svg&.include?('<linearGradient id="g8"') &&
+    favicon_svg.include?('stop-color="#2d5a7b"') && favicon_svg.include?('stop-color="#1a3a5c"') &&
+    favicon_svg.include?('fill="url(#g8)"') &&
+    favicon_svg.scan('stroke="#5dd9e8"').size == 2 && favicon_svg.include?('stroke-width="6.5"')
+end
+[["/", "index.html"], ["/404.html", "404.html"]].each do |label, rel|
+  html = read(File.join(SITE, rel))
+  check(failures, "#{label} <head> links favicon.ico, the SVG icon and the Apple touch icon") do
+    html&.match?(%r{<link rel="icon" href="/favicon\.ico"}) &&
+      html.match?(%r{<link rel="icon" type="image/svg\+xml" href="/assets/favicon\.svg"}) &&
+      html.match?(%r{<link rel="apple-touch-icon" href="/apple-touch-icon\.png"})
+  end
 end
 
 puts "== #31 Jodi's logo (no 'AD' leak) =="
@@ -745,10 +841,10 @@ check(failures, "assets/fonts/ ships an OFL license file for each family beside 
     File.file?(File.join(SITE, "assets", "fonts", n))
   end
 end
-# The critical files are preloaded on both layouts so the first paint does not
+# The critical files are preloaded on every layout (home, media, 404) so the first paint does not
 # wait for the stylesheet to discover them; `crossorigin` is required on a font
 # preload or the browser fetches the file twice.
-font_preload_pages = ["index.html"] + Dir.glob(File.join(SITE, "media", "*", "index.html")).sort.first(1).map { |f| f.delete_prefix("#{SITE}/") }
+font_preload_pages = ["index.html", "404.html"] + Dir.glob(File.join(SITE, "media", "*", "index.html")).sort.first(1).map { |f| f.delete_prefix("#{SITE}/") }
 font_preload_pages.each do |page|
   html = read(File.join(SITE, page))
   preloads = html.to_s.scan(/<link\b[^>]*>/m).select { |t| t.match?(/\brel="preload"/) }

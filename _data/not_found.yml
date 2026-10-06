@@ -1,0 +1,7 @@
+# The page a visitor sees at an address that does not exist (404.html, drawn by
+# _layouts/not-found.html). Plain, generic words: it is served on every
+# missing address, including while the site is still coming-soon.
+heading: "Page not found"
+message: "The page you were looking for doesn't exist, or it may have moved."
+home_link_label: "Return to the homepage"
+skip_link_label: "Skip to content"

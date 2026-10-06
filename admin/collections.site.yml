@@ -285,3 +285,11 @@
             fields:
               - { name: alternate_names, label: "Other Names You Publish Under", widget: list, required: false, summary: "{{fields.name}}", hint: "For example, a name with a middle initial. One name per line.", field: { name: name, label: "Name", widget: string } }
               - { name: profile_links, label: "Other Profile Pages About You", widget: list, required: false, summary: "{{fields.link}}", hint: "Web addresses of your profile pages elsewhere, such as your university page. Each one starts with https://.", field: { name: link, label: "Web Address", widget: string, pattern: ["^https://", "Start with https://"] } }
+      - name: not_found
+        label: "Page-Not-Found Page"
+        file: "_data/not_found.yml"
+        fields:
+          - { name: heading, label: "Heading", widget: string, hint: "The headline of the page visitors see when they follow a link that does not exist. It always says the page was not found, whether the full site is showing or still coming soon." }
+          - { name: message, label: "Message", widget: text, hint: "One or two sentences under the heading." }
+          - { name: home_link_label, label: "Button Text", widget: string, hint: "The button that takes them back to the home page." }
+          - { name: skip_link_label, label: "Skip Link Text", widget: string, hint: "Hidden text that appears only for visitors who navigate with the keyboard; it lets them jump past the header to the message." }
