@@ -8,10 +8,18 @@
 # Built pages are read with kramdown's HTML parser (a Jekyll dependency, so already installed),
 # not a regex: what matters is where an element sits, and a regex cannot see nesting.
 
+# kramdown is a bundle gem: `ruby` alone (how site-verify runs this script) may not see it, so
+# fall back to the repo's bundle. `bundler/setup` also writes RUBYOPT, BUNDLE_GEMFILE and
+# RUBYLIB into the environment, and every child process the caller spawns afterwards (the other
+# scripts/test-*.rb, which load minitest from the system gems) would inherit `-rbundler/setup`
+# and fail with "cannot load such file -- minitest/autorun". The bundle is already on this
+# process's load path, so put the environment back as it was found.
 begin
   require "kramdown"
 rescue LoadError
+  env_before = ENV.to_h
   require "bundler/setup"
+  ENV.replace(env_before)
   require "kramdown"
 end
 

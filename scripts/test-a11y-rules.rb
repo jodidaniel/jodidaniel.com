@@ -8,9 +8,18 @@
 #   ruby scripts/test-a11y-rules.rb
 
 require "minitest/autorun"
+
+# Loading the rules may fall back to the bundle (kramdown is not on plain ruby's gem path in
+# CI); that must not leave `-rbundler/setup` in RUBYOPT for the caller's child processes.
+ENV_BEFORE_RULES = ENV.to_h
 require_relative "a11y_rules"
+ENV_AFTER_RULES = ENV.to_h
 
 class A11yRulesTest < Minitest::Test
+  def test_loading_the_rules_leaves_the_environment_as_it_was
+    assert_equal ENV_BEFORE_RULES, ENV_AFTER_RULES
+  end
+
   # --- contrast math ----------------------------------------------------------------------
 
   def test_black_on_white_is_21_to_1
