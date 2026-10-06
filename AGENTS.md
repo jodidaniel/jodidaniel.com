@@ -286,6 +286,9 @@ platform script by hand: that is how the proxy stack got targeted.
 - Go-live (flip the gate + restore SEO/title + headshot) is **issue #26**,
   pending boss copy sign-off. Do not leak bio content to prod before then.
 - CI/platform behavior (e2e matrix, platform version notes) → `docs/CI-AND-PLATFORM.md`.
+- `/admin` labels never spell out "(optional)" (Decap adds it to every `required: false` field), and the About
+  fields rendered as Markdown carry a hint explaining the `**` bold markup. `ruby scripts/test-admin-config.rb`
+  pins both; `scripts/verify-build-artifacts.rb` runs it in CI.
 
 ## Deeper references
 
