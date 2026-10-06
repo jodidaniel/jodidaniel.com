@@ -8,7 +8,8 @@ weight on the wire. This pins the axis to 600-700 (fontTools varLib.instancer,
 the same, but the outlines are not byte-identical: the source default weight
 is 100, outside 600-700, so fontTools re-bases the font at wght 600 and rounds
 outlines to integer units (at most 1/1000 em at 600, 2/1000 at 700; at 700,
-123 advance widths differ by 1 unit; the kern table is not byte-identical).
+84 advance widths (123 horizontal metrics) differ by 1 unit; the kern table is
+not byte-identical).
 
   python3 -m venv /tmp/venv && /tmp/venv/bin/pip install -r scripts/requirements-fonts.txt
   /tmp/venv/bin/python scripts/subset-raleway.py <source.woff2> assets/fonts/raleway-v37-latin-wght600-700.woff2

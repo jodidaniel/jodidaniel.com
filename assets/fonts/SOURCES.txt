@@ -16,8 +16,8 @@ raleway-v37-latin-wght600-700.woff2
   unchanged, but the outlines are not byte-identical: the source default
   weight is 100, outside 600-700, so fontTools re-bases the font at wght 600
   and rounds outlines to integer units (at most 1/1000 em at 600, 2/1000 at
-  700; at 700, 123 advance widths differ by 1 unit; the kern table is not
-  byte-identical). 48,264 -> 33,348 bytes.
+  700; at 700, 84 advance widths (123 horizontal metrics) differ by 1 unit;
+  the kern table is not byte-identical). 48,264 -> 33,348 bytes.
   Reproduce with scripts/subset-raleway.py (header has the command); the tool
   is fontTools 4.66.0 (varLib.instancer, limit axis range) with brotli 1.2.0,
   pinned in scripts/requirements-fonts.txt. The output is byte-for-byte
