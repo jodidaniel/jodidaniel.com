@@ -118,7 +118,7 @@ end
 puts(OPEN_PASS ? "#### open-gate pass: site_live forced on in a disposable copy" : "#### committed-gate pass: _site")
 
 # The site-verify reusable (platform-owned) runs only `jekyll build` and this script, so
-# the unit tests for the rules this script applies run from here (issues #338, #339, #358).
+# the unit tests for the rules this script applies run from here (issues #338, #339, #358, #360).
 # Committed pass only: the open-gate re-entry would repeat them.
 unless OPEN_PASS
   puts "== unit tests: scripts/test-media-rules.rb =="
@@ -135,6 +135,11 @@ unless OPEN_PASS
   $stdout.flush
   site_meta_passed = system(RbConfig.ruby, File.join(__dir__, "test-site-meta.rb"))
   check(failures, "scripts/test-site-meta.rb passes (output above)") { site_meta_passed == true }
+
+  puts "== unit tests: scripts/test-back-to-top-clearance.rb =="
+  $stdout.flush
+  back_to_top_passed = system(RbConfig.ruby, File.join(__dir__, "test-back-to-top-clearance.rb"))
+  check(failures, "scripts/test-back-to-top-clearance.rb passes (output above)") { back_to_top_passed == true }
 end
 
 def read(path)
