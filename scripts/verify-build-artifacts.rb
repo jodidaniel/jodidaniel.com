@@ -1173,7 +1173,9 @@ seo_title = seo_home[%r{<title>(.*?)</title>}m, 1]
 seo_desc = seo_home[/<meta name="description" content="([^"]*)"/, 1]
 filled = ->(value) { value.is_a?(String) && !value.strip.empty? }
 site_name = filled.call(seo_data.dig("seo", "site_title")) ? seo_data.dig("seo", "site_title") : seo_config["title"].to_s
-if OPEN_PASS
+# The gate is open on the committed build too once `site_live: true` is committed
+# (go-live), so the open expectation applies there as well as on the open pass.
+if OPEN_PASS || seo_data["site_live"] == true
   launch_title = seo_data.dig("seo", "launch_title")
   expected_title = filled.call(launch_title) ? "#{launch_title} | #{site_name}" : site_name
   expected_desc = seo_data.dig("seo", "launch_description")
