@@ -46,6 +46,11 @@ footer:
 # the site's "every visible string" rule rather than hardcoded in the layout.
 back_to_top_label: "Back to top"
 
+# Keyboard skip link, the first Tab stop on the full site (WCAG 2.4.1): it jumps
+# past the header to the content. Hidden until it has keyboard focus; kept
+# /admin-editable like every other visible string.
+skip_link_label: "Skip to main content"
+
 # Jodi's 2026-08-30 feedback item 1 ("too lawyery/conservative"): the headings
 # read as section labels a person would say out loud rather than CV rubrics.
 # `events_heading` is new with the Upcoming Events section (feedback item 3).
@@ -66,3 +71,14 @@ section_headings:
   media_authored_heading: "Written by Jodi"
   media_coverage_heading: "Appearances & Coverage"
   education_heading: "Education"
+
+# Facts that only search engines read (the Person data in the page source). The
+# job title, firm and schools come from the Experience and Education sections;
+# her profile links come from Contact. These two lists add what has no
+# visible home on the page.
+share:
+  alternate_names:
+    - "Jodi Goldstein Daniel"
+    - "Jodi G. Daniel"
+  profile_links:
+    - "https://medicine.yale.edu/profile/jodi-daniel/"

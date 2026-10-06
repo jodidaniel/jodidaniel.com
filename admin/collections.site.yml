@@ -265,15 +265,26 @@
             fields:
               - { name: copyright, label: "Copyright", widget: string }
           - { label: "Back to Top Button Label", name: "back_to_top_label", widget: "string", hint: "Accessible label for the floating back-to-top button (screen readers only; it's an icon)." }
+          - { label: "Skip Link Label", name: "skip_link_label", widget: "string", required: false, hint: "The first thing a keyboard visitor reaches when they press Tab: a link that jumps past the header to the content. It stays hidden until it is focused. Leave blank to use \"Skip to main content\"." }
           - name: section_headings
             label: "Section Headings"
             widget: object
             fields:
+              - { name: events_heading,          label: "Events Heading", widget: string, hint: "The title of the upcoming events section." }
               - { name: expertise_heading,       label: "Expertise Heading", widget: string }
               - { name: experience_heading,      label: "Experience Heading", widget: string }
               - { name: accomplishments_heading, label: "Accomplishments Heading", widget: string }
               - { name: media_heading,           label: "Media Heading", widget: string }
+              - { name: media_authored_heading,  label: "Written Work Label", widget: string, hint: "The small label above the first group in the writing, talks and press section, for the articles, briefs and testimony you wrote." }
+              - { name: media_coverage_heading,  label: "Appearances Label", widget: string, hint: "The small label above the second group in the writing, talks and press section, for the talks, interviews and press about you." }
               - { name: education_heading,       label: "Education Heading", widget: string }
+          - name: share
+            label: "Search Facts (not shown on the page)"
+            widget: object
+            hint: "Facts Google reads to connect this site with you. Nothing here appears on the page itself. Your job title, firm and schools come from the Experience and Education sections, and your profile links come from Contact."
+            fields:
+              - { name: alternate_names, label: "Other Names You Publish Under", widget: list, required: false, summary: "{{fields.name}}", hint: "For example, a name with a middle initial. One name per line.", field: { name: name, label: "Name", widget: string } }
+              - { name: profile_links, label: "Other Profile Pages About You", widget: list, required: false, summary: "{{fields.link}}", hint: "Web addresses of your profile pages elsewhere, such as your university page. Each one starts with https://.", field: { name: link, label: "Web Address", widget: string, pattern: ["^https://", "Start with https://"] } }
       - name: not_found
         label: "Page-Not-Found Page"
         file: "_data/not_found.yml"

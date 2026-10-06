@@ -75,12 +75,34 @@ html {
     }
 }
 
+/* Skip link (WCAG 2.4.1): the first tab stop, hidden until it has focus. */
+.skip-link {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 0.75rem 1.25rem;
+    background: #1a3a5c;
+    color: #ffffff;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    text-decoration: none;
+    transform: translateY(-120%);
+}
+
+.skip-link:focus {
+    transform: translateY(0);
+    z-index: 10;
+    outline: 3px solid #5dd9e8;
+    outline-offset: 2px;
+}
+
 /* issue #198 item 3 (companion to the JS focus handoff in _layouts/home.html):
    activating a nav pill moves focus to the target section so keyboard Tab
    resumes from there. That section is focused programmatically, not tabbed to,
    so it must not paint a focus ring around the whole box -- the visitor did not
    navigate to it by keyboard. Scoped tightly to the roving tabindex="-1" targets
    so it can never suppress a real, user-initiated focus indicator elsewhere. */
+main[tabindex="-1"]:focus,
 section[tabindex="-1"]:focus,
 body[tabindex="-1"]:focus {
     outline: none;
@@ -151,6 +173,18 @@ body::after {
 .delay-7 { animation-delay: 1.2s; }
 .delay-8 { animation-delay: 1.4s; }
 .delay-9 { animation-delay: 1.6s; }
+
+/* WCAG 2.2 AA: the fade-in above starts every block at opacity 0 and reveals
+   it over up to ~2.2 s (0.8 s animation + the longest delay). A visitor who
+   asked for reduced motion gets the content at once, with no fade or slide.
+   After the rules it overrides, so the cascade order decides it. */
+@media (prefers-reduced-motion: reduce) {
+    .animate-in {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+}
 
 .site-wrapper {
     max-width: 74rem;
@@ -227,6 +261,7 @@ header .tagline {
 .profile-image {
     width: 100%;
     max-width: 180px;
+    height: auto; /* the width/height attributes only reserve the box */
     border-radius: 0.5rem;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -351,10 +386,12 @@ header .tagline {
 
 /* Upcoming Events (feedback item 3). Reuses the .expertise-card visual
    language rather than inventing a new one: same #f8fafc panel, 0.5rem
-   radius, teal left accent border, and translateY(-3px)+shadow hover. Each
-   item is a two-column grid -- a fixed-width date column beside the body --
-   collapsing to one column at the same 767px breakpoint the rest of the
-   mobile layout uses (see @media (max-width: 767px) below). */
+   radius and teal left accent border. Unlike .expertise-card it does NOT
+   lift on hover: the card is not a link (only the title is), and a lift
+   suggests the whole card is clickable (#375). Each item is a two-column
+   grid -- a fixed-width date column beside the body -- collapsing to one
+   column at the same 767px breakpoint the rest of the mobile layout uses
+   (see @media (max-width: 767px) below). */
 .events-list {
     display: flex;
     flex-direction: column;
@@ -370,12 +407,6 @@ header .tagline {
     background: #f8fafc;
     border-radius: 0.5rem;
     border-left: 4px solid #5dd9e8;
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-
-.event-item:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
 }
 
 .event-date {
@@ -393,19 +424,20 @@ header .tagline {
     margin-bottom: 0.25rem;
 }
 
-/* Same underline-on-hover idiom as .intro-nav a: the link inherits the
-   heading's own color rather than switching to the usual link blue, so an
-   event without a URL (plain text heading) and one with a URL (linked
-   heading) read as the same visual weight. */
+/* A linked title must read as a link before anyone hovers (#375): there is
+   no hover on a phone. It takes the link color the media list uses and a
+   resting underline (not color alone), and darkens and thickens on hover. An
+   event without a URL stays a plain heading. */
 .event-body h3 a {
-    color: inherit;
-    text-decoration: none;
-    border-bottom: 2px solid transparent;
-    transition: border-color 0.25s ease;
+    color: #2d5a7b;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
 }
 
 .event-body h3 a:hover {
-    border-bottom-color: #5dd9e8;
+    color: #1a3a5c;
+    text-decoration-thickness: 2px;
 }
 
 /* Colors lifted from .timeline-item .org / .timeline-item .period -- the
@@ -419,7 +451,7 @@ header .tagline {
 
 .event-location {
     font-size: 0.85rem;
-    color: #8a9aaa;
+    color: #5f6f7f;
     margin-bottom: 0.25rem;
 }
 
@@ -515,7 +547,7 @@ header .tagline {
 
 .timeline-item .period {
     font-size: 0.85rem;
-    color: #8a9aaa;
+    color: #5f6f7f;
     margin-bottom: 0.5rem;
 }
 
@@ -621,6 +653,10 @@ header .tagline {
 
 .media-list li {
     margin-bottom: 0.75rem;
+    /* Issue #376: the item page's back link (/#media-<slug>) scrolls the item
+       to the viewport's top edge. Leave room above it so the card's category
+       heading is usually still in view and the reader can tell where they are. */
+    scroll-margin-top: 6rem;
 }
 
 /* Issue #359: arriving at a media item's anchor (the item page's back link,
@@ -648,7 +684,7 @@ body:has(.media-list li:target) .animate-in {
 
 .media-list .source {
     font-size: 0.8rem;
-    color: #8a9aaa;
+    color: #5f6f7f;
     display: block;
     margin-top: 0.15rem;
 }
@@ -680,7 +716,7 @@ body:has(.media-list li:target) .animate-in {
 }
 
 .media-detail__source {
-    color: #6a7a8a;
+    color: #5f6f7f;
     font-size: 1rem;
     margin-top: 0.5rem;
 }
@@ -837,12 +873,17 @@ footer a:hover {
    still applies on top of this one at narrower widths. */
 @media (max-width: 767px) {
     /* issue #198 item 1: smaller + tucked further into the corner so it
-       stays clear of content on narrow viewports. */
+       stays clear of content on narrow viewports. Issue #360: it must sit
+       entirely in the gutter beside the card text, which ends 3.5rem from
+       the viewport edge (2rem .site-wrapper + 1.5rem .container padding
+       below), so right + width stays within that 3.5rem. 0.5rem + 2.5rem
+       leaves 0.5rem clear; scripts/test-back-to-top-clearance.rb holds
+       the line. */
     .back-to-top {
-        right: 1rem;
+        right: 0.5rem;
         bottom: 1rem;
-        width: 2.75rem;
-        height: 2.75rem;
+        width: 2.5rem;
+        height: 2.5rem;
     }
 
     /* Feedback item 2, phone half: the header/photo/gap trims that only

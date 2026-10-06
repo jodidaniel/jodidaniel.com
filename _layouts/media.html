@@ -33,7 +33,46 @@
     <link rel="preload" href="{{ '/assets/fonts/raleway-v37-latin.woff2' | relative_url }}" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="{{ '/assets/fonts/source-sans-pro-v24-latin-300.woff2' | relative_url }}" as="font" type="font/woff2" crossorigin>
     {%- if live -%}
-    {% seo %}
+    {%- comment -%}
+      Hand-written head, NOT {% seo %}. The tag types any collection document
+      with a `date` as a BlogPosting by Jodi with datePublished = the build
+      time (a media item has no real date; `date_display` is free text), and
+      a third party's article ABOUT her is not her blog post. Here the page is
+      a plain WebPage that belongs to the site, with its own description
+      (the tag fell back to the site-wide one on all of them) and no
+      article:published_time. No link preview image is set here (none is today).
+    {%- endcomment -%}
+    {%- capture media_desc -%}{{ page.title }}{% if page.source and page.source != "" %} — {{ page.source }}{% endif %}{% if page.date_display and page.date_display != "" %}, {{ page.date_display }}{% endif %}{%- endcapture -%}
+    {%- comment -%}
+      Smart quotes, as {% seo %} gave these titles (it runs smartify). smartify
+      returns entity-escaped HTML text, so the HTML spots (<title>, og:title,
+      twitter:title) use `escape_once`, and the plain-text spots (meta description,
+      JSON-LD, which escape or JSON-encode themselves) get the entities decoded,
+      `&amp;` last so it cannot create a second decode.
+    {%- endcomment -%}
+    {%- assign media_title_html = page.title | strip_html | normalize_whitespace | smartify -%}
+    {%- assign media_title = media_title_html | replace: "&lt;", "<" | replace: "&gt;", ">" | replace: "&quot;", '"' | replace: "&amp;", "&" -%}
+    {%- assign media_desc = media_desc | strip_html | normalize_whitespace | smartify | replace: "&lt;", "<" | replace: "&gt;", ">" | replace: "&quot;", '"' | replace: "&amp;", "&" -%}
+    {%- assign media_canonical = page.url | absolute_url -%}
+    <title>{{ media_title_html | escape_once }} | {{ site.title | escape }}</title>
+    <meta name="description" content="{{ media_desc | escape }}" />
+    <link rel="canonical" href="{{ media_canonical }}" />
+    {%- if site.author.name %}
+    <meta name="author" content="{{ site.author.name | escape }}" />
+    {%- endif %}
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content="{{ media_title_html | escape_once }}" />
+    <meta property="og:description" content="{{ media_desc | escape }}" />
+    <meta property="og:url" content="{{ media_canonical }}" />
+    <meta property="og:site_name" content="{{ site.title | escape }}" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="{{ media_title_html | escape_once }}" />
+    <meta name="twitter:description" content="{{ media_desc | escape }}" />
+    {%- capture media_json -%}
+    {"@context":"https://schema.org","@type":"WebPage","name":{{ media_title | jsonify }},"url":{{ media_canonical | jsonify }},"description":{{ media_desc | jsonify }},"isPartOf":{"@type":"WebSite","name":{{ site.title | jsonify }},"url":{{ "/" | absolute_url | jsonify }}}}
+    {%- endcapture %}
+    <script type="application/ld+json">{{ media_json | replace: "<", "\u003c" }}</script>
     {%- else -%}
     <title>{{ site.title | escape }}</title>
     <meta name="robots" content="noindex,nofollow">
@@ -49,6 +88,9 @@
     <link rel="stylesheet" href="{{ '/assets/css/jodidaniel.css' | cachebust }}">
 </head>
 <body>
+    {%- if live -%}
+    <a class="skip-link" href="#main">{{ settings.skip_link_label | default: 'Skip to main content' }}</a>
+    {%- endif -%}
     <div class="site-wrapper">
         <header class="animate-in delay-1">
             <h1><a href="{{ '/' | relative_url }}">{{ site.data.header.name }}</a></h1>
@@ -64,6 +106,7 @@
         </header>
 
         {%- if live -%}
+        <main id="main" tabindex="-1">
         <article class="container media-detail animate-in delay-2">
             {%- if page.category and page.category != "" -%}
             <span class="section-title">{{ page.category }}</span>
@@ -176,6 +219,7 @@
                 <a href="{{ '/#media-' | append: page.slug | relative_url }}">&larr; Back to {{ settings.section_headings.media_heading | default: "Media" }}</a>
             </p>
         </article>
+        </main>
         {%- endif -%}
 
         {%- if live -%}

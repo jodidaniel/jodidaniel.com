@@ -40,6 +40,11 @@ require "fileutils"
 require "rbconfig"
 require "tmpdir"
 require_relative "media_rules"
+require_relative "person_rules"
+require_relative "a11y_rules"
+# After a11y_rules, which may put the bundle on the load path: a `require "json"` before it
+# activates the default json gem, and `bundler/setup` then dies on the Gemfile.lock pin.
+require "json"
 
 REPO_ROOT = File.expand_path("..", __dir__)
 OPEN_PASS = ARGV[0] == "--open-pass"
@@ -118,7 +123,7 @@ end
 puts(OPEN_PASS ? "#### open-gate pass: site_live forced on in a disposable copy" : "#### committed-gate pass: _site")
 
 # The site-verify reusable (platform-owned) runs only `jekyll build` and this script, so
-# the unit tests for the rules this script applies run from here (issues #338, #339, #358).
+# the unit tests for the rules this script applies run from here (issues #338, #339, #358, #360, and the copy-consistency checks).
 # Committed pass only: the open-gate re-entry would repeat them.
 unless OPEN_PASS
   puts "== unit tests: scripts/test-media-rules.rb =="
@@ -131,6 +136,16 @@ unless OPEN_PASS
   admin_config_passed = system(RbConfig.ruby, File.join(__dir__, "test-admin-config.rb"))
   check(failures, "scripts/test-admin-config.rb passes (output above)") { admin_config_passed == true }
 
+  puts "== unit tests: scripts/test-person-rules.rb =="
+  $stdout.flush
+  person_rules_passed = system(RbConfig.ruby, File.join(__dir__, "test-person-rules.rb"))
+  check(failures, "scripts/test-person-rules.rb passes (output above)") { person_rules_passed == true }
+
+  puts "== unit tests: scripts/test-a11y-rules.rb =="
+  $stdout.flush
+  a11y_rules_passed = system(RbConfig.ruby, File.join(__dir__, "test-a11y-rules.rb"))
+  check(failures, "scripts/test-a11y-rules.rb passes (output above)") { a11y_rules_passed == true }
+
   puts "== unit tests: scripts/test-site-meta.rb =="
   $stdout.flush
   site_meta_passed = system(RbConfig.ruby, File.join(__dir__, "test-site-meta.rb"))
@@ -140,6 +155,21 @@ unless OPEN_PASS
   $stdout.flush
   favicon_include_passed = system(RbConfig.ruby, File.join(__dir__, "test-favicon-include.rb"))
   check(failures, "scripts/test-favicon-include.rb passes (output above)") { favicon_include_passed == true }
+
+  puts "== unit tests: scripts/test-back-to-top-clearance.rb =="
+  $stdout.flush
+  back_to_top_passed = system(RbConfig.ruby, File.join(__dir__, "test-back-to-top-clearance.rb"))
+  check(failures, "scripts/test-back-to-top-clearance.rb passes (output above)") { back_to_top_passed == true }
+
+  puts "== unit tests: scripts/test-content-copy.rb =="
+  $stdout.flush
+  content_copy_passed = system(RbConfig.ruby, File.join(__dir__, "test-content-copy.rb"))
+  check(failures, "scripts/test-content-copy.rb passes (output above)") { content_copy_passed == true }
+
+  puts "== unit tests: scripts/test-event-media-polish.rb =="
+  $stdout.flush
+  event_media_polish_passed = system(RbConfig.ruby, File.join(__dir__, "test-event-media-polish.rb"))
+  check(failures, "scripts/test-event-media-polish.rb passes (output above)") { event_media_polish_passed == true }
 end
 
 def read(path)
@@ -1132,6 +1162,37 @@ check(
   "expected #{expected_event_fields.inspect}"
 ) { events_seam_field_names == expected_event_fields }
 
+puts "== accessibility: WCAG 2.2 AA (contrast, landmarks, headings, reduced motion) =="
+# The audit's axe-core run found 27 text nodes in #8a9aaa at 2.75-2.88:1 and no <main>,
+# skip link or <h2> section titles, and the entrance fade-in kept content invisible for up to
+# 2.2 s under prefers-reduced-motion. The rules live in scripts/a11y_rules.rb (tested by
+# scripts/test-a11y-rules.rb); the built pages are read with kramdown's HTML parser, not a regex.
+a11y_css = read(File.join(ROOT, "assets", "css", "jodidaniel.css")).to_s
+low_contrast = A11yRules.low_contrast_text(a11y_css)
+check(failures, "every solid text color in jodidaniel.css reaches #{A11yRules::MIN_RATIO}:1 on its surface") do
+  low_contrast.empty?
+end
+low_contrast.each { |offender| puts "       ^ #{offender}" }
+check(failures, "jodidaniel.css shows .animate-in content under prefers-reduced-motion (after the fade-in rule)") do
+  A11yRules.reduced_motion_shows_content?(a11y_css)
+end
+
+a11y_pages = { "home page" => [File.join(SITE, "index.html"), true] }
+media_src.each do |src|
+  a11y_pages["#{File.basename(src, '.md')} item page"] = [MediaRules.page_path(SITE, src, media_front_matter(src)), false]
+end
+a11y_open = home_html.to_s.include?('<section id="about"')
+if a11y_open
+  a11y_pages.each do |label, (path, home)|
+    html = read(path)
+    problems = html ? A11yRules.page_problems(html, home: home) : ["page not built at #{path}"]
+    check(failures, "built #{label}: <main>, skip link, heading order and image sizes are in place") { problems.empty? }
+    problems.each { |problem| puts "       ^ #{problem}" }
+  end
+else
+  gate_hidden(failures, "the built-page landmark/skip-link/heading checks")
+end
+
 puts "== editor-facing admin copy stays out of developer vocabulary =="
 # Every word an editor reads in /admin comes from this seam, and the premise of
 # this site (AGENTS.md, "Keep every visible string /admin-editable") is that its
@@ -1191,6 +1252,122 @@ check(failures, "no admin label/hint/validation message uses developer vocabular
 end
 jargon_offenders.each { |(kind, text)| puts "       ^ #{kind}: #{text}" }
 
+# ---------------------------------------------------------------------------
+# Share titles + Person data (audit #4/#5). The Person facts, the share titles
+# and the media pages' schema only exist once the gate is open (open-gate pass);
+# the gated pass checks that none of it leaks.
+# ---------------------------------------------------------------------------
+puts "== share titles + structured data =="
+site_url = (YAML.safe_load(read(File.join(ROOT, "_config.yml"))) || {})["url"].to_s
+person_name = (YAML.safe_load(read(File.join(ROOT, "_data", "header.yml"))) || {})["name"].to_s
+author_name = ((YAML.safe_load(read(File.join(ROOT, "_config.yml"))) || {})["author"] || {})["name"].to_s
+
+# Every <meta> (property|name => [content, ...]) in a page's <head>, so a
+# duplicate is visible rather than the first one silently winning.
+def head_metas(html)
+  head = html.to_s[%r{<head>.*?</head>}m].to_s
+  head.scan(/<meta\s+([^>]*?)\s*\/?>/m).each_with_object(Hash.new { |h, k| h[k] = [] }) do |(attrs), acc|
+    key = attrs[/(?:property|name)="([^"]+)"/, 1]
+    acc[key] << attrs[/content="([^"]*)"/, 1] if key
+  end
+end
+
+def ld_json_blocks(html)
+  html.to_s.scan(%r{<script type="application/ld\+json">(.*?)</script>}m).flatten.map { |raw| JSON.parse(raw) }
+end
+
+home_share_html = read(File.join(SITE, "index.html"))
+home_metas = head_metas(home_share_html)
+# No link preview image is set by this change (whether her headshot belongs on
+# one is an open decision), so neither page type may carry one yet.
+check(failures, "the home page sets no og:image or twitter:image") do
+  !home_metas.key?("og:image") && !home_metas.key?("twitter:image")
+end
+settings_src = YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml"))) || {}
+if settings_src["site_live"] == true
+  # --- open gate: Person on the home page ---------------------------------
+  # The share title leads with her name (a bare role title read as a slogan with
+  # no one attached). Exactly one of each: a failed prefix replace would leave the
+  # bare title, a double insert would repeat the name.
+  %w[og:title twitter:title].each do |key|
+    check(failures, "home #{key} is one value and leads with #{person_name.inspect}: #{home_metas[key].inspect}") do
+      home_metas[key].size == 1 && home_metas[key].first.start_with?(person_name) &&
+        !home_metas[key].first.start_with?("#{person_name} | #{person_name}")
+    end
+  end
+
+  home_ld = ld_json_blocks(home_share_html)
+  persons = home_ld.select { |b| b["@type"] == "Person" }
+  check(failures, "home page emits exactly one top-level Person (JSON-LD), got #{persons.size}") { persons.size == 1 }
+  person = persons.first || {}
+  want = PersonRules.expected(ROOT)
+  got = PersonRules.observed(person)
+  check(failures, "Person name is #{person_name.inspect} and url is the site root") do
+    person["name"] == person_name && person["url"] == "#{site_url}/"
+  end
+  # One comparison per field, derived from the source files (scripts/person_rules.rb),
+  # so an /admin edit (a changed Contact link, "present" in any case, no current
+  # job) moves the expectation with it instead of tripping a hardcoded fact.
+  %w[jobTitle worksFor alumniOf knowsAbout sameAs alternateName].each do |field|
+    check(failures, "Person #{field} matches the source content: want #{want[field].inspect}, got #{got[field].inspect}") do
+      got[field] == want[field]
+    end
+  end
+  check(failures, "Person sameAs entries are all https") { person["sameAs"].to_a.all? { |u| u.start_with?("https://") } }
+  check(failures, "the Person script holds no raw '<' (so no value can close the script tag)") do
+    home_share_html.scan(%r{<script type="application/ld\+json">(.*?)</script>}m).flatten.none? { |raw| raw.include?("<") }
+  end
+
+  # --- open gate: media pages are WebPages, not her blog posts ---------------
+  media_pages = Dir[File.join(SITE, "media", "*", "index.html")].sort
+  check(failures, "open-gate build has media pages to check (#{media_pages.size})") { media_pages.size > 0 }
+  descs = []
+  media_pages.each do |f|
+    slug = File.basename(File.dirname(f))
+    html = read(f)
+    blocks = ld_json_blocks(html)
+    metas = head_metas(html)
+    descs << metas["description"].first
+    check(failures, "media/#{slug}: schema is one WebPage with no BlogPosting, datePublished or author") do
+      blocks.size == 1 && blocks.first["@type"] == "WebPage" &&
+        !html.include?("BlogPosting") && !html.include?("datePublished") && !blocks.first.key?("author")
+    end
+    # {% seo %} ran smartify on these titles, so a contraction showed a curly
+    # apostrophe in the tab and the share titles; the hand-written head has to keep that.
+    source_title = (media_front_matter(File.join(ROOT, "_media", "#{slug}.md")) || {})["title"].to_s.gsub(/\s+/, " ").strip
+    unless source_title.empty?
+      want_title = source_title.gsub(/(?<=\w)'(?=\w)/, "\u2019")
+      tab_title = CGI.unescapeHTML(html[%r{<title>(.*?)</title>}m, 1].to_s)
+      shown = [tab_title.sub(/ \| [^|]*\z/, ""), CGI.unescapeHTML(metas["og:title"].first.to_s), CGI.unescapeHTML(metas["twitter:title"].first.to_s)]
+      check(failures, "media/#{slug}: tab, og and twitter titles keep smart apostrophes: want #{want_title.inspect}, got #{shown.inspect}") do
+        if source_title.include?('"')
+          shown.none? { |t| t.include?("'") || t.include?('"') }
+        else
+          shown.all? { |t| t == want_title }
+        end
+      end
+    end
+    check(failures, "media/#{slug}: not typed as an article (og:type website, no article:published_time)") do
+      metas["og:type"] == ["website"] && !metas.key?("article:published_time")
+    end
+    check(failures, "media/#{slug}: keeps og:locale and the author meta the tag used to emit") do
+      metas["og:locale"] == ["en_US"] && metas["author"] == [author_name]
+    end
+    check(failures, "media/#{slug}: sets no og:image or twitter:image, and uses the small card") do
+      !metas.key?("og:image") && !metas.key?("twitter:image") && metas["twitter:card"] == ["summary"]
+    end
+  end
+  check(failures, "every media page has its own description (not one site-wide string)") do
+    descs.size == descs.uniq.size && descs.none? { |d| d.to_s.empty? }
+  end
+else
+  # --- gated: no bio fact ----------------------------------------------------
+  check(failures, "gated home page serves NO Person data and no job title (no claim before sign-off)") do
+    html = home_share_html.to_s
+    ld_json_blocks(html).empty? && !html.include?("jobTitle") && !html.include?("Wilson Sonsini")
+  end
+end
+
 # The tab title and meta description on the built home page come from
 # _data/settings.yml `seo:` (applied by _plugins/site_meta_from_settings.rb), so
 # an /admin edit reaches the page. Gated: the site name plus the coming-soon
@@ -1208,7 +1385,9 @@ seo_title = seo_home[%r{<title>(.*?)</title>}m, 1]
 seo_desc = seo_home[/<meta name="description" content="([^"]*)"/, 1]
 filled = ->(value) { value.is_a?(String) && !value.strip.empty? }
 site_name = filled.call(seo_data.dig("seo", "site_title")) ? seo_data.dig("seo", "site_title") : seo_config["title"].to_s
-if OPEN_PASS
+# The gate is open on the committed build too once `site_live: true` is committed
+# (go-live), so the open expectation applies there as well as on the open pass.
+if OPEN_PASS || seo_data["site_live"] == true
   launch_title = seo_data.dig("seo", "launch_title")
   expected_title = filled.call(launch_title) ? "#{launch_title} | #{site_name}" : site_name
   expected_desc = seo_data.dig("seo", "launch_description")

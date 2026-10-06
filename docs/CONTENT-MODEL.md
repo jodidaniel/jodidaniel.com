@@ -12,7 +12,7 @@ data file:
 | `_data/header.yml`   | `name`, `tagline`                              | **Header / Hero** (`site_header`) |
 | `_data/about.yml`    | `photo`, `intro_heading`, `lead`, `bio[]`, `nav[]` | **About** (`site_about`) |
 | `_data/contact.yml`  | `heading`, `intro`, `links[]`                  | **Contact** (`site_contact`) |
-| `_data/settings.yml` | `site_live` GATE, `coming_soon`, `seo` (site name, launch title, Google description), `footer`, `back_to_top_label`, `section_headings` | **Site Settings** (`site_settings`) |
+| `_data/settings.yml` | `site_live` GATE, `coming_soon`, `seo` (site name, launch title, Google description), `footer`, `back_to_top_label`, `skip_link_label`, `section_headings`, `share` (search-engine-only facts) | **Site Settings** (`site_settings`) |
 | `_data/not_found.yml` | `heading`, `message`, `home_link_label`, `skip_link_label` — the 404 page (`404.html` → `_layouts/not-found.html`) | **Site Settings** → "Page-Not-Found Page" (`site_settings` file `not_found`) |
 
 The layout reads these as `site.data.header` / `.about` / `.contact` /
@@ -27,6 +27,28 @@ plus `favicon.ico`, `favicon-32x32.png`, `apple-touch-icon.png`) is rendered by
 links all of it (and still honors `cms.favicon_url`, verbatim, as the theme's does; `scripts/test-favicon-include.rb` covers that). `assets/images/uploads/e2e-preview-media-probe.png` looks like
 a stray test image but is a sentinel cms-platform's `preview-media` gate and
 pin-consistency check require: do not delete it.
+
+### Share titles, `Person` data and media-page schema (audit #4/#5)
+
+The open home page's `{% seo %}` output is led by her name in the share titles,
+and it carries one `Person` entity; media item pages describe themselves
+honestly. **No link-preview image is set** (that work is separate, and whether
+her headshot belongs on a preview is an open decision).
+
+- **Open**: `_includes/home-seo.html` calls `{% seo %}` with the share titles led
+  by her name (the tab `<title>` is unchanged) and adds one `Person` JSON-LD
+  built only from repo content: current role and firm (first Experience item
+  whose `period` contains "present", any case; none means no job title), schools (Education), areas (Expertise),
+  `sameAs` from Contact links plus `settings.share.profile_links`, and
+  `alternateName` from `settings.share.alternate_names`.
+- **Media item pages** write their own head (not `{% seo %}`): a `WebPage`
+  that is part of the site, with a per-item description. The tag would type
+  every collection document as her `BlogPosting` dated at build time.
+
+`scripts/verify-build-artifacts.rb` ("share titles + structured data") asserts all
+of it, deriving the expected Person from the source files
+(`scripts/person_rules.rb`) rather than hardcoding facts, so ordinary `/admin`
+edits do not trip it; `scripts/test-person-rules.rb` builds the edited cases.
 
 ### About nav anchors are a closed set (issue #196)
 
