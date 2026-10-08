@@ -176,7 +176,7 @@ do not re-add them, they would be a second, unedited source
 headshot — after the boss approves the copy. Until then, no bio content reaches prod and
 no marketing claim ships. Do not flip the gate on your own initiative.
 
-**`/admin` now SAYS the site is gated**, on every screen, instead of leaving it
+**`/admin` SAYS the site is gated**, on every screen, instead of leaving it
 discoverable only by opening the Settings collection. The gate's location is
 declared in `_config.yml` as `cms.site_gate` (path / field / Decap entry route
 / label); both cms-platform render paths inject it as `window.CMS_SITE_GATE`
@@ -191,14 +191,6 @@ and `admin/site-gate-banner.js` renders the banner (cms-platform v0.1.95,
   `site_live` under another key, or quoting its value, makes the banner show
   NOTHING rather than something wrong — deliberately, since claiming the site
   is gated when it is not would be worse than silence.
-
-### Known open blockers (CMS editing)
-
-All three blockers previously tracked here (#27 org OAuth App access
-restrictions, the `CMS_E2E_PAT` repo secret, #28 "Live Preview" 404s) are now
-RESOLVED — see
-[`docs/CI-AND-PLATFORM.md`](docs/CI-AND-PLATFORM.md#resolved-blockers-historical)
-for the full history.
 
 ## Content model (per-section, all `/admin`-editable)
 
@@ -223,9 +215,9 @@ The e2e matrix's per-project jobs, worker counts, expected wall-clock range
 [`docs/CI-AND-PLATFORM.md`](docs/CI-AND-PLATFORM.md) before reasoning about a
 red or slow e2e run.
 
-## Platform v0.1.76 — what changed for this repo
+## Workflow triggers and scheduled-run behavior
 
-The `pull_request: edited` trigger removal, the scheduled-run health audit's
+The `pull_request: edited` trigger's absence, the scheduled-run health audit's
 runner-starvation fix, and the deploy-lane diagnostic's merge-aware verdicts
 → read [`docs/CI-AND-PLATFORM.md`](docs/CI-AND-PLATFORM.md) before treating an
 old "chain never fired" log line as a trigger bug.
@@ -292,7 +284,7 @@ platform script by hand: that is how the proxy stack got targeted.
   verbatim from it.
 - Go-live (flip the gate + restore SEO/title + headshot) is **issue #26**,
   pending boss copy sign-off. Do not leak bio content to prod before then.
-- CI/platform behavior (e2e matrix, platform version notes) → `docs/CI-AND-PLATFORM.md`.
+- CI/platform behavior (e2e matrix, workflow triggers, scheduled runs) → `docs/CI-AND-PLATFORM.md`.
 - `/admin` labels never spell out "(optional)" (Decap adds it to every `required: false` field), and the About
   fields rendered as Markdown carry a hint explaining the `**` bold markup. `ruby scripts/test-admin-config.rb`
   pins both; `scripts/verify-build-artifacts.rb` runs it in CI.
@@ -303,8 +295,8 @@ platform script by hand: that is how the proxy stack got targeted.
   or reshaping a content source, or when touching `/admin` config or adding a
   new section/collection.
 - [`docs/CI-AND-PLATFORM.md`](docs/CI-AND-PLATFORM.md) — read when triaging a
-  red or slow e2e run, understanding what the platform v0.1.76 bump changed
-  here, or looking up the history of a now-resolved CMS-editing blocker.
+  red or slow e2e run, understanding the workflow triggers and scheduled-run
+  behavior, or looking up the history of a resolved CMS-editing blocker.
 
 ## Keep every visible string `/admin`-editable
 
@@ -324,7 +316,7 @@ platform script by hand: that is how the proxy stack got targeted.
   field it lands in is labelled in developer vocabulary — "Site Live (controls
   gating)", "Coming Soon (shown when `site_live` = false)" — because Decap
   renders whatever string the seam hands it and nothing else fails when the
-  copy drifts. `scripts/verify-build-artifacts.rb` now parses every
+  copy drifts. `scripts/verify-build-artifacts.rb` parses every
   `label`/`hint`/validation message in the seam and fails on two narrow
   classes: an internal key (any snake_case token, which is never natural
   English) or a code comparison (`= true`/`= false`), and a small fixed
@@ -340,8 +332,8 @@ platform script by hand: that is how the proxy stack got targeted.
   is real, and it carries the archived PDF next to `article_url` -- gated on
   `pdf_public`, with the bytes in a private S3 archive rather than this
   public repo (see docs/CONTENT-MODEL.md, "Archived PDFs").
-  This shadowing silently 404'd all 16 media links until PR #176 first rendered
-  the section. Check any new field name against `DocumentDrop` before using it;
+  The shadowing is silent: every link 404s with no build error (evidence: PR
+  #176). Check any new field name against `DocumentDrop` before using it;
   `scripts/verify-build-artifacts.rb` guards the rest. Detail →
   `docs/CONTENT-MODEL.md`.
 - **The one standing exception is the media category list, and it lives in
@@ -357,15 +349,15 @@ platform script by hand: that is how the proxy stack got targeted.
   editing all THREE — a value present in only some of them silently drops
   items from the page, mislabels a picker option, or mislabels a per-item
   page's button, with no build error.
-  `scripts/verify-build-artifacts.rb` now cross-checks all three.
+  `scripts/verify-build-artifacts.rb` cross-checks all three.
 - **The About nav's `anchor` select `options:` is the same dual-maintenance
-  shape, and it is no longer silent.** `admin/collections.site.yml`'s
+  shape, and it is not silent.** `admin/collections.site.yml`'s
   `site_about` → `nav` → `anchor` field and the `<section id="...">` set in
   `_layouts/home.html` have to name the same sections (see "About nav anchors
   are a closed set" in `docs/CONTENT-MODEL.md`) — `scripts/verify-build-
-  artifacts.rb` now cross-checks the seam's options against the *built*
-  section ids (its "admin seam <-> layout section ids stay in step" group,
-  added with the Events section), so a section added, renamed, or removed in
+  artifacts.rb` cross-checks the seam's options against the *built*
+  section ids (its "admin seam <-> layout section ids stay in step" group), so
+  a section added, renamed, or removed in
   one without the other fails the build instead of shipping a picker option
   nobody can jump to.
 - **The `media` nav entry's `label` (`_data/about.yml`) is verifier-checked
