@@ -147,7 +147,15 @@ already happened. Filtering on "today" would make the rendered page depend
 on the moment it was *built*, not on its content — exactly the
 non-determinism the platform's visual-regression lane and this repo's own
 test rules (AGENTS.md: "no reliance on wall-clock time") forbid. The owner
-removes a finished event from `/admin` herself once it has passed.
+moves a finished event out of Upcoming Events herself once it has passed:
+add it under Media Items as a "Talks & Panels" entry (event name or her
+session title, host, month and year, the event page as the link), then delete
+the event entry. UNIFY was moved this way on 2026-10-05 rather than deleted, so
+the panel stays on the record. Talks & Panels lists newest first, so give the
+moved item the lowest `weight` and bump the others (`scripts/test-content-copy.rb`
+checks the order). An in-browser
+upcoming/past split on one Speaking list is planned for the restructure and
+is not built yet.
 
 **The new `about.yml` field, `lead`, costs above-the-fold space.** Feedback
 item 2 split the About card's copy in two: `lead` is a single sentence that
