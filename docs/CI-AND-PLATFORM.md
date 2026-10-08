@@ -39,7 +39,7 @@ allocation, not test time — so a 20% swing between two runs is not a regressio
 install + 99 s tests), because WebKit runs the `@admin-read` specs several times
 slower than Chromium does.
 
-## Platform v0.1.76 — what changed for this repo
+## Workflow triggers and scheduled-run behavior
 
 - **The 9 PR-triggered callers no longer fire on `pull_request: edited`**
   (`dependabot-auto-merge`, `deploy-preview`, `e2e-stub`, `e2e-tests`,
@@ -84,8 +84,7 @@ checks those rules.
 
 ## Resolved blockers (historical)
 
-Previously tracked in "Known open blockers (CMS editing)" in AGENTS.md;
-all three are resolved.
+Formerly tracked in AGENTS.md; all three are resolved.
 
 - ~~**#27 — saving fails: org OAuth App access restrictions.**~~ **RESOLVED.**
   Login worked, but the `jodidaniel` GitHub **org** had OAuth App access
