@@ -1177,6 +1177,30 @@ else
   gate_hidden(failures, "the built-page event title/date_display/order checks")
 end
 
+puts "== Past events live in Talks & Panels, not Upcoming Events =="
+# 2026-10-05: UNIFY had already happened but still sat in Upcoming Events. It
+# was moved to the Talks & Panels list rather than deleted (the record of a
+# talk is worth keeping). The DHNY Summit stays in Upcoming Events until Jodi
+# says whether she spoke there (its session is blank, meaning attended). The layout deliberately has
+# no date filter (docs/CONTENT-MODEL.md, "Past events are not auto-hidden"), so
+# this is a fixed-list source check, never a comparison with today's date: each
+# moved event must still be a Talks & Panels media item carrying its original
+# event page, and must not be back in _events/.
+MOVED_PAST_EVENTS = {
+  "UNIFY: Convening for Quality" => "https://www.jointcommission.org/en-us/unify-convening-for-quality",
+}.freeze
+talk_urls = media_src.filter_map do |src|
+  raw = read(src)
+  fm_match = raw && raw.match(/\A---\s*\n(.*?)\n---\s*\n?/m)
+  fm = fm_match && YAML.safe_load(fm_match[1])
+  fm["article_url"] if fm.is_a?(Hash) && fm["category"] == "Talks & Panels"
+end
+upcoming_urls = events_by_slug.values.filter_map { |fm| fm["event_url"] if fm.is_a?(Hash) }
+MOVED_PAST_EVENTS.each do |name, url|
+  check(failures, "#{name} is a Talks & Panels media item linking #{url}") { talk_urls.include?(url) }
+  check(failures, "#{name} is no longer listed in Upcoming Events (_events/)") { !upcoming_urls.include?(url) }
+end
+
 puts "== Above the fold: blurb + nav (Jodi 2026-08-30 feedback) =="
 # Feedback item 2: the one-sentence `lead` and the nav pills both have to
 # land inside the first viewport; the full bio moves below them. The pixel
