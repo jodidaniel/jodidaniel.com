@@ -3,6 +3,10 @@ _site/
 vendor/
 infrastructure/site-params.env
 .bundle/
+# cms-platform checked out at platform.lock's platform_ref by
+# oauth-proxy/deploy.sh (the delegating wrapper) — a throwaway clone, never
+# part of this repo.
+.cms-platform/
 # Decap admin config is RENDERED at deploy time (gem post_write hook /
 # render-decap-config.rb inject window.CMS_* + splice the site collections).
 admin/config.yml

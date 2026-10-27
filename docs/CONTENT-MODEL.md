@@ -12,10 +12,43 @@ data file:
 | `_data/header.yml`   | `name`, `tagline`                              | **Header / Hero** (`site_header`) |
 | `_data/about.yml`    | `photo`, `intro_heading`, `lead`, `bio[]`, `nav[]` | **About** (`site_about`) |
 | `_data/contact.yml`  | `heading`, `intro`, `links[]`                  | **Contact** (`site_contact`) |
-| `_data/settings.yml` | `site_live` GATE, `coming_soon`, `footer`, `back_to_top_label`, `section_headings` | **Site Settings** (`site_settings`) |
+| `_data/settings.yml` | `site_live` GATE, `coming_soon`, `seo` (site name, launch title, Google description), `footer`, `back_to_top_label`, `skip_link_label`, `section_headings`, `share` (search-engine-only facts) | **Site Settings** (`site_settings`) |
+| `_data/not_found.yml` | `heading`, `message`, `home_link_label`, `skip_link_label` — the 404 page (`404.html` → `_layouts/not-found.html`) | **Site Settings** → "Page-Not-Found Page" (`site_settings` file `not_found`) |
 
 The layout reads these as `site.data.header` / `.about` / `.contact` /
-`.settings`.
+`.settings`. The 404 page reads `site.data.not_found`. It is a site-owned layout
+(the theme's dark `default` layout and its "RSS" link are gone from it); it
+renders no bio content, so it is safe while `site_live` is false, and
+cms-platform's `e2e/not-found.spec.js` skips for it (that spec runs only when the
+404 uses the theme layout), so `scripts/verify-build-artifacts.rb` carries the
+header, footer, `h1`-in-`main`, skip-link and home-link checks instead. The icon set (`assets/favicon.svg`
+plus `favicon.ico`, `favicon-32x32.png`, `apple-touch-icon.png`) is rendered by
+`scripts/render-icons.mjs`; `_includes/favicon.html` shadows the theme's and
+links all of it (and still honors `cms.favicon_url`, verbatim, as the theme's does; `scripts/test-favicon-include.rb` covers that). `assets/images/uploads/e2e-preview-media-probe.png` looks like
+a stray test image but is a sentinel cms-platform's `preview-media` gate and
+pin-consistency check require: do not delete it.
+
+### Share titles, `Person` data and media-page schema (audit #4/#5)
+
+The open home page's `{% seo %}` output is led by her name in the share titles,
+and it carries one `Person` entity; media item pages describe themselves
+honestly. **No link-preview image is set** (that work is separate, and whether
+her headshot belongs on a preview is an open decision).
+
+- **Open**: `_includes/home-seo.html` calls `{% seo %}` with the share titles led
+  by her name (the tab `<title>` is unchanged) and adds one `Person` JSON-LD
+  built only from repo content: current role and firm (first Experience item
+  whose `period` contains "present", any case; none means no job title), schools (Education), areas (Expertise),
+  `sameAs` from Contact links plus `settings.share.profile_links`, and
+  `alternateName` from `settings.share.alternate_names`.
+- **Media item pages** write their own head (not `{% seo %}`): a `WebPage`
+  that is part of the site, with a per-item description. The tag would type
+  every collection document as her `BlogPosting` dated at build time.
+
+`scripts/verify-build-artifacts.rb` ("share titles + structured data") asserts all
+of it, deriving the expected Person from the source files
+(`scripts/person_rules.rb`) rather than hardcoding facts, so ordinary `/admin`
+edits do not trip it; `scripts/test-person-rules.rb` builds the edited cases.
 
 ### About nav anchors are a closed set (issue #196)
 
@@ -48,11 +81,12 @@ close. `scripts/verify-build-artifacts.rb` covers that gap: for every entry
 in `_data/about.yml`'s `nav`, the *built* home page must contain a real
 `<section id="...">` matching that entry's `anchor` — checked against
 `_site/index.html`, not the layout source — so a rename that silently drifts
-the two apart fails the build instead of shipping a dead pill. That check is
-vacuous while `site_live: false` (the gate hides every section, so there is
-nothing built to check anchors against); it prints a `note` saying so rather
-than letting a pass imply coverage it doesn't have — the same conditional
-posture as the PDF-upload checks documented further down in this file.
+the two apart fails the build instead of shipping a dead pill. On the
+committed build that check is vacuous while `site_live: false` (the gate hides
+every section, so there is nothing built to check anchors against), and it
+prints a `note` saying so. The verifier's second, open-gate pass (issue #306,
+see "What the build verifies" further down) runs it for real against a
+disposable build with the gate forced open, where a skip is a failure.
 
 ### Repeating sections → folder collections (one file per item, ordered by `weight`)
 
@@ -97,12 +131,10 @@ each forced by what the section actually needs:
   (a `Date` object) instead, and `sort: 'start_date'` on a mix of Strings
   and Dates compares mismatched types — `scripts/verify-build-artifacts.rb`
   asserts every `_events/*.md`'s `start_date` is a String matching
-  `\A\d{4}-\d{2}-\d{2}\z` for exactly this reason. The admin seam's
-  `pattern: ['^\d{4}-\d{2}-\d{2}$', ...]` on that field must also stay
-  **single-quoted YAML** — `\d` inside a double-quoted scalar is not a
-  recognized escape and is a YAML parse error, not merely a different regex
-  (same trap the media `pdf_archive_file` field's pattern already documents further
-  down).
+  `\A\d{4}-\d{2}-\d{2}\z` for exactly this reason. The admin seam uses the
+  equivalent `pattern: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}$', ...]`. Its
+  backslash-free spelling survives the whole-fragment YAML round-trip that a
+  platform field-library `$ref` activates while keeping the same date shape.
 - **The outbound field is `event_url`, never `url`.** Same DocumentDrop
   shadow as `_media`'s `article_url` (see "Media items are real pages"
   below): a front-matter `url:` key on a collection document is unreachable
@@ -193,7 +225,8 @@ site every single media link:
 So: **the outbound link lives in `article_url`.** `admin/collections.site.yml`
 names that field, so Decap writes it; `scripts/verify-build-artifacts.rb` fails
 if any `_media/*.md` regains a top-level `url:` key, if an item stops resolving
-to a built page, or if the admin seam loses the PDF widget. The same trap
+to a built page, or if the rendered admin config loses the shared PDF fields.
+The same trap
 applies to any new field you add here — check the name against `DocumentDrop`
 (`url`, `content`, `output`, `path`, `relative_path`, `date`, `collection`,
 `excerpt`, `id`, `next`, `previous`) before using it.
@@ -289,7 +322,7 @@ a later `git rm` fixes the working tree and nothing else. So the archive is a
 
 - **`pdf_archive_file`** (optional string) — the object's file name in the
   archive, e.g. `"1-fda-amicus.pdf"`. It is NOT a site path and NOT a URL.
-  Seam-validated with `pattern: ['\.pdf$', …]`.
+  Must end in a lowercase `.pdf` (see "Suffix guard" below).
 - **`pdf_public`** (boolean, default `false`) — the permission gate.
 - **`pdf_label`** (optional string) — button text; only ever seen when the gate
   is open.
@@ -315,44 +348,107 @@ verifier's withhold assertion checks that the built page contains no
 that no button rendered.
 
 **3. Opening the gate is an editor's explicit act.** Ticking *"Publish this PDF
-on the public website"* in `/admin` is the whole opt-in. The hint tells the
-editor what the box means: tick it for a US-government work, for something Jodi
-wrote and holds the rights to, or where the publisher has cleared it.
+on jodidaniel.com"* in `/admin` is the whole opt-in. The shared platform hint
+keeps the rule site-neutral: publish only when the owner has permission, owns
+the rights, the work is in the public domain, or the publisher has cleared it.
+The hostname is filled from the routed admin host at runtime.
 
 The href is **derived, never authored** — `/media-pdfs/<pdf_archive_file>` — so
 an editor cannot type a URL that bypasses the gate.
 
-**Suffix guard (issue #195).** Before the original fix, the field accepted any
-file type and the page rendered a confident "DOWNLOAD PDF" button that handed
-the visitor a text file. Two layers still guard it: the seam `pattern:`
-(rejecting a non-`.pdf` value at save time) and the layout, which renders the
-button only when the key's last four characters, downcased, equal `.pdf`.
-**Quoting matters**: the regex must be **single-quoted** YAML (`'\.pdf$'`) — a
-double-quoted `"\.pdf$"` is a YAML parse *error*, not merely a different regex.
-Verify with a real parser, never by eye:
+**Suffix guard (issues #195, #305).** Before the original fix, the field
+accepted any file type and the page rendered a confident "DOWNLOAD PDF" button
+that handed the visitor a text file.
 
-```sh
-ruby -ryaml -e 'p YAML.safe_load(File.read("admin/collections.site.yml", encoding: "utf-8")).find { |c| c["name"] == "media" }["fields"].find { |f| f["name"] == "pdf_archive_file" }["pattern"]'
-# => ["\\.pdf$", "Must be a PDF file name (.pdf)"]
-```
+**The suffix rule: the name ends in a lowercase `.pdf`, compared
+case-sensitively.** `report.pdf` qualifies; `report.PDF`, `report.Pdf`,
+`report` and `report.pdf.txt` do not. There are two rules in play, a looser one
+and a stricter one, and each link in the chain enforces its own:
+
+- the shared field-library `pattern: ['[.]pdf$', ...]` enforces **the suffix
+  only**, at save time in `/admin` (the character class is deliberately
+  equivalent to `\.` without carrying a backslash through the `$ref` YAML
+  render). It would accept `my file.pdf` or `a/b.pdf`;
+- `_layouts/media.html` enforces **the suffix only**: it renders the button only
+  when the name's last four characters equal `.pdf` exactly. It used to downcase
+  them first, so `report.PDF` got a button for a file the deploy would never
+  publish;
+- the platform's `publish-opted-in-pdfs.sh` enforces **the full rule**, but only
+  at deploy time and only for an entry whose `pdf_public` is true: the name must
+  match `^[A-Za-z0-9._-]+\.pdf$` (letters, numbers, dot, dash and underscore;
+  no spaces, no slashes) and contain no `..`, or the deploy fails;
+- `verify-build-artifacts.rb` enforces **the full rule before deploy**: every
+  real entry with `pdf_public: true` must have a name the deploy would accept,
+  and a name it would refuse fails the required check with a message naming the
+  entry, the rule and what to do. It also holds every committed entry's name to
+  the field's own suffix pattern (catching a hand edit Decap never validated),
+  and checks the built pages against all five example names above.
+
+The rule is about the suffix only. The rest of the name keeps its casing: the
+href is `/media-pdfs/<pdf_archive_file>` verbatim, matching the object's name in
+the archive. If an archived object's name ends in `.PDF`, rename the object to
+end in `.pdf` rather than changing the rule.
 
 **What the build verifies, and what it cannot.** `verify-build-artifacts.rb`
-splits the PDF assertions two ways and reports which half ran, because "All
-assertions passed" over zero of both would be a green light wired to nothing:
+splits the PDF assertions by entry state and reports which ran, because "All
+assertions passed" over zero of them would be a green light wired to nothing:
 
 | entry state | assertion |
 |---|---|
 | key, `pdf_public: false` | page carries no `/media-pdfs/` href and no file name |
-| key, `pdf_public: true`  | page links `/media-pdfs/<key>`, href ends `.pdf`, **and the file exists in `_site`** |
+| key the deploy accepts, `pdf_public: true` | page links `/media-pdfs/<key>`, href ends `.pdf`, **and the file exists in `_site`** (a stand-in the verifier stages; see below) |
+| key the deploy would refuse (space, slash, `..`, other characters), `pdf_public: true` | the check fails with a plain-language message naming the entry and the rule |
+| key not ending in lowercase `.pdf`, `pdf_public: true` | page shows no PDF button and no `/media-pdfs/` href |
 | no key | nothing (a legitimate content state) |
 
-That last publish-side row is why a ticked box still **fails** the build: the
-step that copies an opted-in object out of the private archive is platform-side
-(`cms-platform`) and is not wired into this repo's deploy callers yet. That is
-deliberate — better a loud red than a "Download PDF" button that 404s. Both
-halves were proven able to fail: flipping one entry to `pdf_public: true` fails
-the `_site` existence check, and removing the `pdf_public` test from the layout
-fails all eight withhold assertions.
+**It runs them twice (issue #306).** While `site_live` is false every media page
+is a coming-soon shell, so on the committed build none of those rows has a page
+to read, and neither do the nav, Events, Media-grouping and above-the-fold
+groups. So after checking the committed `_site`, the verifier copies the source
+into a temporary directory outside the repo (without `.git`), forces
+`site_live: true` in that copy only, adds six synthetic `_media` entries (one
+withheld, one published, and `.PDF`, `.Pdf`, no suffix and `.pdf.txt` names,
+all ticked), builds it, and runs every assertion again. On that pass a group
+the gate would hide is a failure, and each PDF row above must run at least
+once. The temporary directory is deleted when the run ends, so that build is
+never deployed, and the verifier asserts the committed `_data/settings.yml` is
+byte-for-byte unchanged afterwards. Both passes print how many assertions they
+executed.
+
+**Whether the object is in the archive is the deploy's check, not the PR's.**
+CI never reads the private archive; only the deploy's
+`publish-opted-in-pdfs.sh` does, and it exits non-zero, loudly, when an opted-in
+object is missing. So on the open-gate pass the verifier writes a stand-in file,
+where that script would put it, for **every** `pdf_public: true` entry in the
+copy's `_media`, real ones as well as the synthetic fixtures, whenever the
+deploy would accept the name. Ticking "Publish this PDF" on a real entry with a
+valid name therefore keeps `site-verify` green and the CMS pull request
+mergeable; if the object was never uploaded, the deploy is what stops it, by
+failing instead of shipping a "Download PDF" button that 404s. (An earlier
+version staged a stand-in only for the fixtures, which made that tick a dead end:
+the PR could never merge, because CI cannot see the file the deploy would copy.)
+What CI **can** check, and does, is the name: see the full rule above. Upload
+the object first, then tick the box.
+
+These rows were proven able to fail: a real entry ticked with a name containing
+a space, a slash, `..` or an uppercase `.PDF` turns the name check red, and with
+a valid name it stays green; making the open-gate flip a no-op fails the pass
+closed; removing the `pdf_public` test from the layout fails all eight withhold
+assertions; and putting the layout's `downcase` back fails the `.PDF` and `.Pdf`
+rows.
+
+**The temporary copy holds tracked files only.** It is built from exactly the
+files `git ls-files` reports, never from "everything except", so the gitignored
+local content a working checkout carries (`infrastructure/site-params.env`, which
+holds real OAuth credentials, `.cms-platform`, `.jodidaniel-real-content`,
+`e2e/node_modules`) never reaches `/tmp`. Without git metadata (a tarball
+checkout) it walks the tree instead and refuses `infrastructure/`, `*.env` and
+the same local-only names. The verifier asserts the copy holds nothing outside
+that list, and removes the directory when the run ends. A run killed
+mid-build (a `SIGKILL`, or even a `SIGTERM` while Jekyll is still writing its
+cache) can leave a `/tmp/verify-open-gate-*` directory behind; because of the
+allowlist it holds only tracked source, never credentials. A file you have not
+yet `git add`ed is not in the copy.
 
 **The bucket exists and the deploy is wired.**
 `jodidaniel-com-media-archive` is live and verified private (public access
@@ -418,7 +514,7 @@ page's links once the site is live.
 
 ## `/admin` (Decap CMS)
 
-`/admin` shows **9 per-section editors** — the 5 folder collections + the 4
+`/admin` shows **10 per-section editors** — the 6 folder collections + the 4
 file collections above — and **nothing else**. The generic platform
 collections (posts / tags / projects / pages / e2e) are hidden by
 `cms.base_collections: []` in `_config.yml` (an empty keep-list hides them all;
@@ -427,7 +523,9 @@ honored by `cms-platform-theme` >= v0.1.7). This single-page bio has no blog.
 The admin UI itself is **delivered by the gem** (`cms-platform-theme`), not
 vendored here. The only admin file this repo owns is the **site seam**
 `admin/collections.site.yml`: a YAML fragment of Decap collection definitions
-that the platform's render hook splices into the base config at the
+that references the platform's reusable `archived_pdf_fields` group. The
+platform's render hook resolves that `$ref`, then splices the result into the
+base config at the
 `# __SITE_COLLECTIONS__` marker at build time (indentation must match the base
 list — 2 spaces for `- name:`). `admin/collections.site.yml.example` documents
 the seam format. Do not add a vendored `admin/config.yml` or admin machinery;

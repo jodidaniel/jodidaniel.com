@@ -18,14 +18,163 @@ require "date"
 # 404.html, and the gem's "AD" logo leaking) and PASSES once the fixes land.
 # `scripts/` is excluded from the Jekyll build (_config.yml), so this file is
 # never published.
+#
+# TWO PASSES (issue #306). While `site_live` is false the coming-soon gate
+# hides every section and every media page, so most content groups below have
+# nothing to read on the committed build: a green run there said nothing about
+# what launch would ship. So, after checking the committed build in `_site`,
+# this script copies the tracked source files (`git ls-files`, so no ignored
+# local content) into a temporary directory OUTSIDE the repo (no `.git`, so
+# nothing run there can push), forces `site_live: true` in that copy only,
+# adds the synthetic PDF entries in PDF_FIXTURES, builds it, and re-runs every
+# assertion against that build with `--open-pass`. On that pass a group the
+# gate would hide is a FAILURE, not a note. The copy and its build are deleted
+# when the run ends, so nothing in them can be deployed, and the committed
+# `_data/settings.yml` is never written (asserted below).
+#
+#   ruby scripts/verify-build-artifacts.rb --open-pass <source-copy> <its _site>
+#
+# is the internal re-entry the first pass uses; run the script bare.
 
-SITE = File.join(__dir__, "..", "_site")
+require "fileutils"
+require "rbconfig"
+require "tmpdir"
+require_relative "media_rules"
+require_relative "person_rules"
+require_relative "a11y_rules"
+# After a11y_rules, which may put the bundle on the load path: a `require "json"` before it
+# activates the default json gem, and `bundler/setup` then dies on the Gemfile.lock pin.
+require "json"
 
+REPO_ROOT = File.expand_path("..", __dir__)
+OPEN_PASS = ARGV[0] == "--open-pass"
+ROOT = OPEN_PASS ? File.expand_path(ARGV.fetch(1)) : REPO_ROOT
+SITE = OPEN_PASS ? File.expand_path(ARGV.fetch(2)) : File.join(REPO_ROOT, "_site")
+
+# The archived-PDF suffix rule (issue #305): a lowercase `.pdf`, compared
+# case-sensitively. This is the platform's rule end to end -- the shared
+# `pdf_archive_file` field's `[.]pdf$` pattern and publish-opted-in-pdfs.sh's
+# `^[A-Za-z0-9._-]+\.pdf$` both reject `report.PDF` -- so the layout (no
+# `downcase`) and this script follow it rather than accepting any casing.
+PDF_SUFFIX_RE = /\.pdf\z/
+
+# The stricter rule the DEPLOY applies (cms-platform's
+# scripts/publish-opted-in-pdfs.sh, at the tag in platform.lock): an opted-in
+# `pdf_archive_file` is copied out of the private archive only when it matches
+# `^[A-Za-z0-9._-]+\.pdf$` and contains no `..`; any other name aborts the
+# deploy. The admin field's `[.]pdf$` is looser (it would accept `my file.pdf`
+# or `a/b.pdf`), so THIS is where the stricter rule is enforced before deploy.
+# `\A...\z`, not `^...$`: a name with a newline in it must not pass.
+DEPLOY_PDF_KEY_RE = /\A[A-Za-z0-9._-]+\.pdf\z/
+
+def deploy_accepts_pdf_key?(key)
+  key.match?(DEPLOY_PDF_KEY_RE) && !key.include?("..")
+end
+
+# An entry's front matter parsed as the deploy script parses it (a real YAML
+# parser, the same split and options), so "is this entry opted in" means the
+# same thing here as at deploy time. Nil when there is none or it does not parse.
+def media_front_matter(path)
+  parts = File.read(path, encoding: "utf-8").split(/^---\s*$/, 3)
+  return nil if parts.length < 3
+
+  fm = YAML.safe_load(parts[1], aliases: true, permitted_classes: [Date, Time])
+  fm.is_a?(Hash) ? fm : nil
+rescue Psych::SyntaxError, Psych::DisallowedClass
+  nil
+end
+
+# Synthetic `_media` entries the open-gate pass adds to its disposable copy, so
+# the withhold path, the publish path and the suffix rule all run even though
+# no real entry is `pdf_public: true` today. [slug, pdf_archive_file,
+# pdf_public]. Never written into the repo.
+PDF_FIXTURE_PREFIX = "zz-verifier-fixture-"
+PDF_FIXTURES = [
+  ["#{PDF_FIXTURE_PREFIX}withheld", "verifier-fixture-withheld.pdf", false],
+  ["#{PDF_FIXTURE_PREFIX}published", "verifier-fixture-published.pdf", true],
+  ["#{PDF_FIXTURE_PREFIX}upper", "verifier-fixture-upper.PDF", true],
+  ["#{PDF_FIXTURE_PREFIX}mixed", "verifier-fixture-mixed.Pdf", true],
+  ["#{PDF_FIXTURE_PREFIX}no-suffix", "verifier-fixture-no-suffix", true],
+  ["#{PDF_FIXTURE_PREFIX}pdf-txt", "verifier-fixture.pdf.txt", true],
+].freeze
+
+STATS = { executed: 0 }
 failures = []
 def check(failures, desc)
+  STATS[:executed] += 1
   ok = yield
   puts(ok ? "  ok   #{desc}" : "  FAIL #{desc}")
   failures << desc unless ok
+end
+
+# A group whose content the coming-soon gate hides. On the committed build
+# that is expected while `site_live` is false, so it is announced, not failed.
+# On the open-gate pass the gate is forced open, so the same skip means the
+# build does not render what launch would render: a failure.
+def gate_hidden(failures, group)
+  if OPEN_PASS
+    check(failures, "#{group} ran against the open-gate build") { false }
+  else
+    puts "  note #{group} did NOT run on this build (site_live is false, so the"
+    puts "       content is hidden); the open-gate pass below runs it."
+  end
+end
+
+puts(OPEN_PASS ? "#### open-gate pass: site_live forced on in a disposable copy" : "#### committed-gate pass: _site")
+
+# The site-verify reusable (platform-owned) runs only `jekyll build` and this script, so
+# the unit tests for the rules this script applies run from here (issues #338, #339, #358, #360, and the copy-consistency checks).
+# Committed pass only: the open-gate re-entry would repeat them.
+unless OPEN_PASS
+  puts "== unit tests: scripts/test-media-rules.rb =="
+  $stdout.flush
+  unit_tests_passed = system(RbConfig.ruby, File.join(__dir__, "test-media-rules.rb"))
+  check(failures, "scripts/test-media-rules.rb passes (output above)") { unit_tests_passed == true }
+
+  puts "== unit tests: scripts/test-admin-config.rb =="
+  $stdout.flush
+  admin_config_passed = system(RbConfig.ruby, File.join(__dir__, "test-admin-config.rb"))
+  check(failures, "scripts/test-admin-config.rb passes (output above)") { admin_config_passed == true }
+
+  puts "== unit tests: scripts/test-person-rules.rb =="
+  $stdout.flush
+  person_rules_passed = system(RbConfig.ruby, File.join(__dir__, "test-person-rules.rb"))
+  check(failures, "scripts/test-person-rules.rb passes (output above)") { person_rules_passed == true }
+
+  puts "== unit tests: scripts/test-a11y-rules.rb =="
+  $stdout.flush
+  a11y_rules_passed = system(RbConfig.ruby, File.join(__dir__, "test-a11y-rules.rb"))
+  check(failures, "scripts/test-a11y-rules.rb passes (output above)") { a11y_rules_passed == true }
+
+  puts "== unit tests: scripts/test-site-meta.rb =="
+  $stdout.flush
+  site_meta_passed = system(RbConfig.ruby, File.join(__dir__, "test-site-meta.rb"))
+  check(failures, "scripts/test-site-meta.rb passes (output above)") { site_meta_passed == true }
+
+  puts "== unit tests: scripts/test-favicon-include.rb =="
+  $stdout.flush
+  favicon_include_passed = system(RbConfig.ruby, File.join(__dir__, "test-favicon-include.rb"))
+  check(failures, "scripts/test-favicon-include.rb passes (output above)") { favicon_include_passed == true }
+
+  puts "== unit tests: scripts/test-back-to-top-clearance.rb =="
+  $stdout.flush
+  back_to_top_passed = system(RbConfig.ruby, File.join(__dir__, "test-back-to-top-clearance.rb"))
+  check(failures, "scripts/test-back-to-top-clearance.rb passes (output above)") { back_to_top_passed == true }
+
+  puts "== unit tests: scripts/test-content-copy.rb =="
+  $stdout.flush
+  content_copy_passed = system(RbConfig.ruby, File.join(__dir__, "test-content-copy.rb"))
+  check(failures, "scripts/test-content-copy.rb passes (output above)") { content_copy_passed == true }
+
+  puts "== unit tests: scripts/test-event-media-polish.rb =="
+  $stdout.flush
+  event_media_polish_passed = system(RbConfig.ruby, File.join(__dir__, "test-event-media-polish.rb"))
+  check(failures, "scripts/test-event-media-polish.rb passes (output above)") { event_media_polish_passed == true }
+
+  puts "== unit tests: scripts/test-inline-css.rb =="
+  $stdout.flush
+  inline_css_passed = system(RbConfig.ruby, File.join(__dir__, "test-inline-css.rb"))
+  check(failures, "scripts/test-inline-css.rb passes (output above)") { inline_css_passed == true }
 end
 
 def read(path)
@@ -90,6 +239,97 @@ check(failures, "404.html copy is generic chrome (says 'not found')") do
   notfound_html&.downcase&.include?("not found")
 end
 
+puts "== 404 page is the site's own, and the icon set is Jodi's =="
+# The 404 used to take the cms-platform theme's `default` layout: dark, unrelated
+# to this site, with an "RSS" link to a feed that has no entries.
+check(failures, "404.html uses the site's own stylesheet, not the theme's main.css") do
+  notfound_html&.include?("/assets/css/jodidaniel.css") && !notfound_html.include?("/assets/css/main.css")
+end
+check(failures, "404.html advertises no feed (no RSS link, no alternate feed <link>)") do
+  notfound_html && !notfound_html.include?("feed.xml") && !notfound_html.match?(/>\s*RSS\s*</) &&
+    !notfound_html.include?("application/atom+xml")
+end
+# cms-platform's e2e/not-found.spec.js skips for this site (its 404 is not on the theme
+# layout), so these are the checks that stand in for it: header, footer, a heading that
+# says not found inside <main>, and a link home.
+check(failures, "404.html has a site header, a site footer, and an h1 saying 'not found' inside <main>") do
+  notfound_html&.match?(/class="site-header[ "]/) && notfound_html.match?(/<footer class="site-footer[ "]/) &&
+    notfound_body&.match?(/<h1>[^<]*not found/i)
+end
+check(failures, "404.html has a skip link whose target is a focusable <main>") do
+  target = notfound_html.to_s[/<a class="skip-link" href="#([^"]+)"/, 1]
+  !target.nil? && notfound_html.match?(/<main id="#{Regexp.escape(target)}" tabindex="-1"/)
+end
+not_found_data = YAML.safe_load(read(File.join(ROOT, "_data", "not_found.yml")) || "") || {}
+check(failures, "404.html copy comes from _data/not_found.yml (heading, message, button text, skip link)") do
+  %w[heading message home_link_label skip_link_label].all? do |key|
+    value = not_found_data[key].to_s
+    !value.strip.empty? && notfound_html&.include?(value)
+  end
+end
+# The page is served for EVERY missing address, gated or not, so it must carry no
+# bio copy, and its header must follow the gate like every other page's.
+%w[Wilson\ Sonsini Crowell\ &\ Moring nationally\ recognized\ leader digital\ health\ law].each do |marker|
+  check(failures, "404.html does NOT leak bio text: #{marker.inspect}") do
+    notfound_html && !notfound_html.include?(marker)
+  end
+end
+gate_settings = YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml")) || "") || {}
+gate_tagline = if gate_settings["site_live"] == true
+                 (YAML.safe_load(read(File.join(ROOT, "_data", "header.yml")) || "") || {})["tagline"].to_s
+               else
+                 gate_settings.dig("coming_soon", "tagline").to_s
+               end
+check(failures, "404.html header tagline follows the gate (#{gate_tagline.inspect})") do
+  gate_tagline.empty? ? !notfound_html.to_s.include?('class="tagline"') : notfound_html.to_s.include?(">#{gate_tagline}<")
+end
+
+# PNG width/height from the IHDR chunk; nil when the bytes are not a PNG.
+def png_size(bytes)
+  return nil unless bytes && bytes.byteslice(0, 8) == "\x89PNG\r\n\x1a\n".b && bytes.byteslice(12, 4) == "IHDR"
+
+  bytes.byteslice(16, 8).unpack("NN")
+end
+
+def site_bytes(rel)
+  path = File.join(SITE, rel)
+  File.exist?(path) ? File.binread(path) : nil
+end
+
+{ "favicon-32x32.png" => [32, 32], "apple-touch-icon.png" => [180, 180] }.each do |rel, size|
+  check(failures, "/#{rel} is a #{size.join('x')} PNG") { png_size(site_bytes(rel)) == size }
+end
+ico = site_bytes("favicon.ico")
+ico_sizes =
+  if ico && ico.bytesize >= 6 && ico.unpack("vvv") == [0, 1, ico.unpack("vvv")[2]]
+    (0...ico.unpack("vvv")[2]).map do |i|
+      w, h, _c, _r, _planes, _bpp, len, off = ico.byteslice(6 + 16 * i, 16).unpack("CCCCvvVV")
+      png_size(ico.byteslice(off, len)) == [w, h] ? w : nil
+    end
+  else
+    []
+  end
+check(failures, "/favicon.ico is an ICO of PNG images that includes 16 and 32 px (got #{ico_sizes.inspect})") do
+  ico_sizes.all? && ([16, 32] - ico_sizes).empty?
+end
+favicon_svg = read(File.join(SITE, "assets", "favicon.svg"))
+# Jodi chose monogram option 8, "Navy to steel gradient": a #2d5a7b to #1a3a5c
+# gradient tile (id g8) under two #5dd9e8 strokes of width 6.5 that draw the J and D.
+check(failures, "/assets/favicon.svg is Jodi's chosen JD monogram (navy-to-steel gradient tile, cyan strokes), not the theme placeholder") do
+  favicon_svg&.include?('<linearGradient id="g8"') &&
+    favicon_svg.include?('stop-color="#2d5a7b"') && favicon_svg.include?('stop-color="#1a3a5c"') &&
+    favicon_svg.include?('fill="url(#g8)"') &&
+    favicon_svg.scan('stroke="#5dd9e8"').size == 2 && favicon_svg.include?('stroke-width="6.5"')
+end
+[["/", "index.html"], ["/404.html", "404.html"]].each do |label, rel|
+  html = read(File.join(SITE, rel))
+  check(failures, "#{label} <head> links favicon.ico, the SVG icon and the Apple touch icon") do
+    html&.match?(%r{<link rel="icon" href="/favicon\.ico"}) &&
+      html.match?(%r{<link rel="icon" type="image/svg\+xml" href="/assets/favicon\.svg"}) &&
+      html.match?(%r{<link rel="apple-touch-icon" href="/apple-touch-icon\.png"})
+  end
+end
+
 puts "== #31 Jodi's logo (no 'AD' leak) =="
 logo_svg = read(logo)
 check(failures, "_site/assets/images/logo.svg exists (site file shadows the gem)") { !logo_svg.nil? }
@@ -113,7 +353,7 @@ puts "== media items resolve (no 404) =="
 # `output: false` that address was never written and all 15 links 404'd
 # (proven on preview-pr176 before the fix). The outbound article link now
 # lives in `article_url`, and each item renders a real page.
-media_src = Dir[File.join(__dir__, "..", "_media", "*.md")].sort
+media_src = Dir[File.join(ROOT, "_media", "*.md")].sort
 check(failures, "_media/ has entries to check") { !media_src.empty? }
 
 media_src.each do |src|
@@ -125,8 +365,10 @@ media_src.each do |src|
   check(failures, "_media/#{slug}.md uses `article_url:`, not the shadowed `url:`") do
     fm.match?(/^article_url:/) && !fm.match?(/^url:/)
   end
-  check(failures, "/media/#{slug}/ is a real page (home page links here)") do
-    File.exist?(File.join(SITE, "media", slug, "index.html"))
+  # Jekyll builds `/media/:slug/` from its OWN slug of the file name, which drops
+  # characters such as an em dash (issue #339), so the address is not the raw name.
+  check(failures, "/media/#{MediaRules.page_slug(src, media_front_matter(src))}/ is a real page (home page links here)") do
+    File.exist?(MediaRules.page_path(SITE, src, media_front_matter(src)))
   end
 end
 
@@ -138,11 +380,10 @@ puts "== media date_display: a real date field, not baked into source =="
 # still in source would render the date TWICE. Parsed with the `yaml` stdlib
 # (AGENTS.md), never a regex/line-scan over front matter.
 #
-# `date_display` is required to EXIST on every item (so a new entry can't
-# silently omit it) but is allowed to be empty, a bare year, or "Ongoing" --
-# those are real, deliberately-incomplete content states pending the owner
-# filling them in from /admin, not build failures. See docs/CONTENT-MODEL.md.
-MEDIA_DATE_DISPLAY_RE = /\A(Ongoing|(January|February|March|April|May|June|July|August|September|October|November|December) \d{4}|\d{4})\z/
+# `date_display` is optional: absent, empty, a bare year, or "Ongoing" are all real,
+# deliberately-incomplete content states pending the owner filling them in from
+# /admin, not build failures. Absent counts the same as empty because Decap writes
+# NO key for an optional text field left blank (issue #338). See docs/CONTENT-MODEL.md.
 undated_media = []
 media_src.each do |src|
   slug = File.basename(src, ".md")
@@ -151,14 +392,12 @@ media_src.each do |src|
   fm = fm_match && YAML.safe_load(fm_match[1])
   fm = {} unless fm.is_a?(Hash)
 
-  check(failures, "_media/#{slug}.md has a `date_display` key (may be empty)") { fm.key?("date_display") }
-
-  date_display = fm["date_display"].to_s
+  date_display = MediaRules.optional_text(fm, "date_display")
   unless date_display.empty?
     check(
       failures,
       "_media/#{slug}.md date_display #{date_display.inspect} is Month YYYY, a bare year, or \"Ongoing\""
-    ) { date_display.match?(MEDIA_DATE_DISPLAY_RE) }
+    ) { MediaRules.date_display_problem(fm).nil? }
   end
 
   source = fm["source"].to_s
@@ -191,7 +430,7 @@ puts "== issue #196: About nav anchors must resolve to a real section id =="
 # in _data/about.yml's `nav`, the built home page must contain a real
 # `<section id="...">` matching that entry's `anchor`. Parsed with the `yaml`
 # stdlib (AGENTS.md) -- never a regex/line-scan over the data file.
-about_yaml = YAML.safe_load(read(File.join(__dir__, "..", "_data", "about.yml")) || "") || {}
+about_yaml = YAML.safe_load(read(File.join(ROOT, "_data", "about.yml")) || "") || {}
 nav_entries = about_yaml["nav"].to_a
 check(failures, "_data/about.yml has nav entries to check (issue #196)") { !nav_entries.empty? }
 
@@ -203,8 +442,7 @@ if built_section_ids.empty?
   # every section, so the built page has nothing to check anchors against.
   # Same posture as the PDF-checks note below -- say so rather than let a
   # pass here imply coverage it doesn't have.
-  puts "  note site_live is false (or no sections rendered) -- nav-anchor id checks did NOT"
-  puts "       run. Flip site_live: true and rebuild to arm them."
+  gate_hidden(failures, "the issue #196 nav-anchor id checks")
 else
   nav_entries.each do |entry|
     anchor = entry.is_a?(Hash) ? entry["anchor"].to_s : ""
@@ -228,7 +466,7 @@ puts "== media nav label matches the section heading =="
 # `nav_entries`, already parsed with the `yaml` stdlib above; runs
 # unconditionally (unlike the anchor checks above) since it compares two
 # data files, not the built page.
-settings_yaml_for_nav_label = YAML.safe_load(read(File.join(__dir__, "..", "_data", "settings.yml")) || "") || {}
+settings_yaml_for_nav_label = YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml")) || "") || {}
 media_heading = settings_yaml_for_nav_label.dig("section_headings", "media_heading").to_s
 media_nav_entry = nav_entries.find { |e| e.is_a?(Hash) && e["anchor"] == "media" }
 media_nav_label = media_nav_entry.is_a?(Hash) ? media_nav_entry["label"].to_s : nil
@@ -238,16 +476,33 @@ check(
   "settings.section_headings.media_heading #{media_heading.inspect}"
 ) { !media_nav_entry.nil? && media_nav_label == media_heading }
 
-puts "== issues #194 / #195: admin seam (link_label, pdf_label, .pdf pattern) =="
+puts "== issues #194 / #195: rendered admin fields (link_label, pdf_label, .pdf pattern) =="
 # Parsed with the `yaml` stdlib, never a regex/line-scan (AGENTS.md) — a regex
 # over this flow-mapping seam can't tell `pattern:` apart from `hint:` text
 # that happens to mention "pdf", and it can't see a field that moved lines.
-seam_text = read(File.join(__dir__, "..", "admin", "collections.site.yml"))
+seam_text = read(File.join(ROOT, "admin", "collections.site.yml"))
 seam_yaml = seam_text && YAML.safe_load(seam_text)
 media_seam = seam_yaml.is_a?(Array) ? seam_yaml.find { |c| c.is_a?(Hash) && c["name"] == "media" } : nil
 check(failures, "admin seam parses as YAML and has a `media` collection") { !media_seam.nil? }
 media_seam_fields = (media_seam && media_seam["fields"]).to_a.each_with_object({}) do |f, h|
   h[f["name"]] = f if f.is_a?(Hash)
+end
+
+# Shared platform fields are `$ref` nodes in the site-owned seam, so their
+# actual Decap contract exists only in the rendered config. Read the build
+# artifact the editor receives; continuing to inspect only the raw seam would
+# mistake every shared field for a missing field.
+admin_config = admin_cfg && YAML.safe_load(
+  admin_cfg,
+  permitted_classes: [Date],
+  aliases: true
+)
+media_admin = admin_config.is_a?(Hash) ? admin_config.fetch("collections", []).find do |collection|
+  collection.is_a?(Hash) && collection["name"] == "media"
+end : nil
+check(failures, "rendered admin config parses as YAML and has a `media` collection") { !media_admin.nil? }
+media_admin_fields = (media_admin && media_admin["fields"]).to_a.each_with_object({}) do |field, fields|
+  fields[field["name"]] = field if field.is_a?(Hash)
 end
 
 # The PDF BYTES must never enter this repo. jodidaniel.com is PUBLIC, so a
@@ -257,17 +512,35 @@ end
 # is private S3; the seam names an OBJECT in it. A `file`/`image` widget here
 # would quietly restore the repo-upload path, so assert its absence, not just
 # the new field's presence. See docs/CONTENT-MODEL.md, "Archived PDFs".
-pdf_field = media_seam_fields["pdf_archive_file"]
-check(failures, "admin seam names the archived PDF and offers NO repo upload") do
-  pdf_field && pdf_field["widget"] == "string" && media_seam_fields["pdf"].nil?
+pdf_field = media_admin_fields["pdf_archive_file"]
+check(failures, "rendered admin config names the archived PDF and offers NO repo upload") do
+  pdf_field && pdf_field["widget"] == "string" && media_admin_fields["pdf"].nil?
 end
-check(failures, "admin seam's `pdf_archive_file` validates a `.pdf` suffix (issue #195)") do
+# The field's own suffix rule, compiled once: the check below proves it is the
+# case-sensitive rule (issue #305), and the per-entry loop further down holds
+# every real entry's `pdf_archive_file` to it, so a hand edit that Decap never
+# validated cannot slip a `.PDF` name past the editor's rule.
+field_suffix_rule = begin
   pattern = pdf_field && pdf_field["pattern"]
-  pattern.is_a?(Array) && pattern.length == 2 && pattern[0].is_a?(String) &&
-    pattern[0].include?(".pdf$") && !pattern[1].to_s.empty?
+  if pattern.is_a?(Array) && pattern.length == 2 && pattern[0].is_a?(String) && !pattern[1].to_s.empty?
+    Regexp.new(pattern[0])
+  end
+rescue RegexpError
+  nil
 end
-check(failures, "admin seam offers the `pdf_public` gate, defaulting to OFF") do
-  f = media_seam_fields["pdf_public"]
+check(failures, "rendered `pdf_archive_file` validates a lowercase `.pdf` suffix, case-sensitively (issues #195, #305)") do
+  suffix = field_suffix_rule
+  !suffix.nil? &&
+    suffix.match?("report.pdf") &&
+    !suffix.match?("report.txt") &&
+    !suffix.match?("reportxpdf") &&
+    !suffix.match?("report.pdf.txt") &&
+    !suffix.match?("report.PDF") &&
+    !suffix.match?("report.Pdf") &&
+    !suffix.match?("report")
+end
+check(failures, "rendered admin config offers the `pdf_public` gate, defaulting to OFF") do
+  f = media_admin_fields["pdf_public"]
   !f.nil? && f["widget"] == "boolean" && f["default"] == false
 end
 
@@ -275,8 +548,8 @@ check(failures, "admin seam offers `link_label` on media entries, and it's optio
   f = media_seam_fields["link_label"]
   !f.nil? && f["required"] == false
 end
-check(failures, "admin seam offers `pdf_label` on media entries, and it's optional (issue #194)") do
-  f = media_seam_fields["pdf_label"]
+check(failures, "rendered admin config offers `pdf_label` on media entries, and it's optional (issue #194)") do
+  f = media_admin_fields["pdf_label"]
   !f.nil? && f["required"] == false
 end
 check(failures, "admin seam offers `date_display` on media entries, and it's optional") do
@@ -284,11 +557,21 @@ check(failures, "admin seam offers `date_display` on media entries, and it's opt
   !f.nil? && f["required"] == false
 end
 
+# Issue #359: the fade-in is skipped when a media item anchor is the target, so the
+# item you return to is not washed out. Runs on both gate states (the CSS ships either way).
+check(failures, "jodidaniel.css skips the fade-in when a media item is the :target (issue #359)") do
+  css = read(File.join(SITE, "assets", "css", "jodidaniel.css")).to_s
+  css.match?(/body:has\(\.media-list li:target\)\s+\.animate-in\s*\{[^}]*animation:\s*none/)
+end
+
 # Every media link the home page actually renders must resolve to a built file.
 # Vacuous while site_live is false (the gate hides the section) — the per-item
 # page assertions above cover both gate states.
 home_html = read(File.join(SITE, "index.html"))
 home_media_links = home_html.to_s.scan(%r{href="(/media/[^"]*)"}).flatten.uniq
+if OPEN_PASS
+  check(failures, "built home page links to media item pages") { !home_media_links.empty? }
+end
 home_media_links.each do |href|
   check(failures, "home page link #{href} resolves in _site") do
     File.exist?(File.join(SITE, href.sub(%r{\A/}, ""), "index.html"))
@@ -309,31 +592,76 @@ ARTICLE_LABEL_RE = /M11\.99 2C6\.47 2 2 6\.48 2 12s4\.47.*?<\/svg>\s*([^<]+?)\s*
 PDF_HREF_RE = /href="([^"]+)"[^>]*>\s*<svg[^>]*><path d="M19 3H5c-1\.1/m
 pdf_public_checks = 0
 pdf_gated_checks = 0
+pdf_refused_checks = 0
 article_labels = {} # slug => rendered label text, ungated pages only
 media_src.each do |src|
   slug = File.basename(src, ".md")
-  page = read(File.join(SITE, "media", slug, "index.html"))
-  next if page.nil?
-  gated = page.include?("noindex,nofollow")
   src_fm = read(src)
   article = src_fm[/^article_url:\s*"?([^"\n]+)"?/, 1].to_s.strip
   pdf_key = src_fm[/^pdf_archive_file:\s*"?([^"\n]+?)"?\s*$/, 1].to_s.strip
   # Only a literal `true` opens the gate; anything else (absent, false,
   # "false", empty) keeps it shut — mirrors the layout's `== true` test.
   pdf_public = src_fm[/^pdf_public:\s*(\S+)\s*$/, 1].to_s.strip == "true"
+  # Issue #305: every real entry's archive name obeys the field's own rule.
+  # Decap applies it only to saves made in /admin; this catches a hand edit.
+  # Committed pass only: the open-gate copy adds fixtures that break the rule
+  # on purpose, and its real entries are the same files checked here.
+  if !OPEN_PASS && !pdf_key.empty?
+    check(failures, "_media/#{slug}.md pdf_archive_file #{pdf_key.inspect} ends in a lowercase .pdf (the field's rule)") do
+      !field_suffix_rule.nil? && field_suffix_rule.match?(pdf_key)
+    end
+  end
+  # Item 1 of the review round on issue #306: the PDF's bytes live in a private
+  # archive CI cannot read, so whether the object EXISTS is the deploy's check
+  # (it fails loudly). What CI can verify is the name: the deploy refuses any
+  # opted-in name outside `[A-Za-z0-9._-]+.pdf`, and the admin field is looser,
+  # so a ticked box over such a name would pass the editor and fail the deploy.
+  # Committed pass only (the open-gate copy's fixtures break the rule on
+  # purpose); it runs whatever the gate state, since it reads the source.
+  if !OPEN_PASS && (front = media_front_matter(src)) && front["pdf_public"] == true
+    opted_key = front["pdf_archive_file"].to_s.strip
+    check(failures, "_media/#{slug}.md publishes its PDF under a name the deploy accepts (#{opted_key.inspect})") do
+      deploy_accepts_pdf_key?(opted_key)
+    end
+    unless deploy_accepts_pdf_key?(opted_key)
+      puts "       ^ _media/#{slug}.md has \"Publish this PDF\" ticked, but its archived file name"
+      puts "         #{opted_key.inspect} cannot be published. The name must use only letters, numbers,"
+      puts "         dots, dashes and underscores (no spaces, no slashes, no \"..\"), and end in a"
+      puts "         lowercase .pdf. Rename the file in the private archive to match and update"
+      puts "         the \"Archived PDF\" field, or untick \"Publish this PDF\"."
+    end
+  end
+  page = read(MediaRules.page_path(SITE, src, media_front_matter(src)))
+  next if page.nil?
+  gated = page.include?("noindex,nofollow")
+  if OPEN_PASS
+    check(failures, "/media/#{slug}/ renders its full page, not the coming-soon shell") { !gated }
+  end
   if gated
     # Gate closed: the item page must be the coming-soon shell only.
     check(failures, "/media/#{slug}/ leaks no bio content while gated") do
-      !page.include?(article) && !page.include?("section-title")
+      # The stylesheet is inlined (_plugins/inline_css.rb), and it names `.section-title`
+      # as a selector, so look at the page without its <style> elements.
+      markup = page.gsub(%r{<style\b[^>]*>.*?</style>}m, "")
+      !markup.include?(article) && !markup.include?("section-title")
     end
   else
     check(failures, "/media/#{slug}/ links out to its article_url") do
       !article.empty? && page.include?(article)
     end
+    # Issue #359: the back link returns to THIS item on the home page, not the
+    # top of the section. The home page must carry the matching element id.
+    page_slug = MediaRules.page_slug(src, media_front_matter(src))
+    check(failures, "/media/#{slug}/ back link targets its own item (#media-#{page_slug})") do
+      page.match?(%r{media-detail__back">\s*<a href="[^"]*/#media-#{Regexp.escape(page_slug)}">})
+    end
+    check(failures, "home page has id=\"media-#{page_slug}\" for /media/#{slug}/'s back link") do
+      home_html.to_s.include?(%(id="media-#{page_slug}"))
+    end
     label = page[ARTICLE_LABEL_RE, 1]
     article_labels[slug] = label unless article.empty?
     unless pdf_key.empty?
-      if pdf_public
+      if pdf_public && pdf_key.match?(PDF_SUFFIX_RE)
         pdf_public_checks += 1
         href = "/media-pdfs/#{pdf_key}"
         check(failures, "/media/#{slug}/ links to its published PDF (#{href})") do
@@ -343,9 +671,9 @@ media_src.each do |src|
         # guard let the button through — and the href it RENDERED (not just the
         # front-matter string) must still end in `.pdf`. This catches the guard
         # regressing even if the seam pattern still blocks new saves.
-        check(failures, "/media/#{slug}/'s rendered PDF href ends in .pdf") do
+        check(failures, "/media/#{slug}/'s rendered PDF href ends in a lowercase .pdf") do
           h = page[PDF_HREF_RE, 1]
-          !h.nil? && h.downcase.end_with?(".pdf")
+          !h.nil? && h.match?(PDF_SUFFIX_RE)
         end
         # Ticking the box renders a download button; if nothing put the file
         # under _site/media-pdfs/ the button is a confident 404. The publish
@@ -353,8 +681,23 @@ media_src.each do |src|
         # platform-side (cms-platform), so until a site's deploy runs it this
         # assertion is what stops the box being ticked into a broken link
         # rather than a working download.
-        check(failures, "published PDF #{href} exists in _site") do
-          File.exist?(File.join(SITE, "media-pdfs", pdf_key))
+        #
+        # A name the deploy would refuse is not staged and is reported, with the
+        # reason, by the committed pass's name check; failing "exists" for it
+        # too would only say the same thing less usefully.
+        if deploy_accepts_pdf_key?(pdf_key)
+          check(failures, "published PDF #{href} exists in _site") do
+            File.exist?(File.join(SITE, "media-pdfs", pdf_key))
+          end
+        end
+      elsif pdf_public
+        pdf_refused_checks += 1
+        # Issue #305: the box is ticked but the name is not a lowercase `.pdf`.
+        # The field rejects that name at save time and the deploy refuses to
+        # copy it out of the archive, so the layout must not offer a download
+        # either: a button here would link to a file that is never published.
+        check(failures, "/media/#{slug}/ shows no PDF button for #{pdf_key.inspect} (not a lowercase .pdf name)") do
+          !page.include?("/media-pdfs/") && page[PDF_HREF_RE, 1].nil?
         end
       else
         pdf_gated_checks += 1
@@ -392,9 +735,7 @@ distinct_labels = article_labels.values.compact.uniq
 # output. Announce the vacuity instead -- the same contract the PDF and
 # nav-anchor groups follow below and above.
 if article_labels.empty?
-  puts "  note site_live is false (or no media pages rendered) -- the issue #194"
-  puts "       outbound-link label checks did NOT run. Flip site_live: true and"
-  puts "       rebuild to arm them."
+  gate_hidden(failures, "the issue #194 outbound-link label checks")
 else
   check(failures, "built media pages render more than one outbound-link label (issue #194)") do
     distinct_labels.length >= 2
@@ -417,24 +758,31 @@ end
 # Count the keys in the SOURCE, independently of the gate, so the note names the
 # real reason.
 keys_in_content = media_src.count { |f| read(f).to_s =~ /^pdf_archive_file:\s*\S/ }
-if pdf_gated_checks.zero? && pdf_public_checks.zero?
+if OPEN_PASS
+  # The open-gate copy carries PDF_FIXTURES, so all three paths must run here;
+  # a zero means the fixtures or the gate did not reach the built pages.
+  check(failures, "PDF withhold assertion ran (#{pdf_gated_checks} entries)") { pdf_gated_checks.positive? }
+  check(failures, "PDF publish assertion ran (#{pdf_public_checks} entries)") { pdf_public_checks.positive? }
+  check(failures, "PDF suffix-rule assertion ran (#{pdf_refused_checks} entries)") { pdf_refused_checks.positive? }
+elsif pdf_gated_checks.zero? && pdf_public_checks.zero? && pdf_refused_checks.zero?
   if keys_in_content.zero?
     puts "  note no media entry carries a `pdf_archive_file`, so NEITHER the withhold"
-    puts "       assertion nor the publish assertion ran."
+    puts "       assertion nor the publish assertion ran on this build. The open-gate"
+    puts "       pass below runs both on synthetic entries."
   else
     puts "  note #{keys_in_content} media entr#{keys_in_content == 1 ? 'y carries' : 'ies carry'} a " \
          "`pdf_archive_file`, but site_live is false, so"
     puts "       every media page is a coming-soon shell and NEITHER the withhold nor"
-    puts "       the publish assertion could run. Flip `site_live: true` and rebuild"
-    puts "       to arm them — the gated build proves nothing about the PDF gate."
+    puts "       the publish assertion could run on this build. The open-gate pass"
+    puts "       below runs both, adding synthetic entries for the publish half."
   end
-  puts "       A pass here is not evidence the PDF chain works — see"
-  puts "       docs/CONTENT-MODEL.md, \"Archived PDFs\"."
 else
-  puts "  ok   PDF gate exercised: #{pdf_gated_checks} withheld, #{pdf_public_checks} published"
+  puts "  ok   PDF gate exercised: #{pdf_gated_checks} withheld, #{pdf_public_checks} published, " \
+       "#{pdf_refused_checks} refused for their suffix"
   if pdf_public_checks.zero?
-    puts "  note no entry has `pdf_public: true`, so the PUBLISH half did not run."
-    puts "       The withhold half (the default, and the security-relevant one) did."
+    puts "  note no entry has `pdf_public: true`, so the PUBLISH half did not run on this"
+    puts "       build. The withhold half (the default, and the security-relevant one) did;"
+    puts "       the open-gate pass below runs the publish half on a synthetic entry."
   end
 end
 
@@ -443,14 +791,155 @@ end
 # a hand-copied offprint, a well-meaning `assets/` commit. _site is excluded
 # because a build legitimately materialises opted-in PDFs there; it is never
 # committed (.gitignore).
-pdf_bytes_in_repo = Dir.glob(File.join(__dir__, "..", "**", "*.pdf"), File::FNM_CASEFOLD)
+# The skip list is matched against the path RELATIVE to the tree being scanned
+# and as whole path segments: an absolute path would let a TMPDIR containing
+# `/vendor/` or `/_site/` quietly skip the whole open-gate copy, and a bare
+# substring would let `xgit` stand in for `.git`.
+pdf_scan_skip = %w[_site .git .cms-platform node_modules vendor e2e].freeze
+pdf_bytes_in_repo = Dir.glob(File.join(ROOT, "**", "*.pdf"), File::FNM_CASEFOLD)
                        .map { |f| File.expand_path(f) }
-                       .reject { |f| f =~ %r{/(_site|\.git|\.cms-platform|node_modules|vendor|e2e)/} }
+                       .reject do |f|
+                         rel = f.delete_prefix("#{ROOT}/")
+                         rel.split("/")[0...-1].any? { |seg| pdf_scan_skip.include?(seg) }
+                       end
 check(failures, "no PDF bytes are committed to this public repo") do
   pdf_bytes_in_repo.empty?
 end
 unless pdf_bytes_in_repo.empty?
   pdf_bytes_in_repo.first(5).each { |f| puts "       stray PDF: #{f}" }
+end
+
+puts
+puts "== Fonts are self-hosted, not fetched from Google =="
+# A visitor's browser asking fonts.googleapis.com / fonts.gstatic.com sends that
+# visitor's IP to Google, which is a poor fit for a privacy lawyer's site and
+# costs a render-blocking third-party round trip. The two families live in
+# assets/fonts/ (sources and OFL licenses in SOURCES.txt) and are declared by
+# @font-face in jodidaniel.css. The hostnames are a lexical token, so this is a
+# plain scan of every built text file rather than a parse.
+GOOGLE_FONT_HOST_RE = /fonts\.(?:googleapis|gstatic)\.com/i
+built_text_files = Dir.glob(File.join(SITE, "**", "*.{html,css,js,svg,xml,json}"))
+google_font_refs = built_text_files.select do |f|
+  File.read(f, encoding: "utf-8", invalid: :replace, undef: :replace).match?(GOOGLE_FONT_HOST_RE)
+end
+check(failures, "no built page or asset references fonts.googleapis.com / fonts.gstatic.com (#{built_text_files.size} files scanned)") do
+  !built_text_files.empty? && google_font_refs.empty?
+end
+google_font_refs.first(5).each { |f| puts "       Google Fonts reference: #{f.delete_prefix("#{SITE}/")}" }
+
+site_css = read(File.join(SITE, "assets", "css", "jodidaniel.css"))
+font_faces = site_css.to_s.scan(/@font-face\s*\{[^}]*\}/m)
+check(failures, "jodidaniel.css declares @font-face rules for Raleway and Source Sans Pro") do
+  font_faces.any? { |b| b.include?("'Raleway'") } && font_faces.any? { |b| b.include?("'Source Sans Pro'") }
+end
+check(failures, "every @font-face sets font-display: swap (no invisible text while it loads)") do
+  !font_faces.empty? && font_faces.all? { |b| b.match?(/font-display:\s*swap\b/) }
+end
+WOFF2_MAGIC = "wOF2".b
+font_urls = font_faces.flat_map { |b| b.scan(/url\(\s*['"]?([^'")\s]+)['"]?\s*\)/).flatten }
+check(failures, "every @font-face url() is a same-site woff2 file that exists and starts with the woff2 magic") do
+  !font_urls.empty? && font_urls.all? do |u|
+    path = File.expand_path(u, File.join(SITE, "assets", "css"))
+    !u.match?(%r{\A[a-z]+:|\A//}i) && path.start_with?("#{SITE}/") && path.end_with?(".woff2") &&
+      File.file?(path) && File.binread(path, 4) == WOFF2_MAGIC
+  end
+end
+check(failures, "assets/fonts/ ships an OFL license file for each family beside the fonts") do
+  %w[OFL-Raleway.txt OFL-SourceSansPro.txt SOURCES.txt].all? do |n|
+    File.file?(File.join(SITE, "assets", "fonts", n))
+  end
+end
+# The critical files are preloaded on every layout (home, media, 404) so the first paint does not
+# wait for the stylesheet to discover them; `crossorigin` is required on a font
+# preload or the browser fetches the file twice.
+font_preload_pages = ["index.html", "404.html"] + Dir.glob(File.join(SITE, "media", "*", "index.html")).sort.first(1).map { |f| f.delete_prefix("#{SITE}/") }
+font_preload_pages.each do |page|
+  html = read(File.join(SITE, page))
+  preloads = html.to_s.scan(/<link\b[^>]*>/m).select { |t| t.match?(/\brel="preload"/) }
+  hrefs = preloads.map { |t| t[/\bhref="([^"]+)"/, 1] }.compact
+  check(failures, "#{page} preloads 1-2 self-hosted woff2 files, each with crossorigin, each present in the build") do
+    (1..2).cover?(hrefs.size) && preloads.all? { |t| t.match?(/\bcrossorigin\b/) && t.match?(/\bas="font"/) } &&
+      hrefs.all? { |h| h.end_with?(".woff2") && File.file?(File.join(SITE, h)) }
+  end
+end
+
+puts
+puts "== The stylesheet is inlined and minified on the home and media pages =="
+# jodidaniel.css was the only render-blocking request on these pages: a second
+# round trip before first paint, 54% of it comments. _plugins/inline_css.rb now
+# minifies it at build time and the layouts put it in a <style> (measured, slow
+# 4G: first contentful paint 648 -> ~400 ms). The readable file stays the edited
+# source and is still published for the 404 page. Parsed with scans of lexical
+# tokens (<link>, <style>, url(), braces), not a CSS parser.
+css_source = File.read(File.join(ROOT, "assets", "css", "jodidaniel.css"), encoding: "utf-8")
+css_source_rules = css_source.gsub(%r{/\*.*?\*/}m, "").count("{")
+inline_pages = ["index.html"] + Dir.glob(File.join(SITE, "media", "*", "index.html")).sort.map { |f| f.delete_prefix("#{SITE}/") }
+check(failures, "the build has the home page and at least one media page to check (#{inline_pages.size} pages)") do
+  inline_pages.size >= 2
+end
+inline_pages.each do |page|
+  html = read(File.join(SITE, page)).to_s
+  styles = html.scan(%r{<style\b[^>]*>(.*?)</style>}m).flatten
+  inline = styles.find { |s| s.include?("@font-face") }.to_s
+  sheet_links = html.scan(/<link\b[^>]*>/m).select { |t| t.match?(/\brel="stylesheet"/) }
+  check(failures, "#{page} has no <link rel=stylesheet> to jodidaniel.css (nothing render-blocking)") do
+    sheet_links.none? { |t| t.include?("jodidaniel.css") }
+  end
+  check(failures, "#{page} inlines the stylesheet in a <style> element") do
+    !inline.empty? && inline.include?("body") && inline.include?("@media")
+  end
+  check(failures, "#{page} inline CSS is minified: no comments, no newlines, under 60% of the source (#{inline.bytesize} of #{css_source.bytesize} bytes)") do
+    !inline.empty? && !inline.include?("/*") && !inline.include?("\n") && inline.bytesize < css_source.bytesize * 0.6
+  end
+  check(failures, "#{page} inline CSS keeps every rule of the source (#{css_source_rules} braces)") do
+    inline.count("{") == css_source_rules && inline.count("}") == css_source_rules
+  end
+  inline_font_urls = inline.scan(/url\(\s*["']?([^"')\s]+\.woff2)["']?\s*\)/).flatten
+  check(failures, "#{page} inline @font-face urls are root-relative /assets/fonts/ paths to existing woff2 files (#{inline_font_urls.size})") do
+    !inline_font_urls.empty? && !inline.include?("../fonts") && inline_font_urls.all? do |u|
+      u.start_with?("/assets/fonts/") && File.file?(File.join(SITE, u)) && File.binread(File.join(SITE, u), 4) == WOFF2_MAGIC
+    end
+  end
+end
+
+puts
+puts "== Raleway ships limited to the 600-700 weight axis =="
+# Raleway is a variable font (wght 100-900) and the site sets only 600 and 700;
+# limiting the axis cut 48 KB to 33 KB. fontTools' varLib.instancer did it
+# (scripts/subset-raleway.py, pinned in scripts/requirements-fonts.txt) and the
+# result is vendored. The unicode-range stays the Latin one. A .woff2 cannot be
+# opened here without a brotli codec, so the axis is checked from what the
+# build says about the file: its @font-face weight range, its name, its size, and
+# the sha256 SOURCES.txt records for it.
+RALEWAY_MAX_BYTES = 36_000
+raleway_files = Dir.glob(File.join(SITE, "assets", "fonts", "raleway-*.woff2")).map { |f| File.basename(f) }
+check(failures, "exactly one Raleway file ships, and it is the 600-700 axis build (#{raleway_files.join(", ")})") do
+  raleway_files == ["raleway-v37-latin-wght600-700.woff2"]
+end
+check(failures, "the Raleway file is at most #{RALEWAY_MAX_BYTES} bytes (the full 100-900 variable font is 48,264)") do
+  raleway_files.all? { |f| File.size(File.join(SITE, "assets", "fonts", f)) <= RALEWAY_MAX_BYTES }
+end
+raleway_face = font_faces.find { |b| b.include?("'Raleway'") }.to_s
+check(failures, "jodidaniel.css declares the Raleway @font-face at font-weight 600 700 with the Latin-1 unicode-range") do
+  raleway_face.match?(/font-weight:\s*600\s+700\s*;/) && raleway_face.match?(/unicode-range:[^;]*U\+0000-00FF\b/)
+end
+check(failures, "the inline Raleway @font-face (home page) has the same weight range and unicode-range") do
+  inline_home = read(File.join(SITE, "index.html")).to_s.scan(%r{<style\b[^>]*>(.*?)</style>}m).flatten.join
+  face = inline_home.scan(/@font-face\{[^}]*\}/).find { |b| b.include?("Raleway") }.to_s
+  face.match?(/font-weight:600 700[;}]/) && face.match?(/unicode-range:[^;}]*U\+0000-00FF\b/)
+end
+sources_txt = read(File.join(SITE, "assets", "fonts", "SOURCES.txt")).to_s
+check(failures, "SOURCES.txt records the sha256 of every self-hosted font file, matching the shipped bytes") do
+  font_files = Dir.glob(File.join(SITE, "assets", "fonts", "*.woff2"))
+  require "digest"
+  !font_files.empty? && font_files.all? do |f|
+    block = sources_txt[/^#{Regexp.escape(File.basename(f))}\n(.*?)(?=^\S|\z)/m, 1].to_s
+    block.match?(/^  sha256 #{Digest::SHA256.file(f).hexdigest}$/)
+  end
+end
+check(failures, "SOURCES.txt names the subsetting tool, its version and the source font's sha256 for Raleway") do
+  sources_txt.include?("scripts/subset-raleway.py") && sources_txt.include?("fontTools 4.66.0") &&
+    sources_txt.include?("b1bef1f03a77a36fc257c5525e32a1dd621bb6f935b743a419da7ed0b18dc8f5")
 end
 
 puts
@@ -520,7 +1009,7 @@ end
 # literal `split: "|"` string — the same text-level technique this script
 # already uses elsewhere (ARTICLE_LABEL_RE, PDF_HREF_RE) to read templated
 # content that isn't itself a structured format.
-home_layout_src = read(File.join(__dir__, "..", "_layouts", "home.html"))
+home_layout_src = read(File.join(ROOT, "_layouts", "home.html"))
 authored_cats_literal = home_layout_src && home_layout_src[/assign media_authored_cats = "([^"]*)" \| split: "\|"/, 1]
 coverage_cats_literal = home_layout_src && home_layout_src[/assign media_coverage_cats = "([^"]*)" \| split: "\|"/, 1]
 check(failures, "_layouts/home.html defines media_authored_cats and media_coverage_cats") do
@@ -541,7 +1030,7 @@ check(
 # Leg 3: _layouts/media.html's `{% case page.category %}` has a `when` for
 # each of the five — this is the leg with no other guard today (the #194
 # label map there was never cross-checked against anything until now).
-media_layout_src = read(File.join(__dir__, "..", "_layouts", "media.html"))
+media_layout_src = read(File.join(ROOT, "_layouts", "media.html"))
 media_layout_whens = media_layout_src.to_s.scan(/when "([^"]+)"/).flatten
 KNOWN_MEDIA_CATEGORIES.each do |cat|
   check(failures, "_layouts/media.html's {% case page.category %} has a `when \"#{cat}\"`") do
@@ -555,7 +1044,7 @@ end
 # false (the gate hides the whole Media section) — same conditional posture
 # as the other gated checks in this file (note, not a failure).
 if home_html.to_s.include?('<section id="media"')
-  settings_yaml_for_media = YAML.safe_load(read(File.join(__dir__, "..", "_data", "settings.yml")) || "") || {}
+  settings_yaml_for_media = YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml")) || "") || {}
   authored_heading = settings_yaml_for_media.dig("section_headings", "media_authored_heading").to_s
   coverage_heading = settings_yaml_for_media.dig("section_headings", "media_coverage_heading").to_s
 
@@ -588,9 +1077,7 @@ if home_html.to_s.include?('<section id="media"')
     !authored_indices.empty? && !coverage_indices.empty? && authored_indices.max < coverage_indices.min
   end
 else
-  puts "  note site_live is false (or no <section id=\"media\"> rendered) -- the authored-vs-"
-  puts "       coverage heading/ordering checks did NOT run. Flip site_live: true and rebuild"
-  puts "       to arm them."
+  gate_hidden(failures, "the authored-vs-coverage heading/ordering checks")
 end
 
 puts "== Upcoming Events (Jodi 2026-08-30 feedback) =="
@@ -598,7 +1085,7 @@ puts "== Upcoming Events (Jodi 2026-08-30 feedback) =="
 # `start_date` rather than `weight` like every sibling collection above --
 # see the comment on `events:` in _config.yml. Front matter is parsed with
 # the `yaml` stdlib (AGENTS.md), never a regex/line-scan.
-events_src = Dir[File.join(__dir__, "..", "_events", "*.md")].sort
+events_src = Dir[File.join(ROOT, "_events", "*.md")].sort
 check(failures, "_events/ has entries to check") { !events_src.empty? }
 
 EVENT_DATE_RE = /\A\d{4}-\d{2}-\d{2}\z/
@@ -687,9 +1174,7 @@ else
   # Same conditional posture as the #196 nav-anchor check and the PDF checks
   # above: say out loud that this didn't run, rather than let an unrelated
   # pass (or an empty failures array) imply coverage the gate is hiding.
-  puts "  note no <section id=\"events\"> in the built home page (site_live is false, or no"
-  puts "       events) -- the built-page title/date_display/order checks did NOT run. Flip"
-  puts "       site_live: true and rebuild to arm them."
+  gate_hidden(failures, "the built-page event title/date_display/order checks")
 end
 
 puts "== Above the fold: blurb + nav (Jodi 2026-08-30 feedback) =="
@@ -700,7 +1185,7 @@ puts "== Above the fold: blurb + nav (Jodi 2026-08-30 feedback) =="
 # that makes it *possible* is, and that's what a careless future edit -- one
 # that moves .intro-bio back above the nav, say -- would silently undo with
 # no build error. This checks that ordering, not the pixels.
-about_yaml_for_lead = YAML.safe_load(read(File.join(__dir__, "..", "_data", "about.yml")) || "") || {}
+about_yaml_for_lead = YAML.safe_load(read(File.join(ROOT, "_data", "about.yml")) || "") || {}
 check(failures, "_data/about.yml has a non-empty `lead`") do
   about_yaml_for_lead["lead"].is_a?(String) && !about_yaml_for_lead["lead"].strip.empty?
 end
@@ -718,9 +1203,7 @@ if lead_idx && nav_idx && bio_idx
     nav_idx < bio_idx
   end
 else
-  puts "  note site_live is false (or the About card didn't render, or bio is empty) -- the"
-  puts "       intro-lead/intro-nav/intro-bio ordering check did NOT run. Flip site_live: true"
-  puts "       and rebuild to arm it."
+  gate_hidden(failures, "the intro-lead/intro-nav/intro-bio ordering check")
 end
 
 puts "== admin seam <-> layout section ids stay in step =="
@@ -750,8 +1233,7 @@ home_html_for_ids = read(File.join(SITE, "index.html"))
 all_section_ids = home_html_for_ids.to_s.scan(/<section\s+id="([a-z-]+)"/).flatten.uniq
 
 if all_section_ids.empty?
-  puts "  note site_live is false (or no sections rendered) -- the admin-seam <-> layout"
-  puts "       section-id cross-check did NOT run. Flip site_live: true and rebuild to arm it."
+  gate_hidden(failures, "the admin-seam <-> layout section-id cross-check")
 else
   expected_ids = (all_section_ids - ["about"]).sort
   actual_options = anchor_seam_options.sort
@@ -772,9 +1254,460 @@ check(
   "expected #{expected_event_fields.inspect}"
 ) { events_seam_field_names == expected_event_fields }
 
+puts "== accessibility: WCAG 2.2 AA (contrast, landmarks, headings, reduced motion) =="
+# The audit's axe-core run found 27 text nodes in #8a9aaa at 2.75-2.88:1 and no <main>,
+# skip link or <h2> section titles, and the entrance fade-in kept content invisible for up to
+# 2.2 s under prefers-reduced-motion. The rules live in scripts/a11y_rules.rb (tested by
+# scripts/test-a11y-rules.rb); the built pages are read with kramdown's HTML parser, not a regex.
+a11y_css = read(File.join(ROOT, "assets", "css", "jodidaniel.css")).to_s
+low_contrast = A11yRules.low_contrast_text(a11y_css)
+check(failures, "every solid text color in jodidaniel.css reaches #{A11yRules::MIN_RATIO}:1 on its surface") do
+  low_contrast.empty?
+end
+low_contrast.each { |offender| puts "       ^ #{offender}" }
+# The tagline and footer sit on the page gradient, which axe cannot score (it reports them
+# "incomplete"), so their contrast is computed from the stylesheet over the gradient's stops.
+tagline_problems = A11yRules.tagline_problems(a11y_css)
+check(failures, "header .tagline reaches its WCAG ratio over the page gradient at every width (3:1 as bold 18.66px+ text, 4.5:1 where smaller)") do
+  tagline_problems.empty?
+end
+tagline_problems.each { |problem| puts "       ^ #{problem}" }
+footer_problems = A11yRules.footer_problems(a11y_css)
+check(failures, "footer text and links reach #{A11yRules::MIN_RATIO}:1 over the footer band on every page gradient stop") do
+  footer_problems.empty?
+end
+footer_problems.each { |problem| puts "       ^ #{problem}" }
+check(failures, "jodidaniel.css shows .animate-in content under prefers-reduced-motion (after the fade-in rule)") do
+  A11yRules.reduced_motion_shows_content?(a11y_css)
+end
+
+header_name = YAML.safe_load(read(File.join(ROOT, "_data", "header.yml")) || "")["name"].to_s
+a11y_pages = { "home page" => [File.join(SITE, "index.html"), true] }
+media_src.each do |src|
+  a11y_pages["#{File.basename(src, '.md')} item page"] = [MediaRules.page_path(SITE, src, media_front_matter(src)), false]
+end
+a11y_open = home_html.to_s.include?('<section id="about"')
+if a11y_open
+  a11y_pages.each do |label, (path, home)|
+    html = read(path)
+    problems = html ? A11yRules.page_problems(html, home: home) : ["page not built at #{path}"]
+    check(failures, "built #{label}: <main>, skip link, heading order and image sizes are in place") { problems.empty? }
+    problems.each { |problem| puts "       ^ #{problem}" }
+  end
+else
+  gate_hidden(failures, "the built-page landmark/skip-link/heading checks")
+end
+
+puts "== headings: each media page's h1 is its item title; the home page keeps the site name =="
+# F4 (UX r5): the media layout's only h1 used to be the site name, so a screen-reader heading list
+# gave every item page the same h1. Now the item title is the h1 and the site name is a banner link.
+# The built home page keeps the site name as its h1 (and the gated coming-soon shell too).
+check(failures, "built home page has exactly one h1, the site name (#{header_name.inspect})") do
+  h1s = A11yRules.find_all(A11yRules.parse_html(home_html.to_s), "h1")
+  h1s.size == 1 && A11yRules.decoded_text_of(h1s.first[:node]).strip == header_name
+end
+if a11y_open
+  media_src.each do |src|
+    slug = File.basename(src, ".md")
+    html = read(MediaRules.page_path(SITE, src, media_front_matter(src)))
+    title = (media_front_matter(src) || {})["title"]
+    problems = html ? A11yRules.media_heading_problems(html, title) : ["page not built"]
+    check(failures, "built #{slug} item page: its one h1 is the item title, in <main>") { problems.empty? }
+    problems.each { |problem| puts "       ^ #{problem}" }
+  end
+else
+  gate_hidden(failures, "the media pages' item-title h1 checks")
+end
+
+puts "== editor-facing admin copy stays out of developer vocabulary =="
+# Every word an editor reads in /admin comes from this seam, and the premise of
+# this site (AGENTS.md, "Keep every visible string /admin-editable") is that its
+# owner maintains it with no developer standing by. Copy that names an internal
+# key (`site_live`), states a code comparison (`= false`), or reaches for
+# developer vocabulary ("gating", "boolean") tells her nothing she can act on --
+# and nothing else fails when it drifts back, because Decap renders whatever
+# string it is handed. Both assertions below were RED on the seam as it stood --
+# "Site Live (controls gating)" and "Settings & Gating" on the vocabulary one,
+# "Coming Soon (shown when site_live = false)" and its footer sibling on both.
+#
+# Scope is deliberately narrow, so this stays a lint and not a style opinion: an
+# internal key is a snake_case token (never natural English), and the vocabulary
+# list holds only words that carry no meaning for a non-technical owner. Plain
+# words she already meets in Decap's own chrome are NOT on it.
+editor_copy = []
+collect_copy = lambda do |node|
+  case node
+  when Hash
+    node.each do |k, v|
+      editor_copy << [k, v] if %w[label hint].include?(k) && v.is_a?(String)
+      # `pattern: ["<regex>", "<message shown on a bad value>"]` -- element 1 is
+      # editor-facing copy too, and parsing (rather than scanning lines) is what
+      # lets this tell it apart from the regex sitting beside it.
+      editor_copy << ["pattern message", v[1]] if k == "pattern" && v.is_a?(Array) && v[1].is_a?(String)
+      collect_copy.call(v)
+    end
+  when Array
+    node.each { |v| collect_copy.call(v) }
+  end
+end
+collect_copy.call(seam_yaml)
+# The site's `$ref` leaves shared PDF labels and hints out of the source seam.
+# Include the three resolved fields from the rendered config so centralized
+# platform copy stays under the same editor-language guard.
+%w[pdf_archive_file pdf_public pdf_label].each do |name|
+  collect_copy.call(media_admin_fields[name])
+end
+
+# Guard the denominator: an empty or mis-parsed seam would make both checks
+# below pass over nothing at all.
+check(failures, "admin seam yields editor-facing copy to check (#{editor_copy.size} strings)") do
+  editor_copy.size > 50
+end
+
+internal_key = /\b[a-z]+(?:_[a-z]+)+\b|=\s*(?:true|false)\b/
+key_offenders = editor_copy.select { |(_, text)| text =~ internal_key }
+check(failures, "no admin label/hint/validation message names an internal key or a code comparison") do
+  key_offenders.empty?
+end
+key_offenders.each { |(kind, text)| puts "       ^ #{kind}: #{text}" }
+
+jargon = /\b(?:gating|gated|boolean|front[- ]matter|yaml|repo|repository|commit|permalink|slug|widget|true|false|null|nil)\b/i
+jargon_offenders = editor_copy.select { |(_, text)| text =~ jargon }
+check(failures, "no admin label/hint/validation message uses developer vocabulary") do
+  jargon_offenders.empty?
+end
+jargon_offenders.each { |(kind, text)| puts "       ^ #{kind}: #{text}" }
+
+# ---------------------------------------------------------------------------
+# Share titles + Person data (audit #4/#5). The Person facts, the share titles
+# and the media pages' schema only exist once the gate is open (open-gate pass);
+# the gated pass checks that none of it leaks.
+# ---------------------------------------------------------------------------
+puts "== share titles + structured data =="
+site_url = (YAML.safe_load(read(File.join(ROOT, "_config.yml"))) || {})["url"].to_s
+person_name = (YAML.safe_load(read(File.join(ROOT, "_data", "header.yml"))) || {})["name"].to_s
+author_name = ((YAML.safe_load(read(File.join(ROOT, "_config.yml"))) || {})["author"] || {})["name"].to_s
+
+# Every <meta> (property|name => [content, ...]) in a page's <head>, so a
+# duplicate is visible rather than the first one silently winning.
+def head_metas(html)
+  head = html.to_s[%r{<head>.*?</head>}m].to_s
+  head.scan(/<meta\s+([^>]*?)\s*\/?>/m).each_with_object(Hash.new { |h, k| h[k] = [] }) do |(attrs), acc|
+    key = attrs[/(?:property|name)="([^"]+)"/, 1]
+    acc[key] << attrs[/content="([^"]*)"/, 1] if key
+  end
+end
+
+def ld_json_blocks(html)
+  html.to_s.scan(%r{<script type="application/ld\+json">(.*?)</script>}m).flatten.map { |raw| JSON.parse(raw) }
+end
+
+home_share_html = read(File.join(SITE, "index.html"))
+home_metas = head_metas(home_share_html)
+# No link preview image is set by this change (whether her headshot belongs on
+# one is an open decision), so neither page type may carry one yet.
+check(failures, "the home page sets no og:image or twitter:image") do
+  !home_metas.key?("og:image") && !home_metas.key?("twitter:image")
+end
+settings_src = YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml"))) || {}
+if settings_src["site_live"] == true
+  # --- open gate: Person on the home page ---------------------------------
+  # The share title leads with her name (a bare role title read as a slogan with
+  # no one attached). Exactly one of each: a failed prefix replace would leave the
+  # bare title, a double insert would repeat the name.
+  %w[og:title twitter:title].each do |key|
+    check(failures, "home #{key} is one value and leads with #{person_name.inspect}: #{home_metas[key].inspect}") do
+      home_metas[key].size == 1 && home_metas[key].first.start_with?(person_name) &&
+        !home_metas[key].first.start_with?("#{person_name} | #{person_name}")
+    end
+  end
+
+  home_ld = ld_json_blocks(home_share_html)
+  persons = home_ld.select { |b| b["@type"] == "Person" }
+  check(failures, "home page emits exactly one top-level Person (JSON-LD), got #{persons.size}") { persons.size == 1 }
+  person = persons.first || {}
+  want = PersonRules.expected(ROOT)
+  got = PersonRules.observed(person)
+  check(failures, "Person name is #{person_name.inspect} and url is the site root") do
+    person["name"] == person_name && person["url"] == "#{site_url}/"
+  end
+  # One comparison per field, derived from the source files (scripts/person_rules.rb),
+  # so an /admin edit (a changed Contact link, "present" in any case, no current
+  # job) moves the expectation with it instead of tripping a hardcoded fact.
+  %w[jobTitle worksFor alumniOf knowsAbout sameAs alternateName].each do |field|
+    check(failures, "Person #{field} matches the source content: want #{want[field].inspect}, got #{got[field].inspect}") do
+      got[field] == want[field]
+    end
+  end
+  check(failures, "Person sameAs entries are all https") { person["sameAs"].to_a.all? { |u| u.start_with?("https://") } }
+  check(failures, "the Person script holds no raw '<' (so no value can close the script tag)") do
+    home_share_html.scan(%r{<script type="application/ld\+json">(.*?)</script>}m).flatten.none? { |raw| raw.include?("<") }
+  end
+
+  # --- open gate: media pages are WebPages, not her blog posts ---------------
+  media_pages = Dir[File.join(SITE, "media", "*", "index.html")].sort
+  check(failures, "open-gate build has media pages to check (#{media_pages.size})") { media_pages.size > 0 }
+  descs = []
+  media_pages.each do |f|
+    slug = File.basename(File.dirname(f))
+    html = read(f)
+    blocks = ld_json_blocks(html)
+    metas = head_metas(html)
+    descs << metas["description"].first
+    check(failures, "media/#{slug}: schema is one WebPage with no BlogPosting, datePublished or author") do
+      blocks.size == 1 && blocks.first["@type"] == "WebPage" &&
+        !html.include?("BlogPosting") && !html.include?("datePublished") && !blocks.first.key?("author")
+    end
+    # {% seo %} ran smartify on these titles, so a contraction showed a curly
+    # apostrophe in the tab and the share titles; the hand-written head has to keep that.
+    source_title = (media_front_matter(File.join(ROOT, "_media", "#{slug}.md")) || {})["title"].to_s.gsub(/\s+/, " ").strip
+    unless source_title.empty?
+      want_title = source_title.gsub(/(?<=\w)'(?=\w)/, "\u2019")
+      tab_title = CGI.unescapeHTML(html[%r{<title>(.*?)</title>}m, 1].to_s)
+      shown = [tab_title.sub(/ \| [^|]*\z/, ""), CGI.unescapeHTML(metas["og:title"].first.to_s), CGI.unescapeHTML(metas["twitter:title"].first.to_s)]
+      check(failures, "media/#{slug}: tab, og and twitter titles keep smart apostrophes: want #{want_title.inspect}, got #{shown.inspect}") do
+        if source_title.include?('"')
+          shown.none? { |t| t.include?("'") || t.include?('"') }
+        else
+          shown.all? { |t| t == want_title }
+        end
+      end
+    end
+    check(failures, "media/#{slug}: not typed as an article (og:type website, no article:published_time)") do
+      metas["og:type"] == ["website"] && !metas.key?("article:published_time")
+    end
+    check(failures, "media/#{slug}: keeps og:locale and the author meta the tag used to emit") do
+      metas["og:locale"] == ["en_US"] && metas["author"] == [author_name]
+    end
+    check(failures, "media/#{slug}: sets no og:image or twitter:image, and uses the small card") do
+      !metas.key?("og:image") && !metas.key?("twitter:image") && metas["twitter:card"] == ["summary"]
+    end
+  end
+  check(failures, "every media page has its own description (not one site-wide string)") do
+    descs.size == descs.uniq.size && descs.none? { |d| d.to_s.empty? }
+  end
+else
+  # --- gated: no bio fact ----------------------------------------------------
+  check(failures, "gated home page serves NO Person data and no job title (no claim before sign-off)") do
+    html = home_share_html.to_s
+    ld_json_blocks(html).empty? && !html.include?("jobTitle") && !html.include?("Wilson Sonsini")
+  end
+end
+
+# The tab title and meta description on the built home page come from
+# _data/settings.yml `seo:` (applied by _plugins/site_meta_from_settings.rb), so
+# an /admin edit reaches the page. Gated: the site name plus the coming-soon
+# description. Open: "<launch title> | <site name>" plus the launch description.
+# Compared against the data file itself, so editing the copy never breaks this --
+# only a wiring break (a hardcoded literal, a dead plugin) does. A BLANK field
+# expects what its /admin hint promises: a blank site name falls back to
+# _config.yml's title, a blank launch title leaves the site name alone in the
+# tab, and a blank description means no description tag at all.
+require "cgi"
+seo_data = YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml")))
+seo_config = YAML.safe_load(read(File.join(ROOT, "_config.yml")))
+seo_home = read(File.join(SITE, "index.html")).to_s
+seo_title = seo_home[%r{<title>(.*?)</title>}m, 1]
+seo_desc = seo_home[/<meta name="description" content="([^"]*)"/, 1]
+filled = ->(value) { value.is_a?(String) && !value.strip.empty? }
+site_name = filled.call(seo_data.dig("seo", "site_title")) ? seo_data.dig("seo", "site_title") : seo_config["title"].to_s
+# The gate is open on the committed build too once `site_live: true` is committed
+# (go-live), so the open expectation applies there as well as on the open pass.
+if OPEN_PASS || seo_data["site_live"] == true
+  launch_title = seo_data.dig("seo", "launch_title")
+  expected_title = filled.call(launch_title) ? "#{launch_title} | #{site_name}" : site_name
+  expected_desc = seo_data.dig("seo", "launch_description")
+else
+  expected_title = site_name
+  expected_desc = seo_data.dig("coming_soon", "seo_description")
+end
+check(failures, "home <title> is the /admin-editable value (#{expected_title.inspect})") do
+  !expected_title.empty? && seo_title == CGI.escapeHTML(expected_title)
+end
+check(failures, "home meta description is the /admin-editable value (blank means no tag)") do
+  if filled.call(expected_desc)
+    seo_desc == CGI.escapeHTML(expected_desc)
+  else
+    seo_desc.nil?
+  end
+end
+
+if OPEN_PASS
+  puts
+  puts "#{STATS[:executed]} assertion(s) executed on the open-gate build."
+  if failures.empty?
+    puts "All open-gate assertions passed."
+    exit 0
+  end
+  puts "#{failures.size} open-gate assertion(s) FAILED:"
+  failures.each { |f| puts "  - #{f}" }
+  exit 1
+end
+
+committed_executed = STATS[:executed]
+puts
+puts "#{committed_executed} assertion(s) executed on the committed-gate build."
+
+# ---------------------------------------------------------------------------
+# The open-gate pass (issue #306). See the header comment for the design.
+# ---------------------------------------------------------------------------
+
+# What goes into the disposable copy is an ALLOWLIST, never "everything except":
+# the files `git ls-files` reports, nothing else. A checkout carries local-only
+# content git ignores (the OAuth proxy's real credentials in
+# infrastructure/site-params.env, .cms-platform, .jodidaniel-real-content,
+# e2e/node_modules), and an exclude list would copy whatever it forgot to name
+# into /tmp. Without git metadata (a tarball checkout) there is no list to ask,
+# so the fallback walks the tree and refuses the local-only names below.
+#
+# Build output and caches, installed gems (Bundler still resolves them from
+# REPO_ROOT, where the build is launched), local agent state and `.git` are
+# never copied either, so the copy is not a repository and nothing run in it can
+# reach `origin`.
+OPEN_COPY_SKIP = %w[.git _site .jekyll-cache .sass-cache .bundle vendor node_modules .claude].freeze
+# Fallback only: names and shapes that hold local-only or credential content.
+OPEN_COPY_LOCAL_ONLY = %w[infrastructure .cms-platform .jodidaniel-real-content e2e].freeze
+
+# Paths, relative to REPO_ROOT, to copy: nil when there is no usable git
+# metadata. Argument array and NUL-delimited output, so no shell string and no
+# name can be misread.
+def tracked_paths
+  return nil unless File.exist?(File.join(REPO_ROOT, ".git"))
+
+  out = IO.popen(["git", "-C", REPO_ROOT, "ls-files", "-z"], err: File::NULL, &:read)
+  return nil unless $?.success?
+
+  out.force_encoding("UTF-8").split("\0").reject(&:empty?)
+rescue SystemCallError
+  nil
+end
+
+def walked_paths
+  Dir.glob("**/*", File::FNM_DOTMATCH, base: REPO_ROOT).select do |rel|
+    segs = rel.split("/")
+    base = segs.last
+    next false if base == "." || segs.include?("..")
+    next false if segs.any? { |seg| OPEN_COPY_SKIP.include?(seg) || OPEN_COPY_LOCAL_ONLY.include?(seg) }
+    next false if base.start_with?(".env") || base.end_with?(".env")
+
+    File.file?(File.join(REPO_ROOT, rel)) || File.symlink?(File.join(REPO_ROOT, rel))
+  end
+end
+
+# Copy the source tree into `tmp`. Returns the relative paths copied and the
+# listing mode, for the assertion that the copy holds nothing else.
+def copy_source_tree(tmp)
+  tracked = tracked_paths
+  paths = tracked || walked_paths
+  paths.each do |rel|
+    next if OPEN_COPY_SKIP.include?(rel.split("/").first)
+
+    src = File.join(REPO_ROOT, rel)
+    next unless File.file?(src) # a tracked file deleted in the working tree, or a submodule
+
+    dest = File.join(tmp, rel)
+    FileUtils.mkdir_p(File.dirname(dest))
+    FileUtils.cp(src, dest)
+  end
+  [paths, tracked ? :git : :walk]
+end
+
+def write_pdf_fixtures(media_dir)
+  PDF_FIXTURES.each do |slug, key, pdf_public|
+    front_matter = {
+      "category" => "Press Coverage",
+      "title" => "Verifier fixture #{slug.delete_prefix(PDF_FIXTURE_PREFIX)}",
+      "source" => "Synthetic entry",
+      "date_display" => "October 2026",
+      "article_url" => "https://example.com/#{slug}",
+      "pdf_archive_file" => key,
+      "pdf_public" => pdf_public,
+      "weight" => 999,
+    }
+    File.write(File.join(media_dir, "#{slug}.md"), "#{YAML.dump(front_matter)}---\n", encoding: "utf-8")
+  end
+end
+
+# Stand in for the deploy's publish-opted-in-pdfs.sh, which copies an opted-in
+# object out of the private archive to exactly this path. EVERY `pdf_public:
+# true` entry in the copy's `_media` gets a file -- the real ones as well as the
+# fixtures -- provided the deploy would accept its name (DEPLOY_PDF_KEY_RE, no
+# `..`). CI cannot read the private archive, so whether the object exists is the
+# deploy's check, which fails loudly; staging here keeps a legitimately ticked
+# real entry from turning the required check red for a file only the deploy can
+# see. A name the deploy would refuse gets nothing, and the committed pass's
+# name check reports it.
+def stage_published_pdfs(media_dir, site)
+  dir = File.join(site, "media-pdfs")
+  FileUtils.mkdir_p(dir)
+  Dir.glob(File.join(media_dir, "*.md")).sort.each do |entry|
+    front = media_front_matter(entry)
+    next unless front && front["pdf_public"] == true
+
+    key = front["pdf_archive_file"].to_s.strip
+    next unless deploy_accepts_pdf_key?(key)
+
+    File.write(File.join(dir, key), "verifier stand-in, not a real PDF\n")
+  end
+end
+
+puts
+puts "== open-gate pass: the same assertions on a disposable build with site_live forced on =="
+settings_path = File.join(REPO_ROOT, "_data", "settings.yml")
+settings_before = File.binread(settings_path)
+open_built = false
+open_passed = false
+copied_paths = []
+copy_mode = nil
+stray_in_copy = []
+Dir.mktmpdir("verify-open-gate-") do |tmp|
+  copied_paths, copy_mode = copy_source_tree(tmp)
+  # Prove the allowlist held, from what is actually on disk: every file in the
+  # copy must be one that was meant to go in (before the fixtures, settings edit
+  # and build add their own).
+  on_disk = Dir.glob("**/*", File::FNM_DOTMATCH, base: tmp).select { |rel| File.file?(File.join(tmp, rel)) }
+  stray_in_copy = on_disk - copied_paths
+  if copy_mode == :walk
+    stray_in_copy += on_disk.select do |rel|
+      rel.split("/").first == "infrastructure" || File.basename(rel).end_with?(".env")
+    end
+  end
+
+  copy_settings = File.join(tmp, "_data", "settings.yml")
+  settings = YAML.safe_load(File.read(copy_settings, encoding: "utf-8")) || {}
+  settings["site_live"] = true
+  File.write(copy_settings, YAML.dump(settings), encoding: "utf-8")
+
+  write_pdf_fixtures(File.join(tmp, "_media"))
+
+  site = File.join(tmp, "_site")
+  $stdout.flush
+  # JEKYLL_ENV=production, as the deploy builds it: the open-gate build stands
+  # in for what launch would ship.
+  open_built = system({ "JEKYLL_ENV" => "production" },
+                      "bundle", "exec", "jekyll", "build", "--quiet", "--source", tmp, "--destination", site,
+                      chdir: REPO_ROOT)
+  if open_built
+    stage_published_pdfs(File.join(tmp, "_media"), site)
+    $stdout.flush
+    open_passed = system(RbConfig.ruby, File.expand_path(__FILE__), "--open-pass", tmp, site)
+  end
+end
+puts
+puts "#### back in the committed-gate pass"
+check(failures, "open-gate copy holds only tracked source files (#{copy_mode == :git ? 'git ls-files' : 'no git metadata, so a walk without infrastructure/ or *.env'}; #{copied_paths.size} paths), no local-only content") do
+  stray_in_copy.empty?
+end
+stray_in_copy.first(5).each { |f| puts "       unexpected in the copy: #{f}" }
+check(failures, "open-gate build succeeds (bundle exec jekyll build on the disposable copy)") { open_built }
+check(failures, "open-gate pass: every assertion passed (its output is above)") { open_passed } if open_built
+check(failures, "_data/settings.yml is unchanged by the open-gate pass (the committed site_live stays as is)") do
+  File.binread(settings_path) == settings_before
+end
+
 puts
 if failures.empty?
-  puts "All build-artifact assertions passed."
+  puts "All build-artifact assertions passed (committed-gate build and open-gate build)."
   exit 0
 else
   puts "#{failures.size} assertion(s) FAILED:"

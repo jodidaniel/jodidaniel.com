@@ -14,7 +14,7 @@ bio:
   # as <strong>, styled to match the mockup's `.highlight` accent color/weight
   # (see .intro-text strong in jodidaniel.css). The owner can bold any future
   # phrase from /admin in plain Markdown — no HTML hand-writing required.
-  - "Jodi is a partner at **Wilson Sonsini** in Washington, DC. She advises health systems, digital health and AI companies, and the investors backing them — usually on the products the rulebook did not anticipate."
+  - "Jodi is a partner at **Wilson Sonsini** in Washington, D.C. She advises health systems, digital health and AI companies, and the investors backing them — usually on the products the rulebook did not anticipate."
   - "She spent **15 years as a lawyer and senior policymaker at the U.S. Department of Health and Human Services**: first as the department's first senior counsel for health IT, then as **founding director of the Office of Policy at ONC**. She was a key drafter of the original **HIPAA Privacy Rule**."
   - "She has been doing this for **more than 30 years** — as **one of the first digital health lawyers**, since before the field had a name. She also teaches at **Yale School of Medicine**."
 nav:

@@ -57,7 +57,7 @@
       # A value present in one but not the others silently drops items,
       # mislabels a picker option, or mislabels a per-item page's button,
       # with no build error. See docs/CONTENT-MODEL.md.
-      - { name: category, label: "Category", widget: select, options: ["Articles & Commentary", "Briefs, Testimony & Reports", "Talks & Panels", "Podcasts & Interviews", "Press Coverage"], hint: "The first two (Articles & Commentary; Briefs, Testimony & Reports) are things she wrote. The last three (Talks & Panels; Podcasts & Interviews; Press Coverage) are things she appeared in, or that someone else wrote about her." }
+      - { name: category, label: "Category", widget: select, options: ["Articles & Commentary", "Briefs, Testimony & Reports", "Talks & Panels", "Podcasts & Interviews", "Press Coverage"], hint: "The first two (Articles & Commentary; Briefs, Testimony & Reports) are things you wrote. The last three (Talks & Panels; Podcasts & Interviews; Press Coverage) are things you appeared in, or that someone else wrote about you." }
       - { name: title,    label: "Title", widget: string }
       - { name: source,   label: "Source", widget: string }
       - { name: date_display, label: "When (month and year)", widget: string, required: false, hint: "Month and year as you want it to read, e.g. \"April 2025\". Leave blank only if the item genuinely has no single date." }
@@ -66,8 +66,8 @@
       # shadows the front-matter value, so {{ item.url }} renders /media/<slug>/
       # instead of the article link. See docs/CONTENT-MODEL.md.
       - { name: article_url, label: "Article URL", widget: string, pattern: ["^https?://.*", "Must be a valid http(s) URL"] }
-      - { name: link_label, label: "Link Button Label", widget: string, required: false, hint: "Optional. Leave blank and a sensible label is picked automatically from Category (e.g. \"Read the brief\" for Policy & Advocacy, \"Listen to the episode\" for Podcasts & Interviews). Set this only to override that default for an unusual item." }
-      # ARCHIVED PDF -- two fields, and the split is the whole point.
+      - { name: link_label, label: "Link Button Label", widget: string, required: false, hint: "Optional. Leave blank and a sensible label is picked automatically from Category (e.g. \"Read the brief\" for Briefs, Testimony & Reports,\"Listen to the episode\" for Podcasts & Interviews). Set this only to override that default for an unusual item." }
+      # ARCHIVED PDF -- three fields, and the split is the whole point.
       #
       # The PDF BYTES never live in this repo. jodidaniel.com is a PUBLIC
       # GitHub repo, so a committed PDF of someone else's article would be
@@ -100,10 +100,8 @@
       # and the one above) -- check a new field name against it before
       # committing. Renaming is the fix at source; an allowlist entry is not,
       # for the reasons the top of `.gitleaks.toml` sets out.
-      - { name: pdf_archive_file, label: "Archived PDF (file name in the private archive)", widget: string, required: false, pattern: ['\.pdf$', 'Must be a PDF file name (.pdf)'], hint: "Optional. The file name of this item's PDF in the private media archive, e.g. \"example-article.pdf\". Leave blank if there is no archived copy. Uploading a new PDF into the archive is done by the site maintainer, not from here." }
-      - { name: pdf_public, label: "Publish this PDF on the public website", widget: boolean, required: false, default: false, hint: "Leave OFF unless you know we are permitted to republish this document -- e.g. it is a US-government work, something Jodi wrote and holds the rights to, or the publisher has given permission. While OFF, the PDF stays in the private archive: no download button appears and the file is not deployed to the website at all." }
-      - { name: pdf_label, label: "PDF Button Label", widget: string, required: false, hint: "Optional. Leave blank to use the default \"Download PDF\". Set this only to override that default for an unusual item. Only ever seen when \"Publish this PDF on the public website\" is ticked." }
-      - { name: weight,   label: "Order within category", widget: number }
+      - $ref: "#/field_library/archived_pdf_fields"
+      - { name: weight,   label: "Order within category", widget: number, hint: "A whole number such as 1, 2 or 3; controls sort order. Within its category, the lowest number is listed first, so type 1 to put this item at the top. Give each item in a category its own number to keep the order fixed." }
 
   - name: education
     label: "Education"
@@ -131,10 +129,10 @@
   # and docs/CONTENT-MODEL.md): a front-matter `url:` key on a collection
   # document is unreachable from Liquid, so this field is named `event_url`.
   #
-  # The `start_date` `pattern:` below MUST stay single-quoted YAML --
-  # `'^\d{4}-\d{2}-\d{2}$'`. A double-quoted `"\d"` is a YAML parse error
-  # (not merely a different regex), same trap the `pdf_archive_file` field's pattern
-  # below already documents.
+  # The `start_date` pattern uses `[0-9]` rather than `\d`. Once this seam uses
+  # a platform `$ref`, the whole fragment is parsed and re-emitted before it is
+  # spliced; a backslash in the replacement text would otherwise become an
+  # invalid double-quoted YAML escape. The two forms accept the same dates.
   - name: events
     label: "Upcoming Events"
     folder: "_events"
@@ -145,10 +143,10 @@
     fields:
       - { name: title,        label: "Event name", widget: string }
       - { name: org,          label: "Host organization", widget: string }
-      - { name: start_date,   label: "Start date (sets the order)", widget: string, pattern: ['^\d{4}-\d{2}-\d{2}$', 'Use YYYY-MM-DD, e.g. 2026-10-20'], hint: "Year-month-day, e.g. 2026-10-20. This is what orders the list -- earliest first. It is NOT what visitors see; that is the next field." }
+      - { name: start_date,   label: "Start date (sets the order)", widget: string, pattern: ['^[0-9]{4}-[0-9]{2}-[0-9]{2}$', 'Use YYYY-MM-DD, e.g. 2026-10-20'], hint: "Year-month-day, e.g. 2026-10-20. This is what orders the list -- earliest first. It is NOT what visitors see; that is the next field." }
       - { name: date_display, label: "Dates (as shown on the page)", widget: string, hint: "Written however you want it to read, e.g. \"October 20 - 21, 2026\"." }
       - { name: location,     label: "Location", widget: string, hint: "City and state, e.g. \"Kansas City, MO\". The venue lives on the event's own site." }
-      - { name: session,      label: "Your session (optional)", widget: text, required: false, hint: "Optional. The panel or talk you are on, with its own date and time, e.g. \"Panel - Federal and State AI Policies, October 1 at 4:00 PM\". Leave blank if you are attending rather than speaking." }
+      - { name: session,      label: "Your session", widget: text, required: false, hint: "Optional. The panel or talk you are on, with its own date and time, e.g. \"Panel - Federal and State AI Policies, October 1 at 4:00 PM\". Leave blank if you are attending rather than speaking." }
       - { name: event_url,    label: "Event website", widget: string, required: false, pattern: ["^https?://.*", "Must be a valid http(s) URL"] }
 
   # ─────────────────────────────────────────────────────────────────────────────────
@@ -180,8 +178,8 @@
         fields:
           - { name: photo,         label: "Profile Photo", widget: image, required: false, media_library: { config: { multiple: false } } }
           - { name: intro_heading, label: "Intro Heading", widget: string }
-          - { name: lead, label: "Opening line (shown above the nav buttons)", widget: text, hint: "One sentence. This is the only body copy above the fold on a laptop -- everything you add here pushes the nav buttons down the page. The longer bio below the buttons is the next field." }
-          - { name: bio,           label: "Bio Paragraphs", widget: list, summary: "{{fields.paragraph | truncate(60)}}", field: { name: paragraph, label: "Paragraph", widget: text } }
+          - { name: lead, label: "Opening line (shown above the nav buttons)", widget: text, hint: "One sentence. This is the only body copy above the fold on a laptop -- everything you add here pushes the nav buttons down the page. The longer bio below the buttons is the next field. To make words bold on the site, put two asterisks on each side, like \\*\\*this\\*\\*. Those asterisks are formatting, so leave them in." }
+          - { name: bio,           label: "Bio Paragraphs", widget: list, hint: "To make words bold on the site, put two asterisks on each side, like \\*\\*this\\*\\*. Those asterisks are formatting, not stray marks, so leave them in unless you want the bold gone.", summary: "{{fields.paragraph | truncate(60)}}", field: { name: paragraph, label: "Paragraph", widget: text } }
           - name: nav
             label: "In-Page Nav Links"
             widget: list
@@ -242,29 +240,56 @@
       preview: false
     files:
       - name: settings
-        label: "Settings & Gating"
+        label: "Settings & Launch"
         file: "_data/settings.yml"
         fields:
-          - { name: site_live, label: "Site Live (controls gating)", widget: boolean, hint: "When false, only shows 'coming soon'; when true, shows full bio." }
+          - { name: site_live, label: "Show the full site on {{CMS_CURRENT_HOST}}", widget: boolean, hint: "Off — visitors to {{CMS_CURRENT_HOST}} see only the coming-soon page. On — they see the full site. Your work is kept either way. Changing this switch does nothing until you select Publish. On a preview address (one that starts with \"preview-\"), Publish changes only that preview, so to change jodidaniel.com itself, use [jodidaniel.com/admin](https://jodidaniel.com/admin/)." }
           - name: coming_soon
-            label: "Coming Soon (shown when site_live = false)"
+            label: "Coming-soon page (shown on {{CMS_CURRENT_HOST}} while the full site is hidden)"
             widget: object
             fields:
               - { name: tagline,   label: "Coming Soon Tagline", widget: string }
               - { name: copyright, label: "Copyright", widget: string }
-              - { name: seo_description, label: "Search-Result Description (while coming soon)", widget: string, required: false, hint: "What Google and link previews show while the site is still gated. Keep it neutral -- the launch description in the site config only takes over once Site Live is on. Leave blank to serve no description at all." }
+              - { name: seo_description, label: "Search-Result Description (while coming soon)", widget: string, required: false, hint: "What Google and link previews show while the full site is hidden. Keep it neutral — the launch description takes over on its own once you show the full site. Leave blank to serve no description at all." }
+          - name: seo
+            label: "Browser Tab and Google Listing"
+            widget: object
+            hint: "The words in the browser tab and in Google results. Changing them does nothing until you select Publish."
+            fields:
+              - { name: site_title, label: "Site Name in the Tab", widget: string, hint: "Shown in the browser tab while the full site is hidden, and after the page title once it is visible (for example, \"Digital Health Law & Policy Leader | Jodi Daniel\")." }
+              - { name: launch_title, label: "Page Title (once the full site is visible)", widget: string, required: false, hint: "Your role or focus, without your name, because the site name is added after it. Takes over from the plain site name once you show the full site. Leave blank to show only the site name." }
+              - { name: launch_description, label: "Google Description (once the full site is visible)", widget: text, required: false, hint: "The sentence or two Google and link previews show under your name. Takes over from the coming-soon description once you show the full site. About 150 characters reads best. Leave blank to serve no description." }
           - name: footer
-            label: "Footer (shown when site_live = true)"
+            label: "Footer (shown on {{CMS_CURRENT_HOST}} once the full site is visible)"
             widget: object
             fields:
               - { name: copyright, label: "Copyright", widget: string }
           - { label: "Back to Top Button Label", name: "back_to_top_label", widget: "string", hint: "Accessible label for the floating back-to-top button (screen readers only; it's an icon)." }
+          - { label: "Skip Link Label", name: "skip_link_label", widget: "string", required: false, hint: "The first thing a keyboard visitor reaches when they press Tab: a link that jumps past the header to the content. It stays hidden until it is focused. Leave blank to use \"Skip to main content\"." }
           - name: section_headings
             label: "Section Headings"
             widget: object
             fields:
+              - { name: events_heading,          label: "Events Heading", widget: string, hint: "The title of the upcoming events section." }
               - { name: expertise_heading,       label: "Expertise Heading", widget: string }
               - { name: experience_heading,      label: "Experience Heading", widget: string }
               - { name: accomplishments_heading, label: "Accomplishments Heading", widget: string }
               - { name: media_heading,           label: "Media Heading", widget: string }
+              - { name: media_authored_heading,  label: "Written Work Label", widget: string, hint: "The small label above the first group in the writing, talks and press section, for the articles, briefs and testimony you wrote." }
+              - { name: media_coverage_heading,  label: "Appearances Label", widget: string, hint: "The small label above the second group in the writing, talks and press section, for the talks, interviews and press about you." }
               - { name: education_heading,       label: "Education Heading", widget: string }
+          - name: share
+            label: "Search Facts (not shown on the page)"
+            widget: object
+            hint: "Facts Google reads to connect this site with you. Nothing here appears on the page itself. Your job title, firm and schools come from the Experience and Education sections, and your profile links come from Contact."
+            fields:
+              - { name: alternate_names, label: "Other Names You Publish Under", widget: list, required: false, summary: "{{fields.name}}", hint: "For example, a name with a middle initial. One name per line.", field: { name: name, label: "Name", widget: string } }
+              - { name: profile_links, label: "Other Profile Pages About You", widget: list, required: false, summary: "{{fields.link}}", hint: "Web addresses of your profile pages elsewhere, such as your university page. Each one starts with https://.", field: { name: link, label: "Web Address", widget: string, pattern: ["^https://", "Start with https://"] } }
+      - name: not_found
+        label: "Page-Not-Found Page"
+        file: "_data/not_found.yml"
+        fields:
+          - { name: heading, label: "Heading", widget: string, hint: "The headline of the page visitors see when they follow a link that does not exist. It always says the page was not found, whether the full site is showing or still coming soon." }
+          - { name: message, label: "Message", widget: text, hint: "One or two sentences under the heading." }
+          - { name: home_link_label, label: "Button Text", widget: string, hint: "The button that takes them back to the home page." }
+          - { name: skip_link_label, label: "Skip Link Text", widget: string, hint: "Hidden text that appears only for visitors who navigate with the keyboard; it lets them jump past the header to the message." }

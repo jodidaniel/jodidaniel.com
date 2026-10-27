@@ -14,10 +14,8 @@
 The account's full guidance — incidents, fleet policy, machine layout, the
 traps that cost real outages — is installed into **user memory**
 (`~/.claude/CLAUDE.md`) by the `fleet-memory` SessionStart hook, so it is
-loaded **once per session** no matter how many repos are attached. It used to
-be inlined here in every repo, which meant a session with 19 repos open
-carried 19 identical copies: 332.3k tokens of a 1M window, measured
-2026-08-29.
+loaded **once per session** no matter how many repos are attached
+([2026-08-29: inlined per repo, it took 332.3k tokens](https://github.com/Adam-S-Daniel/_agent-guidance/blob/main/docs/evidence/2026-08-29-guidance-inlined-in-every-repo.md)).
 
 **Check the session-start verdict before you rely on it.** The hook prints one
 line:
@@ -37,6 +35,28 @@ line:
 
 No verdict at all means the hook never ran — treat that as DEGRADED.
 
+## Codex reads the same block, from `~/.codex/AGENTS.md`
+
+The hook writes the same block to `~/.codex/AGENTS.md` whenever `~/.codex`
+exists — Codex's global **user** instructions, outside its 32 KiB
+`project_doc_max_bytes` project-doc budget. Register it once per machine with
+`scripts/register-codex-hook.sh` from an `_agent-guidance` checkout, then
+trust it in `/hooks`. `codex debug prompt-input` renders instructions loaded
+from disk by its own diagnostic process; it does not run SessionStart hooks
+or inspect an existing session or daemon. Verify delivery in the launched
+session's initial instructions and verdict; see the
+[2026-10-04 evidence](https://github.com/Adam-S-Daniel/_agent-guidance/blob/main/docs/evidence/codex-trust-and-daemon-0160.md#prompt-debugging-source-read-2026-10-04-cli-01600-rust-v01600).
+
+For Codex Cloud, use **Manual** environment setup with persistent
+`CODEX_HOME=/opt/codex`. Preserve the repository's dependency setup and run
+`bash .claude/hooks/fleet-memory.sh --codex-cloud` in both setup and
+maintenance; reset the cache for the first verification. Fresh setup and
+cached maintenance were verified in the `_agent-guidance` environment. See
+[`docs/codex-cloud.md`](https://github.com/Adam-S-Daniel/_agent-guidance/blob/main/docs/codex-cloud.md).
+If the Cloud shell has no `codex debug prompt-input`, the saved task response's
+raw initial instruction envelope is the echo-free proof of model-visible
+delivery.
+
 ## The floor: rules that hold even when the guidance did not load
 
 These are the ones with teeth. They are restated here, deliberately, because a
@@ -45,9 +65,13 @@ session that lost the guidance must not also lose these.
 - **Branch protection is real.** Fleet repos are PR-only on their default
   branch; a direct push is rejected (GH013), even from the repo's own
   workflows. Never design a bot that pushes to a protected default branch.
-- **Every `uses:` is pinned to a full 40-character commit SHA, with no
-  trailing version comment.** The one carve-out is a ref into this account's
-  own `cms-platform`, which stays on its release tag.
+- **Every `uses:` is pinned through `.github/workflows/actions.lock`: an
+  exact tag, locked, checked by a required `gh actions-lock --verify`
+  failing on any pin finding.** A repo not yet migrated keeps the legacy
+  form, a full 40-character commit SHA with no trailing version comment,
+  until its migration PR; never mix the two in one repo. Cross-repo
+  reusable workflows take a full SHA either way. The one carve-out is a ref
+  into this account's own `cms-platform`, which stays on its release tag.
 - **Never commit secrets or `.env` files, and never print personal data to a
   CI log** — logs, artifacts and git history on a public repo are public.
 - **A successful `git push` does not mean your commit exists.** A refused
@@ -64,6 +88,9 @@ session that lost the guidance must not also lose these.
   waiting on, and what you cite as already done.
 - **Merge with a merge commit** (`gh pr merge --merge`); do not amend
   published commits or force-push shared branches.
+- **Keep this file under 32 KiB.** Codex truncates project instructions at
+  that byte silently; the sync warns and the drift report flags
+  `codex-truncated`.
 
 <!-- END MANAGED SECTION -->
 ## Repo-specific additions
@@ -131,25 +158,29 @@ boss signs off on the copy. The gate is a single boolean,
 **`site_live` in `_data/settings.yml`** (default `false`).
 
 `_layouts/home.html` assigns `live = settings.site_live` and wraps **every** bio
-section (about, expertise, experience, accomplishments, media, education,
-contact) in `{% if live %}`. When `site_live` is `false`, only the coming-soon
-shell renders: the name (`_data/header.yml`), `coming_soon.tagline`, and
+section (about, events, expertise, experience, accomplishments, media,
+education, contact) in `{% if live %}`. When `site_live` is `false`, only the
+coming-soon shell renders: the name (`_data/header.yml`), `coming_soon.tagline`, and
 `coming_soon.copyright` (all from `_data/settings.yml`). The full bio copy is
 present in the data/collections but is **not rendered** — so there is zero bio
 leak on prod while gated.
 
-SEO is gated in parallel: `_config.yml` `description:` stays neutral
-("…site coming soon."), and `index.html` sets **no page title** so `{% seo %}`
-renders only the neutral site title — no marketing claim is served until
-sign-off. Both `_config.yml` and `index.html` carry inline comments with the
-real (post-go-live) values to restore.
+SEO is gated in parallel: while `site_live` is false `_layouts/home.html` skips
+`{% seo %}` and serves only the site name and `coming_soon.seo_description`, so
+no marketing claim is served until sign-off. The real (post-go-live) page title
+and Google description are held permanently in `_data/settings.yml` under `seo:`
+(`launch_title`, `launch_description`, plus `site_title`), editable in `/admin`
+under Site Settings; `_plugins/site_meta_from_settings.rb` applies them to
+`site.title`, `site.description` and the home page title, so `{% seo %}` is
+unchanged. `_config.yml` has no `description:` and `index.html` no `title:` —
+do not re-add them, they would be a second, unedited source
+(`scripts/test-site-meta.rb`).
 
-**Go-live = issue #26**: flip `site_live: true` (via `/admin`), restore the real
-`description:` in `_config.yml` and the real page title, and add the headshot —
-after the boss approves the copy. Until then, no bio content reaches prod and
+**Go-live = issue #26**: flip `site_live: true` (via `/admin`) and add the
+headshot — after the boss approves the copy. Until then, no bio content reaches prod and
 no marketing claim ships. Do not flip the gate on your own initiative.
 
-**`/admin` now SAYS the site is gated**, on every screen, instead of leaving it
+**`/admin` SAYS the site is gated**, on every screen, instead of leaving it
 discoverable only by opening the Settings collection. The gate's location is
 declared in `_config.yml` as `cms.site_gate` (path / field / Decap entry route
 / label); both cms-platform render paths inject it as `window.CMS_SITE_GATE`
@@ -165,14 +196,6 @@ and `admin/site-gate-banner.js` renders the banner (cms-platform v0.1.95,
   NOTHING rather than something wrong — deliberately, since claiming the site
   is gated when it is not would be worse than silence.
 
-### Known open blockers (CMS editing)
-
-All three blockers previously tracked here (#27 org OAuth App access
-restrictions, the `CMS_E2E_PAT` repo secret, #28 "Live Preview" 404s) are now
-RESOLVED — see
-[`docs/CI-AND-PLATFORM.md`](docs/CI-AND-PLATFORM.md#resolved-blockers-historical)
-for the full history.
-
 ## Content model (per-section, all `/admin`-editable)
 
 Per-section content sources: singleton `_data/*.yml` files (Decap file
@@ -183,7 +206,7 @@ or reshaping a content source.
 
 ## `/admin` (Decap CMS)
 
-The 9 section editors, the site-owned `admin/collections.site.yml` seam
+The 10 section editors, the site-owned `admin/collections.site.yml` seam
 format, the brand-mark shadowing fix, and visual-regression gotchas for new
 folder collections/top-level routes → read
 [`docs/CONTENT-MODEL.md`](docs/CONTENT-MODEL.md) before touching `/admin`
@@ -196,9 +219,9 @@ The e2e matrix's per-project jobs, worker counts, expected wall-clock range
 [`docs/CI-AND-PLATFORM.md`](docs/CI-AND-PLATFORM.md) before reasoning about a
 red or slow e2e run.
 
-## Platform v0.1.76 — what changed for this repo
+## Workflow triggers and scheduled-run behavior
 
-The `pull_request: edited` trigger removal, the scheduled-run health audit's
+The `pull_request: edited` trigger's absence, the scheduled-run health audit's
 runner-starvation fix, and the deploy-lane diagnostic's merge-aware verdicts
 → read [`docs/CI-AND-PLATFORM.md`](docs/CI-AND-PLATFORM.md) before treating an
 old "chain never fired" log line as a trigger bug.
@@ -214,12 +237,36 @@ The Decap GitHub backend authenticates through an **API Gateway OAuth proxy**:
 - The proxy CloudFormation stack is `jodidaniel-com-oauth-proxy` (us-east-1);
   per-site deploy params (incl. the GitHub OAuth client id/secret) come from
   `infrastructure/site-params.env` (gitignored; copy from
-  `infrastructure/site-params.example.env`). Login is working.
+  `infrastructure/site-params.example.env`).
 
 ## Hosting / DNS
 
-Production is served from CloudFront; the apex `jodidaniel.com` was cut over
-from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
+Production is served from CloudFront; the apex `jodidaniel.com` is an A alias
+record to our CloudFront distribution.
+
+### Deploying the bootstrap stack (security headers, media bucket)
+
+Run `bash infrastructure/bootstrap/deploy.sh` (needs AWS credentials, Ruby,
+python3; the operator runs it, never CI). The wrapper checks the platform out
+at `platform.lock`'s `platform_ref` and delegates to its bootstrap script. It
+**pins** the live stack: `BOOTSTRAP_STACK_NAME=jodidaniel-com-bootstrap`
+(us-east-1), `CREATE_OIDC_PROVIDER=false`, `CREATE_APEX_DNS_RECORDS=false`,
+`GITHUB_ORG=jodidaniel` and `MEDIA_ARCHIVE_BUCKET=jodidaniel-com-media-archive`,
+overriding the shell and `site-params.env`, and refuses if that stack name
+equals `site-params.env`'s `STACK_NAME` (the OAuth **proxy** stack,
+`jodidaniel-com-oauth-proxy`). Do not source `site-params.env` and call the
+platform script by hand: that is how the proxy stack got targeted.
+
+- The stack exists, so a run is an update; `ALLOW_STACK_CREATE=1` is for a
+  first create only and the wrapper never sets it.
+- The platform script re-sends every parameter, so a setting the wrapper does
+  not pin (`ADMIN_DOMAIN`, `HSTS_*`, `ADMIN_CSP_MODE`) reverts to its default
+  unless exported. Compare `aws cloudformation describe-stacks --stack-name
+  jodidaniel-com-bootstrap --region us-east-1 --query 'Stacks[0].Parameters'`
+  with the printed change set, and use `ALLOW_DESTRUCTIVE_CHANGES=1` only when
+  a removal is the intent.
+- `bash scripts/test-bootstrap-deploy.sh` tests the wrapper with a stub platform
+  and `aws` (no AWS, no network, example values only).
 
 ## Quick orientation for a fresh session
 
@@ -233,7 +280,7 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
   not editor-numbered, since "upcoming" means chronological and it frees the
   owner from renumbering the list every time she inserts an event). NOT a
   single data file. Full field lists → `docs/CONTENT-MODEL.md`.
-- `/admin` = 9 section editors; generics hidden via `cms.base_collections: []`;
+- `/admin` = 10 section editors; generics hidden via `cms.base_collections: []`;
   admin UI shipped by the `cms-platform-theme` gem; seam =
   `admin/collections.site.yml`.
   Full detail → `docs/CONTENT-MODEL.md`.
@@ -241,7 +288,10 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
   verbatim from it.
 - Go-live (flip the gate + restore SEO/title + headshot) is **issue #26**,
   pending boss copy sign-off. Do not leak bio content to prod before then.
-- CI/platform behavior (e2e matrix, platform version notes) → `docs/CI-AND-PLATFORM.md`.
+- CI/platform behavior (e2e matrix, workflow triggers, scheduled runs) → `docs/CI-AND-PLATFORM.md`.
+- `/admin` labels never spell out "(optional)" (Decap adds it to every `required: false` field), and the About
+  fields rendered as Markdown carry a hint explaining the `**` bold markup. `ruby scripts/test-admin-config.rb`
+  pins both; `scripts/verify-build-artifacts.rb` runs it in CI.
 
 ## Deeper references
 
@@ -249,8 +299,8 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
   or reshaping a content source, or when touching `/admin` config or adding a
   new section/collection.
 - [`docs/CI-AND-PLATFORM.md`](docs/CI-AND-PLATFORM.md) — read when triaging a
-  red or slow e2e run, understanding what the platform v0.1.76 bump changed
-  here, or looking up the history of a now-resolved CMS-editing blocker.
+  red or slow e2e run, understanding the workflow triggers and scheduled-run
+  behavior, or looking up the history of a resolved CMS-editing blocker.
 
 ## Keep every visible string `/admin`-editable
 
@@ -260,11 +310,24 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
   that its owner maintains it end to end without a developer; a string only a
   commit can change is invisible in `/admin` and she cannot fix it herself. Add
   the data source first, then have the layout read it (`site.data.*` /
-  `site.<collection>`), not the other way round. Even the five section headings
+  `site.<collection>`), not the other way round. Even the section headings
   live in `_data/settings.yml` `section_headings` for this reason.
 - **A string you genuinely cannot route through `/admin` is a decision to
   surface, not a detail to absorb silently** — call it out in the PR and get it
   agreed before merge. Hardcoded chrome stays at the irreducible minimum.
+- **The seam's own `label:`/`hint:` copy is editor-facing too, and is held to
+  the same bar.** Routing a string through `/admin` achieves nothing if the
+  field it lands in is labelled in developer vocabulary — "Site Live (controls
+  gating)", "Coming Soon (shown when `site_live` = false)" — because Decap
+  renders whatever string the seam hands it and nothing else fails when the
+  copy drifts. `scripts/verify-build-artifacts.rb` parses every
+  `label`/`hint`/validation message in the seam and fails on two narrow
+  classes: an internal key (any snake_case token, which is never natural
+  English) or a code comparison (`= true`/`= false`), and a small fixed
+  vocabulary list ("gating", "boolean", "repo", "commit", "widget", bare
+  "true"/"false", …). It is deliberately a lint and not a style opinion —
+  plain words the owner already meets in Decap's own chrome are not on the
+  list. Name the effect she can see, not the key behind it.
 - **A `_media/` item's outbound link is `article_url`, NEVER `url`.** A
   front-matter key named `url` is unreachable from Liquid — Jekyll's
   `DocumentDrop` defines `url` (the document's own address) and shadows it — so
@@ -273,8 +336,8 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
   is real, and it carries the archived PDF next to `article_url` -- gated on
   `pdf_public`, with the bytes in a private S3 archive rather than this
   public repo (see docs/CONTENT-MODEL.md, "Archived PDFs").
-  This shadowing silently 404'd all 16 media links until PR #176 first rendered
-  the section. Check any new field name against `DocumentDrop` before using it;
+  The shadowing is silent: every link 404s with no build error (evidence: PR
+  #176). Check any new field name against `DocumentDrop` before using it;
   `scripts/verify-build-artifacts.rb` guards the rest. Detail →
   `docs/CONTENT-MODEL.md`.
 - **The one standing exception is the media category list, and it lives in
@@ -290,15 +353,15 @@ from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
   editing all THREE — a value present in only some of them silently drops
   items from the page, mislabels a picker option, or mislabels a per-item
   page's button, with no build error.
-  `scripts/verify-build-artifacts.rb` now cross-checks all three.
+  `scripts/verify-build-artifacts.rb` cross-checks all three.
 - **The About nav's `anchor` select `options:` is the same dual-maintenance
-  shape, and it is no longer silent.** `admin/collections.site.yml`'s
+  shape, and it is not silent.** `admin/collections.site.yml`'s
   `site_about` → `nav` → `anchor` field and the `<section id="...">` set in
   `_layouts/home.html` have to name the same sections (see "About nav anchors
   are a closed set" in `docs/CONTENT-MODEL.md`) — `scripts/verify-build-
-  artifacts.rb` now cross-checks the seam's options against the *built*
-  section ids (its "admin seam <-> layout section ids stay in step" group,
-  added with the Events section), so a section added, renamed, or removed in
+  artifacts.rb` cross-checks the seam's options against the *built*
+  section ids (its "admin seam <-> layout section ids stay in step" group), so
+  a section added, renamed, or removed in
   one without the other fails the build instead of shipping a picker option
   nobody can jump to.
 - **The `media` nav entry's `label` (`_data/about.yml`) is verifier-checked
