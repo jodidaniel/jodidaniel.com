@@ -58,6 +58,24 @@ class AdminConfigTest < Minitest::Test
     end
   end
 
+  # --- #374: every heading in _data/settings.yml `section_headings` is on the page, so each
+  # must be editable. The Events heading and the two Writing group labels were left out.
+
+  def settings_data
+    YAML.safe_load(File.read(File.expand_path("../_data/settings.yml", __dir__), encoding: "UTF-8"))
+  end
+
+  def test_every_section_heading_is_editable_with_a_hint
+    editable = find_in_file("settings", "section_headings")
+    refute_nil editable, "settings.section_headings is missing from the admin config"
+    fields = editable["fields"].to_h { |f| [f["name"], f] }
+    keys = settings_data.fetch("section_headings").keys
+    assert_empty keys - fields.keys, "section_headings keys on the page with no /admin field (#374)"
+    %w[events_heading media_authored_heading media_coverage_heading].each do |name|
+      refute_empty fields.fetch(name)["hint"].to_s, "section_headings.#{name} needs a hint naming the section it titles"
+    end
+  end
+
   # --- Launch title and Google description are editable in /admin, not only in
   # _config.yml / index.html. Each field must exist in the Site Settings file,
   # match a key in _data/settings.yml (so the plugin that applies it has a value),

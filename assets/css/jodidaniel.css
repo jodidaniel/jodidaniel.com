@@ -1,14 +1,17 @@
 /* Self-hosted fonts (latin subset, woff2; sources and OFL licenses in
-   assets/fonts/SOURCES.txt). Raleway is one variable file covering every
-   weight the site uses (600, 700). `swap` shows fallback text at once and
-   swaps the font in when it arrives. The two critical files are preloaded in
-   the layouts' <head>. */
+   assets/fonts/SOURCES.txt). Raleway is one variable file limited to the
+   600-700 weight axis, the only weights the site sets (headings 700, labels
+   600): a Raleway rule at any other weight renders at the nearest of the two.
+   `swap` shows fallback text at once and swaps the font in when it arrives.
+   The two critical files are preloaded in the layouts' <head>. The home and
+   media layouts inline this file, minified (_plugins/inline_css.rb); edit it
+   here. */
 @font-face {
     font-family: 'Raleway';
     font-style: normal;
-    font-weight: 100 900;
+    font-weight: 600 700;
     font-display: swap;
-    src: url('../fonts/raleway-v37-latin.woff2') format('woff2');
+    src: url('../fonts/raleway-v37-latin-wght600-700.woff2') format('woff2');
     unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
@@ -204,12 +207,16 @@ header {
     color: #ffffff;
 }
 
-header h1 a {
+header h1 a,
+header .site-name a {
     color: inherit;
     text-decoration: none;
 }
 
-header h1 {
+/* `.site-name` is the site name on pages whose own h1 is the item title
+   (_layouts/media.html): a <p> that looks exactly like the header h1. */
+header h1,
+header .site-name {
     font-family: 'Raleway', sans-serif;
     font-size: 3rem;
     font-weight: 700;
@@ -218,9 +225,16 @@ header h1 {
     margin-bottom: 0.5rem;
 }
 
+/* Weight 600 (the heaviest Source Sans Pro file the site ships) makes the
+   20px tagline WCAG "large text" (bold, at least 18.66px), so it needs 3:1
+   over the page gradient, not 4.5:1. At weight 300 it measured 3.6:1 where it
+   crosses the middle of the gradient. The 16px phone size below is not large
+   text and keeps weight 600 too; scripts/a11y_rules.rb asserts both. The
+   20px size holds down to 600px wide: at 16px, 600-767px wide on a short
+   page, it was 4.30:1, under the 4.5:1 normal text needs. */
 header .tagline {
     font-size: 1.25rem;
-    font-weight: 300;
+    font-weight: 600;
     opacity: 0.9;
     letter-spacing: 0.05em;
 }
@@ -386,10 +400,12 @@ header .tagline {
 
 /* Upcoming Events (feedback item 3). Reuses the .expertise-card visual
    language rather than inventing a new one: same #f8fafc panel, 0.5rem
-   radius, teal left accent border, and translateY(-3px)+shadow hover. Each
-   item is a two-column grid -- a fixed-width date column beside the body --
-   collapsing to one column at the same 767px breakpoint the rest of the
-   mobile layout uses (see @media (max-width: 767px) below). */
+   radius and teal left accent border. Unlike .expertise-card it does NOT
+   lift on hover: the card is not a link (only the title is), and a lift
+   suggests the whole card is clickable (#375). Each item is a two-column
+   grid -- a fixed-width date column beside the body -- collapsing to one
+   column at the same 767px breakpoint the rest of the mobile layout uses
+   (see @media (max-width: 767px) below). */
 .events-list {
     display: flex;
     flex-direction: column;
@@ -405,12 +421,6 @@ header .tagline {
     background: #f8fafc;
     border-radius: 0.5rem;
     border-left: 4px solid #5dd9e8;
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-
-.event-item:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
 }
 
 .event-date {
@@ -428,19 +438,20 @@ header .tagline {
     margin-bottom: 0.25rem;
 }
 
-/* Same underline-on-hover idiom as .intro-nav a: the link inherits the
-   heading's own color rather than switching to the usual link blue, so an
-   event without a URL (plain text heading) and one with a URL (linked
-   heading) read as the same visual weight. */
+/* A linked title must read as a link before anyone hovers (#375): there is
+   no hover on a phone. It takes the link color the media list uses and a
+   resting underline (not color alone), and darkens and thickens on hover. An
+   event without a URL stays a plain heading. */
 .event-body h3 a {
-    color: inherit;
-    text-decoration: none;
-    border-bottom: 2px solid transparent;
-    transition: border-color 0.25s ease;
+    color: #2d5a7b;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
 }
 
 .event-body h3 a:hover {
-    border-bottom-color: #5dd9e8;
+    color: #1a3a5c;
+    text-decoration-thickness: 2px;
 }
 
 /* Colors lifted from .timeline-item .org / .timeline-item .period -- the
@@ -656,6 +667,10 @@ header .tagline {
 
 .media-list li {
     margin-bottom: 0.75rem;
+    /* Issue #376: the item page's back link (/#media-<slug>) scrolls the item
+       to the viewport's top edge. Leave room above it so the card's category
+       heading is usually still in view and the reader can tell where they are. */
+    scroll-margin-top: 6rem;
 }
 
 /* Issue #359: arriving at a media item's anchor (the item page's back link,
@@ -703,9 +718,10 @@ body:has(.media-list li:target) .animate-in {
 }
 
 /* Per-item media page (/media/<slug>/) — the target of every entry in the
-   media list above. Reuses .container / .section-title / .contact-link so the
+   media list above. The item title is the page's h1 (the site name above it is
+   a <p class="site-name">, styled as the header h1). Reuses .container / .section-title / .contact-link so the
    detail page reads as the same document as the home page. */
-.media-detail h2 {
+.media-detail h1 {
     font-family: 'Raleway', sans-serif;
     font-size: 1.75rem;
     font-weight: 600;
@@ -842,26 +858,41 @@ body:has(.media-list li:target) .animate-in {
     fill: currentColor;
 }
 
+/* Footer text sits on the page gradient, up to its lightest stop (#5ba0be).
+   White at 70% opacity was 2.2:1 there. A navy band (#1a3a5c, the gradient's
+   darkest stop, at 70%) under full-white text keeps every footer text at
+   4.5:1 or better over every stop; scripts/a11y_rules.rb computes it. The
+   band only backs the footer: the page gradient is unchanged. */
 footer {
     text-align: center;
     padding: 2rem;
-    color: rgba(255, 255, 255, 0.7);
+    color: #ffffff;
+    background: rgba(26, 58, 92, 0.7);
+    border-radius: 0.5rem;
     font-size: 0.9rem;
 }
 
+/* White like the footer text, so the underline (always on, not only on
+   hover) is what marks a link. */
 footer a {
-    color: #5dd9e8;
-    text-decoration: none;
+    color: #ffffff;
+    text-decoration: underline;
 }
 
 footer a:hover {
-    text-decoration: underline;
+    text-decoration-thickness: 2px;
 }
 
 @media (max-width: 900px) {
     .expertise-grid,
     .media-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 599px) {
+    header .tagline {
+        font-size: 1rem;
     }
 }
 
@@ -896,13 +927,10 @@ footer a:hover {
         padding: 0.75rem 1rem 0.5rem;
     }
 
-    header h1 {
+    header h1,
+    header .site-name {
         font-size: 2rem;
         letter-spacing: 0.1em;
-    }
-
-    header .tagline {
-        font-size: 1rem;
     }
 
     .intro-section {
@@ -968,7 +996,7 @@ footer a:hover {
         grid-template-columns: 1fr;
     }
 
-    .media-detail h2 {
+    .media-detail h1 {
         font-size: 1.35rem;
     }
 

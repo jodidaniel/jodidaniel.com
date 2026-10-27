@@ -40,7 +40,11 @@ require "fileutils"
 require "rbconfig"
 require "tmpdir"
 require_relative "media_rules"
+require_relative "person_rules"
 require_relative "a11y_rules"
+# After a11y_rules, which may put the bundle on the load path: a `require "json"` before it
+# activates the default json gem, and `bundler/setup` then dies on the Gemfile.lock pin.
+require "json"
 
 REPO_ROOT = File.expand_path("..", __dir__)
 OPEN_PASS = ARGV[0] == "--open-pass"
@@ -132,14 +136,25 @@ unless OPEN_PASS
   admin_config_passed = system(RbConfig.ruby, File.join(__dir__, "test-admin-config.rb"))
   check(failures, "scripts/test-admin-config.rb passes (output above)") { admin_config_passed == true }
 
+  puts "== unit tests: scripts/test-person-rules.rb =="
+  $stdout.flush
+  person_rules_passed = system(RbConfig.ruby, File.join(__dir__, "test-person-rules.rb"))
+  check(failures, "scripts/test-person-rules.rb passes (output above)") { person_rules_passed == true }
+
   puts "== unit tests: scripts/test-a11y-rules.rb =="
   $stdout.flush
   a11y_rules_passed = system(RbConfig.ruby, File.join(__dir__, "test-a11y-rules.rb"))
   check(failures, "scripts/test-a11y-rules.rb passes (output above)") { a11y_rules_passed == true }
+
   puts "== unit tests: scripts/test-site-meta.rb =="
   $stdout.flush
   site_meta_passed = system(RbConfig.ruby, File.join(__dir__, "test-site-meta.rb"))
   check(failures, "scripts/test-site-meta.rb passes (output above)") { site_meta_passed == true }
+
+  puts "== unit tests: scripts/test-favicon-include.rb =="
+  $stdout.flush
+  favicon_include_passed = system(RbConfig.ruby, File.join(__dir__, "test-favicon-include.rb"))
+  check(failures, "scripts/test-favicon-include.rb passes (output above)") { favicon_include_passed == true }
 
   puts "== unit tests: scripts/test-back-to-top-clearance.rb =="
   $stdout.flush
@@ -150,6 +165,16 @@ unless OPEN_PASS
   $stdout.flush
   content_copy_passed = system(RbConfig.ruby, File.join(__dir__, "test-content-copy.rb"))
   check(failures, "scripts/test-content-copy.rb passes (output above)") { content_copy_passed == true }
+
+  puts "== unit tests: scripts/test-event-media-polish.rb =="
+  $stdout.flush
+  event_media_polish_passed = system(RbConfig.ruby, File.join(__dir__, "test-event-media-polish.rb"))
+  check(failures, "scripts/test-event-media-polish.rb passes (output above)") { event_media_polish_passed == true }
+
+  puts "== unit tests: scripts/test-inline-css.rb =="
+  $stdout.flush
+  inline_css_passed = system(RbConfig.ruby, File.join(__dir__, "test-inline-css.rb"))
+  check(failures, "scripts/test-inline-css.rb passes (output above)") { inline_css_passed == true }
 end
 
 def read(path)
@@ -212,6 +237,97 @@ end
 # 404 chrome must be generic, never marketing/bio copy.
 check(failures, "404.html copy is generic chrome (says 'not found')") do
   notfound_html&.downcase&.include?("not found")
+end
+
+puts "== 404 page is the site's own, and the icon set is Jodi's =="
+# The 404 used to take the cms-platform theme's `default` layout: dark, unrelated
+# to this site, with an "RSS" link to a feed that has no entries.
+check(failures, "404.html uses the site's own stylesheet, not the theme's main.css") do
+  notfound_html&.include?("/assets/css/jodidaniel.css") && !notfound_html.include?("/assets/css/main.css")
+end
+check(failures, "404.html advertises no feed (no RSS link, no alternate feed <link>)") do
+  notfound_html && !notfound_html.include?("feed.xml") && !notfound_html.match?(/>\s*RSS\s*</) &&
+    !notfound_html.include?("application/atom+xml")
+end
+# cms-platform's e2e/not-found.spec.js skips for this site (its 404 is not on the theme
+# layout), so these are the checks that stand in for it: header, footer, a heading that
+# says not found inside <main>, and a link home.
+check(failures, "404.html has a site header, a site footer, and an h1 saying 'not found' inside <main>") do
+  notfound_html&.match?(/class="site-header[ "]/) && notfound_html.match?(/<footer class="site-footer[ "]/) &&
+    notfound_body&.match?(/<h1>[^<]*not found/i)
+end
+check(failures, "404.html has a skip link whose target is a focusable <main>") do
+  target = notfound_html.to_s[/<a class="skip-link" href="#([^"]+)"/, 1]
+  !target.nil? && notfound_html.match?(/<main id="#{Regexp.escape(target)}" tabindex="-1"/)
+end
+not_found_data = YAML.safe_load(read(File.join(ROOT, "_data", "not_found.yml")) || "") || {}
+check(failures, "404.html copy comes from _data/not_found.yml (heading, message, button text, skip link)") do
+  %w[heading message home_link_label skip_link_label].all? do |key|
+    value = not_found_data[key].to_s
+    !value.strip.empty? && notfound_html&.include?(value)
+  end
+end
+# The page is served for EVERY missing address, gated or not, so it must carry no
+# bio copy, and its header must follow the gate like every other page's.
+%w[Wilson\ Sonsini Crowell\ &\ Moring nationally\ recognized\ leader digital\ health\ law].each do |marker|
+  check(failures, "404.html does NOT leak bio text: #{marker.inspect}") do
+    notfound_html && !notfound_html.include?(marker)
+  end
+end
+gate_settings = YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml")) || "") || {}
+gate_tagline = if gate_settings["site_live"] == true
+                 (YAML.safe_load(read(File.join(ROOT, "_data", "header.yml")) || "") || {})["tagline"].to_s
+               else
+                 gate_settings.dig("coming_soon", "tagline").to_s
+               end
+check(failures, "404.html header tagline follows the gate (#{gate_tagline.inspect})") do
+  gate_tagline.empty? ? !notfound_html.to_s.include?('class="tagline"') : notfound_html.to_s.include?(">#{gate_tagline}<")
+end
+
+# PNG width/height from the IHDR chunk; nil when the bytes are not a PNG.
+def png_size(bytes)
+  return nil unless bytes && bytes.byteslice(0, 8) == "\x89PNG\r\n\x1a\n".b && bytes.byteslice(12, 4) == "IHDR"
+
+  bytes.byteslice(16, 8).unpack("NN")
+end
+
+def site_bytes(rel)
+  path = File.join(SITE, rel)
+  File.exist?(path) ? File.binread(path) : nil
+end
+
+{ "favicon-32x32.png" => [32, 32], "apple-touch-icon.png" => [180, 180] }.each do |rel, size|
+  check(failures, "/#{rel} is a #{size.join('x')} PNG") { png_size(site_bytes(rel)) == size }
+end
+ico = site_bytes("favicon.ico")
+ico_sizes =
+  if ico && ico.bytesize >= 6 && ico.unpack("vvv") == [0, 1, ico.unpack("vvv")[2]]
+    (0...ico.unpack("vvv")[2]).map do |i|
+      w, h, _c, _r, _planes, _bpp, len, off = ico.byteslice(6 + 16 * i, 16).unpack("CCCCvvVV")
+      png_size(ico.byteslice(off, len)) == [w, h] ? w : nil
+    end
+  else
+    []
+  end
+check(failures, "/favicon.ico is an ICO of PNG images that includes 16 and 32 px (got #{ico_sizes.inspect})") do
+  ico_sizes.all? && ([16, 32] - ico_sizes).empty?
+end
+favicon_svg = read(File.join(SITE, "assets", "favicon.svg"))
+# Jodi chose monogram option 8, "Navy to steel gradient": a #2d5a7b to #1a3a5c
+# gradient tile (id g8) under two #5dd9e8 strokes of width 6.5 that draw the J and D.
+check(failures, "/assets/favicon.svg is Jodi's chosen JD monogram (navy-to-steel gradient tile, cyan strokes), not the theme placeholder") do
+  favicon_svg&.include?('<linearGradient id="g8"') &&
+    favicon_svg.include?('stop-color="#2d5a7b"') && favicon_svg.include?('stop-color="#1a3a5c"') &&
+    favicon_svg.include?('fill="url(#g8)"') &&
+    favicon_svg.scan('stroke="#5dd9e8"').size == 2 && favicon_svg.include?('stroke-width="6.5"')
+end
+[["/", "index.html"], ["/404.html", "404.html"]].each do |label, rel|
+  html = read(File.join(SITE, rel))
+  check(failures, "#{label} <head> links favicon.ico, the SVG icon and the Apple touch icon") do
+    html&.match?(%r{<link rel="icon" href="/favicon\.ico"}) &&
+      html.match?(%r{<link rel="icon" type="image/svg\+xml" href="/assets/favicon\.svg"}) &&
+      html.match?(%r{<link rel="apple-touch-icon" href="/apple-touch-icon\.png"})
+  end
 end
 
 puts "== #31 Jodi's logo (no 'AD' leak) =="
@@ -524,7 +640,10 @@ media_src.each do |src|
   if gated
     # Gate closed: the item page must be the coming-soon shell only.
     check(failures, "/media/#{slug}/ leaks no bio content while gated") do
-      !page.include?(article) && !page.include?("section-title")
+      # The stylesheet is inlined (_plugins/inline_css.rb), and it names `.section-title`
+      # as a selector, so look at the page without its <style> elements.
+      markup = page.gsub(%r{<style\b[^>]*>.*?</style>}m, "")
+      !markup.include?(article) && !markup.include?("section-title")
     end
   else
     check(failures, "/media/#{slug}/ links out to its article_url") do
@@ -730,10 +849,10 @@ check(failures, "assets/fonts/ ships an OFL license file for each family beside 
     File.file?(File.join(SITE, "assets", "fonts", n))
   end
 end
-# The critical files are preloaded on both layouts so the first paint does not
+# The critical files are preloaded on every layout (home, media, 404) so the first paint does not
 # wait for the stylesheet to discover them; `crossorigin` is required on a font
 # preload or the browser fetches the file twice.
-font_preload_pages = ["index.html"] + Dir.glob(File.join(SITE, "media", "*", "index.html")).sort.first(1).map { |f| f.delete_prefix("#{SITE}/") }
+font_preload_pages = ["index.html", "404.html"] + Dir.glob(File.join(SITE, "media", "*", "index.html")).sort.first(1).map { |f| f.delete_prefix("#{SITE}/") }
 font_preload_pages.each do |page|
   html = read(File.join(SITE, page))
   preloads = html.to_s.scan(/<link\b[^>]*>/m).select { |t| t.match?(/\brel="preload"/) }
@@ -742,6 +861,85 @@ font_preload_pages.each do |page|
     (1..2).cover?(hrefs.size) && preloads.all? { |t| t.match?(/\bcrossorigin\b/) && t.match?(/\bas="font"/) } &&
       hrefs.all? { |h| h.end_with?(".woff2") && File.file?(File.join(SITE, h)) }
   end
+end
+
+puts
+puts "== The stylesheet is inlined and minified on the home and media pages =="
+# jodidaniel.css was the only render-blocking request on these pages: a second
+# round trip before first paint, 54% of it comments. _plugins/inline_css.rb now
+# minifies it at build time and the layouts put it in a <style> (measured, slow
+# 4G: first contentful paint 648 -> ~400 ms). The readable file stays the edited
+# source and is still published for the 404 page. Parsed with scans of lexical
+# tokens (<link>, <style>, url(), braces), not a CSS parser.
+css_source = File.read(File.join(ROOT, "assets", "css", "jodidaniel.css"), encoding: "utf-8")
+css_source_rules = css_source.gsub(%r{/\*.*?\*/}m, "").count("{")
+inline_pages = ["index.html"] + Dir.glob(File.join(SITE, "media", "*", "index.html")).sort.map { |f| f.delete_prefix("#{SITE}/") }
+check(failures, "the build has the home page and at least one media page to check (#{inline_pages.size} pages)") do
+  inline_pages.size >= 2
+end
+inline_pages.each do |page|
+  html = read(File.join(SITE, page)).to_s
+  styles = html.scan(%r{<style\b[^>]*>(.*?)</style>}m).flatten
+  inline = styles.find { |s| s.include?("@font-face") }.to_s
+  sheet_links = html.scan(/<link\b[^>]*>/m).select { |t| t.match?(/\brel="stylesheet"/) }
+  check(failures, "#{page} has no <link rel=stylesheet> to jodidaniel.css (nothing render-blocking)") do
+    sheet_links.none? { |t| t.include?("jodidaniel.css") }
+  end
+  check(failures, "#{page} inlines the stylesheet in a <style> element") do
+    !inline.empty? && inline.include?("body") && inline.include?("@media")
+  end
+  check(failures, "#{page} inline CSS is minified: no comments, no newlines, under 60% of the source (#{inline.bytesize} of #{css_source.bytesize} bytes)") do
+    !inline.empty? && !inline.include?("/*") && !inline.include?("\n") && inline.bytesize < css_source.bytesize * 0.6
+  end
+  check(failures, "#{page} inline CSS keeps every rule of the source (#{css_source_rules} braces)") do
+    inline.count("{") == css_source_rules && inline.count("}") == css_source_rules
+  end
+  inline_font_urls = inline.scan(/url\(\s*["']?([^"')\s]+\.woff2)["']?\s*\)/).flatten
+  check(failures, "#{page} inline @font-face urls are root-relative /assets/fonts/ paths to existing woff2 files (#{inline_font_urls.size})") do
+    !inline_font_urls.empty? && !inline.include?("../fonts") && inline_font_urls.all? do |u|
+      u.start_with?("/assets/fonts/") && File.file?(File.join(SITE, u)) && File.binread(File.join(SITE, u), 4) == WOFF2_MAGIC
+    end
+  end
+end
+
+puts
+puts "== Raleway ships limited to the 600-700 weight axis =="
+# Raleway is a variable font (wght 100-900) and the site sets only 600 and 700;
+# limiting the axis cut 48 KB to 33 KB. fontTools' varLib.instancer did it
+# (scripts/subset-raleway.py, pinned in scripts/requirements-fonts.txt) and the
+# result is vendored. The unicode-range stays the Latin one. A .woff2 cannot be
+# opened here without a brotli codec, so the axis is checked from what the
+# build says about the file: its @font-face weight range, its name, its size, and
+# the sha256 SOURCES.txt records for it.
+RALEWAY_MAX_BYTES = 36_000
+raleway_files = Dir.glob(File.join(SITE, "assets", "fonts", "raleway-*.woff2")).map { |f| File.basename(f) }
+check(failures, "exactly one Raleway file ships, and it is the 600-700 axis build (#{raleway_files.join(", ")})") do
+  raleway_files == ["raleway-v37-latin-wght600-700.woff2"]
+end
+check(failures, "the Raleway file is at most #{RALEWAY_MAX_BYTES} bytes (the full 100-900 variable font is 48,264)") do
+  raleway_files.all? { |f| File.size(File.join(SITE, "assets", "fonts", f)) <= RALEWAY_MAX_BYTES }
+end
+raleway_face = font_faces.find { |b| b.include?("'Raleway'") }.to_s
+check(failures, "jodidaniel.css declares the Raleway @font-face at font-weight 600 700 with the Latin-1 unicode-range") do
+  raleway_face.match?(/font-weight:\s*600\s+700\s*;/) && raleway_face.match?(/unicode-range:[^;]*U\+0000-00FF\b/)
+end
+check(failures, "the inline Raleway @font-face (home page) has the same weight range and unicode-range") do
+  inline_home = read(File.join(SITE, "index.html")).to_s.scan(%r{<style\b[^>]*>(.*?)</style>}m).flatten.join
+  face = inline_home.scan(/@font-face\{[^}]*\}/).find { |b| b.include?("Raleway") }.to_s
+  face.match?(/font-weight:600 700[;}]/) && face.match?(/unicode-range:[^;}]*U\+0000-00FF\b/)
+end
+sources_txt = read(File.join(SITE, "assets", "fonts", "SOURCES.txt")).to_s
+check(failures, "SOURCES.txt records the sha256 of every self-hosted font file, matching the shipped bytes") do
+  font_files = Dir.glob(File.join(SITE, "assets", "fonts", "*.woff2"))
+  require "digest"
+  !font_files.empty? && font_files.all? do |f|
+    block = sources_txt[/^#{Regexp.escape(File.basename(f))}\n(.*?)(?=^\S|\z)/m, 1].to_s
+    block.match?(/^  sha256 #{Digest::SHA256.file(f).hexdigest}$/)
+  end
+end
+check(failures, "SOURCES.txt names the subsetting tool, its version and the source font's sha256 for Raleway") do
+  sources_txt.include?("scripts/subset-raleway.py") && sources_txt.include?("fontTools 4.66.0") &&
+    sources_txt.include?("b1bef1f03a77a36fc257c5525e32a1dd621bb6f935b743a419da7ed0b18dc8f5")
 end
 
 puts
@@ -1091,10 +1289,23 @@ check(failures, "every solid text color in jodidaniel.css reaches #{A11yRules::M
   low_contrast.empty?
 end
 low_contrast.each { |offender| puts "       ^ #{offender}" }
+# The tagline and footer sit on the page gradient, which axe cannot score (it reports them
+# "incomplete"), so their contrast is computed from the stylesheet over the gradient's stops.
+tagline_problems = A11yRules.tagline_problems(a11y_css)
+check(failures, "header .tagline reaches its WCAG ratio over the page gradient at every width (3:1 as bold 18.66px+ text, 4.5:1 where smaller)") do
+  tagline_problems.empty?
+end
+tagline_problems.each { |problem| puts "       ^ #{problem}" }
+footer_problems = A11yRules.footer_problems(a11y_css)
+check(failures, "footer text and links reach #{A11yRules::MIN_RATIO}:1 over the footer band on every page gradient stop") do
+  footer_problems.empty?
+end
+footer_problems.each { |problem| puts "       ^ #{problem}" }
 check(failures, "jodidaniel.css shows .animate-in content under prefers-reduced-motion (after the fade-in rule)") do
   A11yRules.reduced_motion_shows_content?(a11y_css)
 end
 
+header_name = YAML.safe_load(read(File.join(ROOT, "_data", "header.yml")) || "")["name"].to_s
 a11y_pages = { "home page" => [File.join(SITE, "index.html"), true] }
 media_src.each do |src|
   a11y_pages["#{File.basename(src, '.md')} item page"] = [MediaRules.page_path(SITE, src, media_front_matter(src)), false]
@@ -1109,6 +1320,27 @@ if a11y_open
   end
 else
   gate_hidden(failures, "the built-page landmark/skip-link/heading checks")
+end
+
+puts "== headings: each media page's h1 is its item title; the home page keeps the site name =="
+# F4 (UX r5): the media layout's only h1 used to be the site name, so a screen-reader heading list
+# gave every item page the same h1. Now the item title is the h1 and the site name is a banner link.
+# The built home page keeps the site name as its h1 (and the gated coming-soon shell too).
+check(failures, "built home page has exactly one h1, the site name (#{header_name.inspect})") do
+  h1s = A11yRules.find_all(A11yRules.parse_html(home_html.to_s), "h1")
+  h1s.size == 1 && A11yRules.decoded_text_of(h1s.first[:node]).strip == header_name
+end
+if a11y_open
+  media_src.each do |src|
+    slug = File.basename(src, ".md")
+    html = read(MediaRules.page_path(SITE, src, media_front_matter(src)))
+    title = (media_front_matter(src) || {})["title"]
+    problems = html ? A11yRules.media_heading_problems(html, title) : ["page not built"]
+    check(failures, "built #{slug} item page: its one h1 is the item title, in <main>") { problems.empty? }
+    problems.each { |problem| puts "       ^ #{problem}" }
+  end
+else
+  gate_hidden(failures, "the media pages' item-title h1 checks")
 end
 
 puts "== editor-facing admin copy stays out of developer vocabulary =="
@@ -1170,6 +1402,122 @@ check(failures, "no admin label/hint/validation message uses developer vocabular
 end
 jargon_offenders.each { |(kind, text)| puts "       ^ #{kind}: #{text}" }
 
+# ---------------------------------------------------------------------------
+# Share titles + Person data (audit #4/#5). The Person facts, the share titles
+# and the media pages' schema only exist once the gate is open (open-gate pass);
+# the gated pass checks that none of it leaks.
+# ---------------------------------------------------------------------------
+puts "== share titles + structured data =="
+site_url = (YAML.safe_load(read(File.join(ROOT, "_config.yml"))) || {})["url"].to_s
+person_name = (YAML.safe_load(read(File.join(ROOT, "_data", "header.yml"))) || {})["name"].to_s
+author_name = ((YAML.safe_load(read(File.join(ROOT, "_config.yml"))) || {})["author"] || {})["name"].to_s
+
+# Every <meta> (property|name => [content, ...]) in a page's <head>, so a
+# duplicate is visible rather than the first one silently winning.
+def head_metas(html)
+  head = html.to_s[%r{<head>.*?</head>}m].to_s
+  head.scan(/<meta\s+([^>]*?)\s*\/?>/m).each_with_object(Hash.new { |h, k| h[k] = [] }) do |(attrs), acc|
+    key = attrs[/(?:property|name)="([^"]+)"/, 1]
+    acc[key] << attrs[/content="([^"]*)"/, 1] if key
+  end
+end
+
+def ld_json_blocks(html)
+  html.to_s.scan(%r{<script type="application/ld\+json">(.*?)</script>}m).flatten.map { |raw| JSON.parse(raw) }
+end
+
+home_share_html = read(File.join(SITE, "index.html"))
+home_metas = head_metas(home_share_html)
+# No link preview image is set by this change (whether her headshot belongs on
+# one is an open decision), so neither page type may carry one yet.
+check(failures, "the home page sets no og:image or twitter:image") do
+  !home_metas.key?("og:image") && !home_metas.key?("twitter:image")
+end
+settings_src = YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml"))) || {}
+if settings_src["site_live"] == true
+  # --- open gate: Person on the home page ---------------------------------
+  # The share title leads with her name (a bare role title read as a slogan with
+  # no one attached). Exactly one of each: a failed prefix replace would leave the
+  # bare title, a double insert would repeat the name.
+  %w[og:title twitter:title].each do |key|
+    check(failures, "home #{key} is one value and leads with #{person_name.inspect}: #{home_metas[key].inspect}") do
+      home_metas[key].size == 1 && home_metas[key].first.start_with?(person_name) &&
+        !home_metas[key].first.start_with?("#{person_name} | #{person_name}")
+    end
+  end
+
+  home_ld = ld_json_blocks(home_share_html)
+  persons = home_ld.select { |b| b["@type"] == "Person" }
+  check(failures, "home page emits exactly one top-level Person (JSON-LD), got #{persons.size}") { persons.size == 1 }
+  person = persons.first || {}
+  want = PersonRules.expected(ROOT)
+  got = PersonRules.observed(person)
+  check(failures, "Person name is #{person_name.inspect} and url is the site root") do
+    person["name"] == person_name && person["url"] == "#{site_url}/"
+  end
+  # One comparison per field, derived from the source files (scripts/person_rules.rb),
+  # so an /admin edit (a changed Contact link, "present" in any case, no current
+  # job) moves the expectation with it instead of tripping a hardcoded fact.
+  %w[jobTitle worksFor alumniOf knowsAbout sameAs alternateName].each do |field|
+    check(failures, "Person #{field} matches the source content: want #{want[field].inspect}, got #{got[field].inspect}") do
+      got[field] == want[field]
+    end
+  end
+  check(failures, "Person sameAs entries are all https") { person["sameAs"].to_a.all? { |u| u.start_with?("https://") } }
+  check(failures, "the Person script holds no raw '<' (so no value can close the script tag)") do
+    home_share_html.scan(%r{<script type="application/ld\+json">(.*?)</script>}m).flatten.none? { |raw| raw.include?("<") }
+  end
+
+  # --- open gate: media pages are WebPages, not her blog posts ---------------
+  media_pages = Dir[File.join(SITE, "media", "*", "index.html")].sort
+  check(failures, "open-gate build has media pages to check (#{media_pages.size})") { media_pages.size > 0 }
+  descs = []
+  media_pages.each do |f|
+    slug = File.basename(File.dirname(f))
+    html = read(f)
+    blocks = ld_json_blocks(html)
+    metas = head_metas(html)
+    descs << metas["description"].first
+    check(failures, "media/#{slug}: schema is one WebPage with no BlogPosting, datePublished or author") do
+      blocks.size == 1 && blocks.first["@type"] == "WebPage" &&
+        !html.include?("BlogPosting") && !html.include?("datePublished") && !blocks.first.key?("author")
+    end
+    # {% seo %} ran smartify on these titles, so a contraction showed a curly
+    # apostrophe in the tab and the share titles; the hand-written head has to keep that.
+    source_title = (media_front_matter(File.join(ROOT, "_media", "#{slug}.md")) || {})["title"].to_s.gsub(/\s+/, " ").strip
+    unless source_title.empty?
+      want_title = source_title.gsub(/(?<=\w)'(?=\w)/, "\u2019")
+      tab_title = CGI.unescapeHTML(html[%r{<title>(.*?)</title>}m, 1].to_s)
+      shown = [tab_title.sub(/ \| [^|]*\z/, ""), CGI.unescapeHTML(metas["og:title"].first.to_s), CGI.unescapeHTML(metas["twitter:title"].first.to_s)]
+      check(failures, "media/#{slug}: tab, og and twitter titles keep smart apostrophes: want #{want_title.inspect}, got #{shown.inspect}") do
+        if source_title.include?('"')
+          shown.none? { |t| t.include?("'") || t.include?('"') }
+        else
+          shown.all? { |t| t == want_title }
+        end
+      end
+    end
+    check(failures, "media/#{slug}: not typed as an article (og:type website, no article:published_time)") do
+      metas["og:type"] == ["website"] && !metas.key?("article:published_time")
+    end
+    check(failures, "media/#{slug}: keeps og:locale and the author meta the tag used to emit") do
+      metas["og:locale"] == ["en_US"] && metas["author"] == [author_name]
+    end
+    check(failures, "media/#{slug}: sets no og:image or twitter:image, and uses the small card") do
+      !metas.key?("og:image") && !metas.key?("twitter:image") && metas["twitter:card"] == ["summary"]
+    end
+  end
+  check(failures, "every media page has its own description (not one site-wide string)") do
+    descs.size == descs.uniq.size && descs.none? { |d| d.to_s.empty? }
+  end
+else
+  # --- gated: no bio fact ----------------------------------------------------
+  check(failures, "gated home page serves NO Person data and no job title (no claim before sign-off)") do
+    html = home_share_html.to_s
+    ld_json_blocks(html).empty? && !html.include?("jobTitle") && !html.include?("Wilson Sonsini")
+  end
+end
+
 # The tab title and meta description on the built home page come from
 # _data/settings.yml `seo:` (applied by _plugins/site_meta_from_settings.rb), so
 # an /admin edit reaches the page. Gated: the site name plus the coming-soon
@@ -1187,7 +1535,9 @@ seo_title = seo_home[%r{<title>(.*?)</title>}m, 1]
 seo_desc = seo_home[/<meta name="description" content="([^"]*)"/, 1]
 filled = ->(value) { value.is_a?(String) && !value.strip.empty? }
 site_name = filled.call(seo_data.dig("seo", "site_title")) ? seo_data.dig("seo", "site_title") : seo_config["title"].to_s
-if OPEN_PASS
+# The gate is open on the committed build too once `site_live: true` is committed
+# (go-live), so the open expectation applies there as well as on the open pass.
+if OPEN_PASS || seo_data["site_live"] == true
   launch_title = seo_data.dig("seo", "launch_title")
   expected_title = filled.call(launch_title) ? "#{launch_title} | #{site_name}" : site_name
   expected_desc = seo_data.dig("seo", "launch_description")

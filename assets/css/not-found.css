@@ -1,0 +1,74 @@
+/* The 404 page (_layouts/not-found.html). Loaded after jodidaniel.css, which
+   supplies the background, the white card (.container) and the button
+   (.contact-link); this file adds only what those do not cover. */
+
+/* The site name is a <p>, not an <h1>, so the heading of the page itself is the
+   one h1. These are the declarations of jodidaniel.css's `header h1` (and its
+   link rule), repeated for the <p>. */
+header .site-name {
+    font-family: 'Raleway', sans-serif;
+    font-size: 3rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
+header .site-name a {
+    color: inherit;
+    text-decoration: none;
+}
+
+/* Same phone breakpoint as jodidaniel.css's `header h1`. */
+@media (max-width: 767px) {
+    header .site-name {
+        font-size: 2rem;
+        letter-spacing: 0.1em;
+    }
+}
+
+.not-found {
+    text-align: center;
+}
+
+.not-found h1 {
+    font-family: 'Raleway', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #1a3a5c;
+    line-height: 1.35;
+}
+
+.not-found__message {
+    font-size: 1.1rem;
+    margin-top: 1rem;
+}
+
+.not-found__actions {
+    margin-top: 2rem;
+}
+
+/* Skip link: hidden until it takes keyboard focus (the theme's default layout,
+   which the 404 used to have, shipped one). The target <main> is focusable so
+   activating the link moves focus there, without painting a ring on the card. */
+.skip-link {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    transform: translateY(-120%);
+    padding: 0.6rem 1rem;
+    background: #ffffff;
+    color: #1a3a5c;
+    font-family: 'Raleway', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.skip-link:focus {
+    transform: translateY(0);
+}
+
+main:focus {
+    outline: none;
+}
