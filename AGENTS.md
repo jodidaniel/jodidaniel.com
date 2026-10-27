@@ -237,12 +237,12 @@ The Decap GitHub backend authenticates through an **API Gateway OAuth proxy**:
 - The proxy CloudFormation stack is `jodidaniel-com-oauth-proxy` (us-east-1);
   per-site deploy params (incl. the GitHub OAuth client id/secret) come from
   `infrastructure/site-params.env` (gitignored; copy from
-  `infrastructure/site-params.example.env`). Login is working.
+  `infrastructure/site-params.example.env`).
 
 ## Hosting / DNS
 
-Production is served from CloudFront; the apex `jodidaniel.com` was cut over
-from Squarespace to our CloudFront (apex A → alias). Coming-soon is live.
+Production is served from CloudFront; the apex `jodidaniel.com` is an A alias
+record to our CloudFront distribution.
 
 ### Deploying the bootstrap stack (security headers, media bucket)
 
