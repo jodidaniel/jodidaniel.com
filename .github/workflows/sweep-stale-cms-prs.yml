@@ -25,7 +25,7 @@ jobs:
     # The sweep reusable authenticates `gh` from CMS_E2E_PAT, which it
     # declares as a workflow_call secret (from v0.1.3) — map it explicitly
     # like every other caller. Keep `@<tag>` in step with the platform release.
-    uses: Adam-S-Daniel/cms-platform/.github/workflows/sweep-stale-cms-prs.yml@v0.1.165
+    uses: Adam-S-Daniel/cms-platform/.github/workflows/sweep-stale-cms-prs.yml@2c3b4ff3d95a0254c586a37ed9c597c9a6776faf
     secrets:
       CMS_E2E_PAT: ${{ secrets.CMS_E2E_PAT }}
     with:
