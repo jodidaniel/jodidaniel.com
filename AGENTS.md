@@ -336,8 +336,7 @@ platform script by hand: that is how the proxy stack got targeted.
   is real, and it carries the archived PDF next to `article_url` -- gated on
   `pdf_public`, with the bytes in a private S3 archive rather than this
   public repo (see docs/CONTENT-MODEL.md, "Archived PDFs").
-  The shadowing is silent: every link 404s with no build error (evidence: PR
-  #176). Check any new field name against `DocumentDrop` before using it;
+  The shadowing is silent: every link 404s with no build error. Check any new field name against `DocumentDrop` before using it;
   `scripts/verify-build-artifacts.rb` guards the rest. Detail →
   `docs/CONTENT-MODEL.md`.
 - **The one standing exception is the media category list, and it lives in
