@@ -37,7 +37,7 @@ permissions:
 
 jobs:
   deploy:
-    uses: Adam-S-Daniel/cms-platform/.github/workflows/deploy-production.yml@52589b1bac8b0572eeb94e7b53fea29ea9d2afb2
+    uses: Adam-S-Daniel/cms-platform/.github/workflows/deploy-production.yml@dcfbf21b4308bcfc0e579f057558e755f7e15bcf
     with:
       apex_domain: jodidaniel.com
       prod_bucket: jodidaniel-com-production
@@ -50,7 +50,7 @@ jobs:
       # own default is `main` -- unpinned. MUST equal the `uses:@` pin above;
       # platform-bump rewrites both, and platform-pin-consistency fails the
       # build if they disagree or if this key is missing.
-      platform_ref: 52589b1bac8b0572eeb94e7b53fea29ea9d2afb2
+      platform_ref: dcfbf21b4308bcfc0e579f057558e755f7e15bcf
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       PRODUCTION_CLOUDFRONT_ID: ${{ secrets.PRODUCTION_CLOUDFRONT_ID }}
