@@ -1180,10 +1180,9 @@ end
 puts "== Past events live in Talks & Panels, not Upcoming Events =="
 # 2026-10-05: UNIFY had already happened but still sat in Upcoming Events. It
 # was moved to the Talks & Panels list rather than deleted (the record of a
-# talk is worth keeping). 2026-10-30: the DHNY Summit, ADAPT and DirectTrust
-# had passed too. Their session was blank, which the /admin hint defines as
-# attending rather than speaking, so there is no talk to record and they are
-# removed instead. The layout deliberately has
+# talk is worth keeping). 2026-10-31: Jodi confirmed she also spoke at ADAPT
+# (she moderated a panel there), so it moves the same way. She did not speak
+# at the DHNY Summit, so it is removed instead. The layout deliberately has
 # no date filter (docs/CONTENT-MODEL.md, "Past events are not auto-hidden"), so
 # this is a fixed-list source check, never a comparison with today's date: each
 # moved event must still be a Talks & Panels media item carrying its original
@@ -1191,6 +1190,7 @@ puts "== Past events live in Talks & Panels, not Upcoming Events =="
 # back in _events/ either.
 MOVED_PAST_EVENTS = {
   "UNIFY: Convening for Quality" => "https://www.jointcommission.org/en-us/unify-convening-for-quality",
+  "ADAPT" => "https://adapt-conference.com/agenda/",
 }.freeze
 talk_urls = media_src.filter_map do |src|
   raw = read(src)
@@ -1205,8 +1205,6 @@ MOVED_PAST_EVENTS.each do |name, url|
 end
 REMOVED_PAST_EVENTS = {
   "DHNY Summit" => "https://www.dhnysummit.com/",
-  "ADAPT" => "https://adapt-conference.com/agenda/",
-  "DirectTrust Annual Conference" => "https://directtrust.org/conference",
 }.freeze
 REMOVED_PAST_EVENTS.each do |name, url|
   check(failures, "#{name} is no longer listed in Upcoming Events (_events/)") { !upcoming_urls.include?(url) }

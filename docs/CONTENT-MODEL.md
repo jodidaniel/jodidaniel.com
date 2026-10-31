@@ -153,8 +153,8 @@ session title, host, month and year, the event page as the link), then delete
 the event entry. UNIFY was moved this way on 2026-10-05 rather than deleted, so
 the panel stays on the record. An event she only attended (blank "Your
 session", per its `/admin` hint) has no talk to record, so it is deleted
-instead; the DHNY Summit, ADAPT and DirectTrust were removed this way on
-2026-10-30. Talks & Panels lists newest first, so give the
+instead (confirm with her first: she may have spoken anyway). The DHNY
+Summit was removed this way; ADAPT moved to Talks & Panels on 2026-10-31. Talks & Panels lists newest first, so give the
 moved item the lowest `weight` and bump the others (`scripts/test-content-copy.rb`
 checks the order). An in-browser
 upcoming/past split on one Speaking list is planned for the restructure and
