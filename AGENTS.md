@@ -122,6 +122,13 @@ skew the pins. See cms-platform's `docs/SYNC.md` for the sync model. Do not vend
 platform's `admin/` machinery — the gem ships it; this repo keeps only the
 site-owned seam (`admin/collections.site.yml`).
 
+**No `actions.lock` in this repo — do not add one**
+([ADR 0024](https://github.com/Adam-S-Daniel/_agent-guidance/blob/main/docs/decisions/0024-actions-pin-through-lockfiles.md)). The floor rule above names the lockfile form, but
+cms-platform and both its consumers stay on full SHAs: actionlint and
+`gh actions-lock --verify` both reject the platform's local-action refs, and
+every workflow here calls into the platform. The `github-actions-sha-pinning`
+skill has the detail.
+
 ## Name variants
 
 Jodi Daniel appears under several name forms across public records, legal
