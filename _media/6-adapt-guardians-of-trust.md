@@ -5,5 +5,5 @@ source: "ADAPT, Healthcare Trust Institute, Santa Fe, NM"
 date_display: "October 2026"
 article_url: "https://adapt-conference.com/agenda/"
 link_label: "About the event"
-weight: 1
+weight: 2
 ---

@@ -5,5 +5,5 @@ source: "DirectTrust Annual Conference, St. Louis, MO"
 date_display: "August 2025"
 article_url: "https://www.wsgr.com/en/events/2025-directtrust-annual-conference.html"
 link_label: "About the event"
-weight: 4
+weight: 6
 ---
