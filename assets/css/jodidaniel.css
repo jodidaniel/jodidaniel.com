@@ -121,9 +121,19 @@ body {
 }
 
 /* These custom layouts load this stylesheet without the platform's main.css,
-   so keep its responsive embed and bare-table rules here. */
+   so keep its responsive embed and bare-table rules here, matching the
+   theme's (cms-platform#540). */
 iframe {
+    box-sizing: border-box;
     max-width: 100%;
+}
+
+/* A fixed-size embed (width and height attributes, e.g. a video) scales its
+   height with its width at 16:9 instead of keeping its authored height and
+   squashing. An author can set another aspect-ratio inline. */
+iframe[width][height] {
+    height: auto;
+    aspect-ratio: 16 / 9;
 }
 
 table:not([class]) {
