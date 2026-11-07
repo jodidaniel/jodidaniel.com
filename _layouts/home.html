@@ -203,19 +203,19 @@
                 {%- for ev in events_sorted -%}
                 <div class="event-item">
                     {%- if ev.date_display and ev.date_display != "" -%}
-                    <div class="event-date">{{ ev.date_display }}</div>
+                    <div class="event-date">{{ ev.date_display | escape }}</div>
                     {%- endif -%}
                     <div class="event-body">
                         <h3>
                             {%- if ev.event_url and ev.event_url != "" -%}
-                            <a href="{{ ev.event_url }}" target="_blank" rel="noopener">{{ ev.title }}</a>
+                            <a href="{{ ev.event_url | escape }}" target="_blank" rel="noopener">{{ ev.title | escape }}</a>
                             {%- else -%}
-                            {{ ev.title }}
+                            {{ ev.title | escape }}
                             {%- endif -%}
                         </h3>
-                        {%- if ev.org and ev.org != "" -%}<div class="event-org">{{ ev.org }}</div>{%- endif -%}
-                        {%- if ev.location and ev.location != "" -%}<div class="event-location">{{ ev.location }}</div>{%- endif -%}
-                        {%- if ev.session and ev.session != "" -%}<p class="event-session">{{ ev.session }}</p>{%- endif -%}
+                        {%- if ev.org and ev.org != "" -%}<div class="event-org">{{ ev.org | escape }}</div>{%- endif -%}
+                        {%- if ev.location and ev.location != "" -%}<div class="event-location">{{ ev.location | escape }}</div>{%- endif -%}
+                        {%- if ev.session and ev.session != "" -%}<p class="event-session">{{ ev.session | escape }}</p>{%- endif -%}
                     </div>
                 </div>
                 {%- endfor -%}
@@ -349,8 +349,8 @@
                                 `article_url` live, so this link stays in-tab.
                               {%- endcomment -%}
                               <a href="{{ item.url | relative_url }}">
-                                  {{ item.title }}
-                                  <span class="source">{%- if item.date_display and item.date_display != "" %}{{ item.date_display }} · {% endif %}{{ item.source }}</span>
+                                  {{ item.title | escape }}
+                                  <span class="source">{%- if item.date_display and item.date_display != "" %}{{ item.date_display | escape }} · {% endif %}{{ item.source | escape }}</span>
                               </a>
                           </li>
                           {%- endfor -%}
@@ -405,8 +405,8 @@
                                 `article_url` live, so this link stays in-tab.
                               {%- endcomment -%}
                               <a href="{{ item.url | relative_url }}">
-                                  {{ item.title }}
-                                  <span class="source">{%- if item.date_display and item.date_display != "" %}{{ item.date_display }} · {% endif %}{{ item.source }}</span>
+                                  {{ item.title | escape }}
+                                  <span class="source">{%- if item.date_display and item.date_display != "" %}{{ item.date_display | escape }} · {% endif %}{{ item.source | escape }}</span>
                               </a>
                           </li>
                           {%- endfor -%}
