@@ -45,6 +45,7 @@ require_relative "a11y_rules"
 # After a11y_rules, which may put the bundle on the load path: a `require "json"` before it
 # activates the default json gem, and `bundler/setup` then dies on the Gemfile.lock pin.
 require "json"
+require "cgi"
 
 REPO_ROOT = File.expand_path("..", __dir__)
 OPEN_PASS = ARGV[0] == "--open-pass"
@@ -1175,6 +1176,52 @@ else
   # above: say out loud that this didn't run, rather than let an unrelated
   # pass (or an empty failures array) imply coverage the gate is hiding.
   gate_hidden(failures, "the built-page event title/date_display/order checks")
+end
+
+puts "== Event and media text fields print HTML-escaped =="
+# Regression guard: _layouts/home.html and _layouts/media.html print each
+# `_events` / `_media` text field with Liquid `| escape`. Existing titles carry a
+# raw `&` ("Providers & Payers"), so an unescaped layout would emit `&` where
+# `&amp;` belongs, and this check would fail rather than pass vacuously. The
+# expected string is Ruby's stdlib CGI.escapeHTML, the same escaping Liquid's
+# `escape` filter applies. The body outputs are plain `| escape` (smartify is
+# only in media.html's <head>), so no further normalization is applied.
+ESCAPED_EVENT_FIELDS = %w[title org location session].freeze
+ESCAPED_MEDIA_FIELDS = %w[title source].freeze
+escape_home_html = read(File.join(SITE, "index.html"))
+if escape_home_html && escape_home_html.include?('<section id="events"')
+  events_src.each do |src|
+    slug = File.basename(src, ".md")
+    fm = media_front_matter(src) or next
+    ESCAPED_EVENT_FIELDS.each do |field|
+      value = fm[field]
+      next unless value.is_a?(String) && !value.strip.empty?
+
+      expected = CGI.escapeHTML(value)
+      check(failures, "index.html prints _events/#{slug}.md #{field} escaped (expected #{expected.inspect})") do
+        escape_home_html.include?(expected)
+      end
+    end
+  end
+  media_src.each do |src|
+    slug = File.basename(src, ".md")
+    fm = media_front_matter(src) or next
+    item_page = read(MediaRules.page_path(SITE, src, fm))
+    ESCAPED_MEDIA_FIELDS.each do |field|
+      value = fm[field]
+      next unless value.is_a?(String) && !value.strip.empty?
+
+      expected = CGI.escapeHTML(value)
+      check(failures, "index.html prints _media/#{slug}.md #{field} escaped (expected #{expected.inspect})") do
+        escape_home_html.include?(expected)
+      end
+      check(failures, "media/#{slug}/index.html prints #{field} escaped (expected #{expected.inspect})") do
+        !item_page.nil? && item_page.include?(expected)
+      end
+    end
+  end
+else
+  gate_hidden(failures, "the escaped event/media field checks")
 end
 
 puts "== Past events live in Talks & Panels, not Upcoming Events =="
