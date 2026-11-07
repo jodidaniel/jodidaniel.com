@@ -1,0 +1,53 @@
+# Weekly media discovery (cms-platform docs/MEDIA-DISCOVERY.md).
+# The job searches the web for Jodi's new talks, podcasts, press quotes,
+# articles and briefs, confirms each find on two independent sites, and
+# proposes it as an /admin "In review" entry. Nothing publishes without an
+# editor's Publish.
+person:
+  # Writers often misspell her name as "Daniels", so those forms count too.
+  names:
+    - Jodi Daniel
+    - Jodi G. Daniel
+    - Jodi Goldstein Daniel
+    - Jodi Daniels
+    - Jodi G. Daniels
+    - Jodi Goldstein Daniels
+  # One of these must appear near her name. Employers and posts, not topics:
+  # another Jodi Daniel(s) also works on health privacy, so words like
+  # "HIPAA" or "privacy" would not tell them apart.
+  identity_markers:
+    - Wilson Sonsini
+    - WSGR
+    - Crowell & Moring
+    - Crowell
+    - Office of the National Coordinator
+    - ONC
+    - HHS
+    - Health and Human Services
+  # Left empty on purpose: every find gets a human review before it publishes.
+  exclusion_markers: []
+  near_chars: 600
+sources:
+  # People-search and contact-scraping sites: never a source.
+  blocked_domains:
+    - spokeo.com
+    - whitepages.com
+    - beenverified.com
+    - radaris.com
+    - mylife.com
+    - peoplefinders.com
+    - truepeoplesearch.com
+    - fastpeoplesearch.com
+    - zoominfo.com
+    - rocketreach.co
+    - signalhire.com
+    - contactout.com
+  seed_urls:
+    - https://www.wsgr.com/en/people/jodi-daniel.html
+search_hints:
+  - Jodi Daniel Wilson Sonsini digital health
+  - Jodi Daniel speaker panel health data
+  - Jodi Daniel webinar
+  - Jodi Daniel podcast
+  - Jodi Daniel quoted health policy
+  - Jodi Daniel former ONC director
