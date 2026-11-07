@@ -42,7 +42,13 @@
       (the tag fell back to the site-wide one on all of them) and no
       article:published_time. No link preview image is set here (none is today).
     {%- endcomment -%}
-    {%- capture media_desc -%}{{ page.title }}{% if page.source and page.source != "" %} — {{ page.source }}{% endif %}{% if page.date_display and page.date_display != "" %}, {{ page.date_display }}{% endif %}{%- endcapture -%}
+    {%- comment -%}
+      Plain text, built with `append` rather than a capture: a capture is
+      markup, and this value is encoded where it prints (escape or jsonify).
+    {%- endcomment -%}
+    {%- assign media_desc = page.title -%}
+    {%- if page.source and page.source != "" -%}{%- assign media_desc = media_desc | append: " — " | append: page.source -%}{%- endif -%}
+    {%- if page.date_display and page.date_display != "" -%}{%- assign media_desc = media_desc | append: ", " | append: page.date_display -%}{%- endif -%}
     {%- comment -%}
       Smart quotes, as {% seo %} gave these titles (it runs smartify). smartify
       returns entity-escaped HTML text, so the HTML spots (<title>, og:title,
@@ -56,14 +62,14 @@
     {%- assign media_canonical = page.url | absolute_url -%}
     <title>{{ media_title_html | escape_once }} | {{ site.title | escape }}</title>
     <meta name="description" content="{{ media_desc | escape }}" />
-    <link rel="canonical" href="{{ media_canonical }}" />
+    <link rel="canonical" href="{{ media_canonical | escape }}" />
     {%- if site.author.name %}
     <meta name="author" content="{{ site.author.name | escape }}" />
     {%- endif %}
     <meta property="og:locale" content="en_US" />
     <meta property="og:title" content="{{ media_title_html | escape_once }}" />
     <meta property="og:description" content="{{ media_desc | escape }}" />
-    <meta property="og:url" content="{{ media_canonical }}" />
+    <meta property="og:url" content="{{ media_canonical | escape }}" />
     <meta property="og:site_name" content="{{ site.title | escape }}" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary" />
@@ -94,7 +100,7 @@
 </head>
 <body>
     {%- if live -%}
-    <a class="skip-link" href="#main">{{ settings.skip_link_label | default: 'Skip to main content' }}</a>
+    <a class="skip-link" href="#main">{{ settings.skip_link_label | default: 'Skip to main content' | escape }}</a>
     {%- endif -%}
     <div class="site-wrapper">
         <header class="animate-in delay-1">
@@ -104,17 +110,17 @@
               Gated: the coming-soon shell has no item title, so the name stays the h1.
             {%- endcomment -%}
             {%- if live -%}
-            <p class="site-name"><a href="{{ '/' | relative_url }}">{{ site.data.header.name }}</a></p>
+            <p class="site-name"><a href="{{ '/' | relative_url }}">{{ site.data.header.name | escape }}</a></p>
             {%- else -%}
-            <h1><a href="{{ '/' | relative_url }}">{{ site.data.header.name }}</a></h1>
+            <h1><a href="{{ '/' | relative_url }}">{{ site.data.header.name | escape }}</a></h1>
             {%- endif -%}
             {%- if live -%}
             {%- if site.data.header.tagline and site.data.header.tagline != "" -%}
-            <p class="tagline">{{ site.data.header.tagline }}</p>
+            <p class="tagline">{{ site.data.header.tagline | escape }}</p>
             {%- endif -%}
             {%- else -%}
             {%- if settings.coming_soon.tagline and settings.coming_soon.tagline != "" -%}
-            <p class="tagline">{{ settings.coming_soon.tagline }}</p>
+            <p class="tagline">{{ settings.coming_soon.tagline | escape }}</p>
             {%- endif -%}
             {%- endif -%}
         </header>
@@ -167,7 +173,7 @@
               {%- assign pdf_suffix = page.pdf_archive_file | slice: -4, 4 -%}
               {%- if pdf_suffix == ".pdf" -%}
                 {%- assign has_pdf = true -%}
-                {%- capture pdf_path -%}/media-pdfs/{{ page.pdf_archive_file }}{%- endcapture -%}
+                {%- assign pdf_path = "/media-pdfs/" | append: page.pdf_archive_file -%}
                 {%- assign pdf_href = pdf_path | relative_url -%}
               {%- endif -%}
             {%- endif -%}
@@ -230,7 +236,7 @@
             {%- endif -%}
 
             <p class="media-detail__back">
-                <a href="{{ '/#media-' | append: page.slug | relative_url }}">&larr; Back to {{ settings.section_headings.media_heading | default: "Media" }}</a>
+                <a href="{{ '/#media-' | append: page.slug | relative_url | escape }}">&larr; Back to {{ settings.section_headings.media_heading | default: "Media" | escape }}</a>
             </p>
         </article>
         </main>
@@ -243,7 +249,7 @@
         {%- endif -%}
         {%- if copyright and copyright != "" -%}
         <footer class="animate-in delay-2">
-            <p>{{ copyright }}</p>
+            <p>{{ copyright | escape }}</p>
         </footer>
         {%- endif -%}
     </div>
