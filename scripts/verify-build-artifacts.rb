@@ -215,7 +215,8 @@ end
   digital\ health\ law
 ].each do |marker|
   check(failures, "/preview/ does NOT leak gated bio text: #{marker.inspect}") do
-    preview_html && !preview_html.include?(marker)
+    # Both spellings: the layouts print copy HTML-escaped (`&` as `&amp;`).
+    preview_html && !preview_html.include?(marker) && !preview_html.include?(CGI.escapeHTML(marker))
   end
 end
 
@@ -265,14 +266,15 @@ not_found_data = YAML.safe_load(read(File.join(ROOT, "_data", "not_found.yml")) 
 check(failures, "404.html copy comes from _data/not_found.yml (heading, message, button text, skip link)") do
   %w[heading message home_link_label skip_link_label].all? do |key|
     value = not_found_data[key].to_s
-    !value.strip.empty? && notfound_html&.include?(value)
+    # The layout prints each value with `| escape`, so look for the escaped form.
+    !value.strip.empty? && notfound_html&.include?(CGI.escapeHTML(value))
   end
 end
 # The page is served for EVERY missing address, gated or not, so it must carry no
 # bio copy, and its header must follow the gate like every other page's.
 %w[Wilson\ Sonsini Crowell\ &\ Moring nationally\ recognized\ leader digital\ health\ law].each do |marker|
   check(failures, "404.html does NOT leak bio text: #{marker.inspect}") do
-    notfound_html && !notfound_html.include?(marker)
+    notfound_html && !notfound_html.include?(marker) && !notfound_html.include?(CGI.escapeHTML(marker))
   end
 end
 gate_settings = YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml")) || "") || {}
@@ -282,7 +284,7 @@ gate_tagline = if gate_settings["site_live"] == true
                  gate_settings.dig("coming_soon", "tagline").to_s
                end
 check(failures, "404.html header tagline follows the gate (#{gate_tagline.inspect})") do
-  gate_tagline.empty? ? !notfound_html.to_s.include?('class="tagline"') : notfound_html.to_s.include?(">#{gate_tagline}<")
+  gate_tagline.empty? ? !notfound_html.to_s.include?('class="tagline"') : notfound_html.to_s.include?(">#{CGI.escapeHTML(gate_tagline)}<")
 end
 
 # PNG width/height from the IHDR chunk; nil when the bytes are not a PNG.
@@ -644,11 +646,12 @@ media_src.each do |src|
       # The stylesheet is inlined (_plugins/inline_css.rb), and it names `.section-title`
       # as a selector, so look at the page without its <style> elements.
       markup = page.gsub(%r{<style\b[^>]*>.*?</style>}m, "")
-      !markup.include?(article) && !markup.include?("section-title")
+      !markup.include?(article) && !markup.include?(CGI.escapeHTML(article)) && !markup.include?("section-title")
     end
   else
     check(failures, "/media/#{slug}/ links out to its article_url") do
-      !article.empty? && page.include?(article)
+      # Printed with `| escape`, so a URL's `&` arrives as `&amp;`.
+      !article.empty? && page.include?(CGI.escapeHTML(article))
     end
     # Issue #359: the back link returns to THIS item on the home page, not the
     # top of the section. The home page must carry the matching element id.
@@ -1050,10 +1053,10 @@ if home_html.to_s.include?('<section id="media"')
   coverage_heading = settings_yaml_for_media.dig("section_headings", "media_coverage_heading").to_s
 
   check(failures, "built home page includes the authored-group heading #{authored_heading.inspect}") do
-    !authored_heading.empty? && home_html.include?(authored_heading)
+    !authored_heading.empty? && home_html.include?(CGI.escapeHTML(authored_heading))
   end
   check(failures, "built home page includes the coverage-group heading #{coverage_heading.inspect}") do
-    !coverage_heading.empty? && home_html.include?(coverage_heading)
+    !coverage_heading.empty? && home_html.include?(CGI.escapeHTML(coverage_heading))
   end
 
   authored_indices = media_category_by_slug.filter_map do |slug, cat|
