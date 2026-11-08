@@ -25,7 +25,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="{{ page.robots | default: 'noindex,nofollow' }}">
+    <meta name="robots" content="{{ page.robots | default: 'noindex,nofollow' | escape }}">
     <title>{{ nf.heading | escape }} | {{ site.title | escape }}</title>
     {%- comment -%}
       Fonts are self-hosted (assets/fonts/, @font-face in jodidaniel.css), so
@@ -41,27 +41,27 @@
     <link rel="stylesheet" href="{{ '/assets/css/not-found.css' | cachebust }}">
 </head>
 <body>
-    <a class="skip-link" href="#main">{{ nf.skip_link_label }}</a>
+    <a class="skip-link" href="#main">{{ nf.skip_link_label | escape }}</a>
     <div class="site-wrapper">
         <header class="site-header animate-in delay-1">
-            <p class="site-name"><a href="{{ '/' | relative_url }}">{{ site.data.header.name }}</a></p>
+            <p class="site-name"><a href="{{ '/' | relative_url }}">{{ site.data.header.name | escape }}</a></p>
             {%- if live -%}
             {%- if site.data.header.tagline and site.data.header.tagline != "" -%}
-            <p class="tagline">{{ site.data.header.tagline }}</p>
+            <p class="tagline">{{ site.data.header.tagline | escape }}</p>
             {%- endif -%}
             {%- else -%}
             {%- if settings.coming_soon.tagline and settings.coming_soon.tagline != "" -%}
-            <p class="tagline">{{ settings.coming_soon.tagline }}</p>
+            <p class="tagline">{{ settings.coming_soon.tagline | escape }}</p>
             {%- endif -%}
             {%- endif -%}
         </header>
 
         <main id="main" tabindex="-1">
             <div class="container not-found animate-in delay-2">
-                <h1>{{ nf.heading }}</h1>
-                <p class="not-found__message">{{ nf.message }}</p>
+                <h1>{{ nf.heading | escape }}</h1>
+                <p class="not-found__message">{{ nf.message | escape }}</p>
                 <p class="not-found__actions">
-                    <a class="contact-link" href="{{ '/' | relative_url }}">{{ nf.home_link_label }}</a>
+                    <a class="contact-link" href="{{ '/' | relative_url }}">{{ nf.home_link_label | escape }}</a>
                 </p>
             </div>
         </main>
@@ -72,7 +72,7 @@
         {%- assign copyright = settings.coming_soon.copyright -%}
         {%- endif -%}
         <footer class="site-footer animate-in delay-2">
-            <p>{{ copyright }}</p>
+            <p>{{ copyright | escape }}</p>
         </footer>
     </div>
 </body>

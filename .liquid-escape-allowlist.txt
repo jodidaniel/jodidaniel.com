@@ -1,0 +1,5 @@
+# Liquid outputs that print markup on purpose, for cms-platform's
+# scripts/liquid-escape-lint.rb. One per line:
+# `<path> | <markup, as the finding prints it> | <reason>`.
+_layouts/home.html | about.lead | markdownify | the owner's own About text from /admin, written in Markdown (bold markup) and rendered to HTML on purpose
+_layouts/home.html | p | markdownify | the owner's own About paragraphs from /admin, written in Markdown and rendered to HTML on purpose

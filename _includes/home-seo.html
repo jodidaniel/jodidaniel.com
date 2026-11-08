@@ -20,11 +20,11 @@
 {%- capture seo_html -%}{% seo %}{%- endcapture -%}
 {%- assign title_head = page.title | slice: 0, person_name.size -%}
 {%- if page.title and page.title != "" and title_head != person_name -%}
-  {%- assign share_prefix = person_name | escape | append: " | " -%}
+  {%- assign share_prefix = person_name | append: " | " -%}
   {%- capture og_open %}<meta property="og:title" content="{% endcapture -%}
-  {%- capture og_led %}<meta property="og:title" content="{{ share_prefix }}{% endcapture -%}
+  {%- capture og_led %}<meta property="og:title" content="{{ share_prefix | escape }}{% endcapture -%}
   {%- capture tw_open %}<meta name="twitter:title" content="{% endcapture -%}
-  {%- capture tw_led %}<meta name="twitter:title" content="{{ share_prefix }}{% endcapture -%}
+  {%- capture tw_led %}<meta name="twitter:title" content="{{ share_prefix | escape }}{% endcapture -%}
   {%- assign seo_html = seo_html | replace: og_open, og_led | replace: tw_open, tw_led -%}
 {%- endif -%}
 {{ seo_html }}

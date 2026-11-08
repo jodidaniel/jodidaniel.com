@@ -78,18 +78,18 @@
       /admin) to go live.
     {%- endcomment -%}
     {%- if live -%}
-    <a class="skip-link" href="#main">{{ settings.skip_link_label | default: 'Skip to main content' }}</a>
+    <a class="skip-link" href="#main">{{ settings.skip_link_label | default: 'Skip to main content' | escape }}</a>
     {%- endif -%}
     <div class="site-wrapper">
         <header class="animate-in delay-1">
-            <h1>{{ site.data.header.name }}</h1>
+            <h1>{{ site.data.header.name | escape }}</h1>
             {%- if live -%}
             {%- if site.data.header.tagline and site.data.header.tagline != "" -%}
-            <p class="tagline">{{ site.data.header.tagline }}</p>
+            <p class="tagline">{{ site.data.header.tagline | escape }}</p>
             {%- endif -%}
             {%- else -%}
             {%- if settings.coming_soon.tagline and settings.coming_soon.tagline != "" -%}
-            <p class="tagline">{{ settings.coming_soon.tagline }}</p>
+            <p class="tagline">{{ settings.coming_soon.tagline | escape }}</p>
             {%- endif -%}
             {%- endif -%}
         </header>
@@ -111,7 +111,7 @@
             <div class="intro-section">
                 <div class="profile-placeholder">
                     {%- if about.photo and about.photo != "" -%}
-                    <img class="profile-image" src="{{ about.photo | relative_url }}" alt="{{ site.data.header.name }}" width="180" height="180">
+                    <img class="profile-image" src="{{ about.photo | relative_url | escape }}" alt="{{ site.data.header.name | escape }}" width="180" height="180">
                     {%- else -%}
                     <svg class="profile-image" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
                         <rect width="300" height="300" fill="#e8f4f8"/>
@@ -123,7 +123,7 @@
                 </div>
                 <div class="intro-text">
                     {%- if about.intro_heading and about.intro_heading != "" -%}
-                    <h2>{{ about.intro_heading }}</h2>
+                    <h2>{{ about.intro_heading | escape }}</h2>
                     {%- endif -%}
                     {%- comment -%}
                       Jodi's 2026-08-30 feedback item 2: the top blurb and the
@@ -145,7 +145,7 @@
             {%- if about.nav and about.nav != empty -%}
             <nav class="intro-nav">
                 {%- for n in about.nav -%}
-                <a href="#{{ n.anchor }}">{{ n.label }}</a>
+                <a href="#{{ n.anchor | escape }}">{{ n.label | escape }}</a>
                 {%- endfor -%}
             </nav>
             {%- endif -%}
@@ -197,7 +197,7 @@
         {%- if events_sorted and events_sorted != empty -%}
         <section id="events" class="container animate-in delay-3">
             {%- if settings.section_headings.events_heading and settings.section_headings.events_heading != "" -%}
-            <h2 class="section-title">{{ settings.section_headings.events_heading }}</h2>
+            <h2 class="section-title">{{ settings.section_headings.events_heading | escape }}</h2>
             {%- endif -%}
             <div class="events-list">
                 {%- for ev in events_sorted -%}
@@ -227,13 +227,13 @@
         {%- if expertise_sorted and expertise_sorted != empty -%}
         <section id="expertise" class="container animate-in delay-4">
             {%- if settings.section_headings.expertise_heading and settings.section_headings.expertise_heading != "" -%}
-            <h2 class="section-title">{{ settings.section_headings.expertise_heading }}</h2>
+            <h2 class="section-title">{{ settings.section_headings.expertise_heading | escape }}</h2>
             {%- endif -%}
             <div class="expertise-grid">
                 {%- for e in expertise_sorted -%}
                 <div class="expertise-card">
-                    <h3>{{ e.title }}</h3>
-                    <p>{{ e.description }}</p>
+                    <h3>{{ e.title | escape }}</h3>
+                    <p>{{ e.description | escape }}</p>
                 </div>
                 {%- endfor -%}
             </div>
@@ -244,15 +244,15 @@
         {%- if experience_sorted and experience_sorted != empty -%}
         <section id="experience" class="container animate-in delay-5">
             {%- if settings.section_headings.experience_heading and settings.section_headings.experience_heading != "" -%}
-            <h2 class="section-title">{{ settings.section_headings.experience_heading }}</h2>
+            <h2 class="section-title">{{ settings.section_headings.experience_heading | escape }}</h2>
             {%- endif -%}
             <div class="timeline">
                 {%- for x in experience_sorted -%}
                 <div class="timeline-item">
-                    <h3>{{ x.title }}</h3>
-                    <div class="org">{{ x.org }}</div>
-                    <div class="period">{{ x.period }}</div>
-                    <p>{{ x.description }}</p>
+                    <h3>{{ x.title | escape }}</h3>
+                    <div class="org">{{ x.org | escape }}</div>
+                    <div class="period">{{ x.period | escape }}</div>
+                    <p>{{ x.description | escape }}</p>
                 </div>
                 {%- endfor -%}
             </div>
@@ -263,11 +263,11 @@
         {%- if accomplishments_sorted and accomplishments_sorted != empty -%}
         <section id="accomplishments" class="container animate-in delay-6">
             {%- if settings.section_headings.accomplishments_heading and settings.section_headings.accomplishments_heading != "" -%}
-            <h2 class="section-title">{{ settings.section_headings.accomplishments_heading }}</h2>
+            <h2 class="section-title">{{ settings.section_headings.accomplishments_heading | escape }}</h2>
             {%- endif -%}
             <ul class="accomplishments-list">
                 {%- for a in accomplishments_sorted -%}
-                <li><strong>{{ a.title }}:</strong> {{ a.text }}</li>
+                <li><strong>{{ a.title | escape }}:</strong> {{ a.text | escape }}</li>
                 {%- endfor -%}
             </ul>
         </section>
@@ -300,7 +300,7 @@
         {%- if all_media_sorted and all_media_sorted != empty -%}
         <section id="media" class="container animate-in delay-7">
             {%- if settings.section_headings.media_heading and settings.section_headings.media_heading != "" -%}
-            <h2 class="section-title">{{ settings.section_headings.media_heading }}</h2>
+            <h2 class="section-title">{{ settings.section_headings.media_heading | escape }}</h2>
             {%- endif -%}
 
             {%- comment -%}
@@ -316,7 +316,7 @@
             {%- endfor -%}
             {%- if media_authored_has_items -%}
             {%- if settings.section_headings.media_authored_heading and settings.section_headings.media_authored_heading != "" -%}
-            <span class="media-group-heading">{{ settings.section_headings.media_authored_heading }}</span>
+            <span class="media-group-heading">{{ settings.section_headings.media_authored_heading | escape }}</span>
             {%- endif -%}
             <div class="media-grid">
                 {%- for cat_idx in (0..1) -%}
@@ -336,11 +336,11 @@
                           {%- when 'globe' -%}
                           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM18.92 8h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zM5.08 16h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.91-4.33-3.56zm2.95-8H5.08c.96-1.65 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>
                           {%- endcase -%}
-                          {{ category }}
+                          {{ category | escape }}
                       </h3>
                       <ul class="media-list">
                           {%- for item in category_items -%}
-                          <li id="media-{{ item.slug }}">
+                          <li id="media-{{ item.slug | escape }}">
                               {%- comment -%}
                                 item.url is the item's OWN page (/media/<slug>/),
                                 not the article link — Jekyll's DocumentDrop
@@ -348,7 +348,7 @@
                                 where the archived PDF and the outbound
                                 `article_url` live, so this link stays in-tab.
                               {%- endcomment -%}
-                              <a href="{{ item.url | relative_url }}">
+                              <a href="{{ item.url | relative_url | escape }}">
                                   {{ item.title | escape }}
                                   <span class="source">{%- if item.date_display and item.date_display != "" %}{{ item.date_display | escape }} · {% endif %}{{ item.source | escape }}</span>
                               </a>
@@ -372,7 +372,7 @@
             {%- endfor -%}
             {%- if media_coverage_has_items -%}
             {%- if settings.section_headings.media_coverage_heading and settings.section_headings.media_coverage_heading != "" -%}
-            <span class="media-group-heading">{{ settings.section_headings.media_coverage_heading }}</span>
+            <span class="media-group-heading">{{ settings.section_headings.media_coverage_heading | escape }}</span>
             {%- endif -%}
             <div class="media-grid">
                 {%- for cat_idx in (0..2) -%}
@@ -392,11 +392,11 @@
                           {%- when 'globe' -%}
                           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM18.92 8h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zM5.08 16h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.91-4.33-3.56zm2.95-8H5.08c.96-1.65 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>
                           {%- endcase -%}
-                          {{ category }}
+                          {{ category | escape }}
                       </h3>
                       <ul class="media-list">
                           {%- for item in category_items -%}
-                          <li id="media-{{ item.slug }}">
+                          <li id="media-{{ item.slug | escape }}">
                               {%- comment -%}
                                 item.url is the item's OWN page (/media/<slug>/),
                                 not the article link — Jekyll's DocumentDrop
@@ -404,7 +404,7 @@
                                 where the archived PDF and the outbound
                                 `article_url` live, so this link stays in-tab.
                               {%- endcomment -%}
-                              <a href="{{ item.url | relative_url }}">
+                              <a href="{{ item.url | relative_url | escape }}">
                                   {{ item.title | escape }}
                                   <span class="source">{%- if item.date_display and item.date_display != "" %}{{ item.date_display | escape }} · {% endif %}{{ item.source | escape }}</span>
                               </a>
@@ -423,14 +423,14 @@
         {%- if education_sorted and education_sorted != empty -%}
         <section id="education" class="container animate-in delay-8">
             {%- if settings.section_headings.education_heading and settings.section_headings.education_heading != "" -%}
-            <h2 class="section-title">{{ settings.section_headings.education_heading }}</h2>
+            <h2 class="section-title">{{ settings.section_headings.education_heading | escape }}</h2>
             {%- endif -%}
             <div class="education-grid">
                 {%- for ed in education_sorted -%}
                 <div class="education-card">
-                    <div class="degree">{{ ed.degree }}</div>
-                    <div class="field">{{ ed.field }}</div>
-                    <div class="school">{{ ed.school }}</div>
+                    <div class="degree">{{ ed.degree | escape }}</div>
+                    <div class="field">{{ ed.field | escape }}</div>
+                    <div class="school">{{ ed.school | escape }}</div>
                 </div>
                 {%- endfor -%}
             </div>
@@ -441,14 +441,14 @@
         {%- if contact and contact.links and contact.links != empty -%}
         <section id="contact" class="container contact-section animate-in delay-9">
             {%- if contact.heading and contact.heading != "" -%}
-            <h2 class="section-title">{{ contact.heading }}</h2>
+            <h2 class="section-title">{{ contact.heading | escape }}</h2>
             {%- endif -%}
             {%- if contact.intro and contact.intro != "" -%}
-            <p>{{ contact.intro }}</p>
+            <p>{{ contact.intro | escape }}</p>
             {%- endif -%}
             <div class="contact-links">
                 {%- for l in contact.links -%}
-                <a href="{{ l.url }}" class="contact-link" target="_blank" rel="noopener">
+                <a href="{{ l.url | escape }}" class="contact-link" target="_blank" rel="noopener">
                     {%- case l.icon -%}
                     {%- when 'globe' -%}
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
@@ -457,7 +457,7 @@
                     {%- when 'email' -%}
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
                     {%- endcase -%}
-                    {{ l.label }}
+                    {{ l.label | escape }}
                 </a>
                 {%- endfor -%}
             </div>
@@ -478,7 +478,7 @@
           and a correct plain jump to <body id="top"> above if it's ever
           exposed without the script running.
         {%- endcomment -%}
-        <a href="#top" id="back-to-top" class="back-to-top" aria-label="{{ settings.back_to_top_label | default: 'Back to top' }}">
+        <a href="#top" id="back-to-top" class="back-to-top" aria-label="{{ settings.back_to_top_label | default: 'Back to top' | escape }}">
             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.59 5.58L20 12l-8-8-8 8z"/></svg>
         </a>
         <script>
@@ -540,7 +540,7 @@
         {%- endif -%}
         {%- if copyright and copyright != "" -%}
         <footer class="animate-in delay-9">
-            <p>{{ copyright }}</p>
+            <p>{{ copyright | escape }}</p>
         </footer>
         {%- endif -%}
     </div>
