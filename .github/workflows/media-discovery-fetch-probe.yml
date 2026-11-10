@@ -1,0 +1,49 @@
+# TEST BRANCH ONLY, never merge: an isolated probe of the media discovery
+# fetch step (urllib vs. headless Chromium) on the sample links in
+# persistent/media-search findings.json. No Claude API, no email, no
+# secrets: nothing but public pages is touched, and the probe prints only
+# per-link indexes, statuses, lengths and identity reason codes.
+name: Media discovery fetch probe
+
+# A push to this test branch runs it: the Media discovery workflow is
+# disabled (scheduled runs paused), so it cannot be dispatched.
+on:
+  push:
+    branches: [claude/fetch-probe-test]
+
+permissions:
+  contents: read
+
+jobs:
+  fetch-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the site (for its person config)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: site
+          persist-credentials: false
+      - name: Check out the sample findings
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: persistent/media-search
+          path: data
+          persist-credentials: false
+      - name: Check out cms-platform at the browser-fetch commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: Adam-S-Daniel/cms-platform
+          ref: 072676f8f6aff71c97a2ebbf960f5f2a347d1ae2
+          path: platform
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python3 -m pip install --user 'pyyaml==6.0.3' 'pypdf==6.21.4' 'playwright==1.64.1'
+      - name: Install Chromium
+        run: python3 -m playwright install --with-deps chromium
+      - name: Probe
+        working-directory: platform/scripts
+        run: python3 -m media_discovery.fetch_probe --findings "$GITHUB_WORKSPACE/data/findings.json" --site-root "$GITHUB_WORKSPACE/site"
