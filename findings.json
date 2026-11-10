@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "searched_at": "2026-11-10T13:00:00Z",
+  "person": "Jodi Daniel",
+  "findings": [
+    {
+      "id": "fc16e45ebf8f3469",
+      "status": "confirmed",
+      "kind": "past_talk",
+      "title": "Health Policy Academy",
+      "outlet": "Alliance for Health Policy",
+      "date": "2026-03-24",
+      "end_date": null,
+      "primary_url": "https://www.allhealthpolicy.org/events/panel-4-health-policy-academy-deep-dive-artificial-intelligence-in-health-care",
+      "other_urls": [],
+      "reasons": [],
+      "entry": {
+        "collection": "media",
+        "slug": "1-health-policy-academy",
+        "path": "_media/1-health-policy-academy.md",
+        "content": "---\ncategory: \"Talks & Panels\"\ntitle: \"Health Policy Academy\"\nsource: \"Alliance for Health Policy\"\ndate_display: \"March 2026\"\narticle_url: \"https://www.allhealthpolicy.org/events/panel-4-health-policy-academy-deep-dive-artificial-intelligence-in-health-care\"\nweight: 1\n---\n"
+      }
+    },
+    {
+      "id": "8c22bf569a5d32e3",
+      "status": "unconfirmed",
+      "kind": "past_talk",
+      "title": "2026 SAU at AUA",
+      "outlet": "Society of Academic Urologists",
+      "date": "2026-05-14",
+      "end_date": null,
+      "primary_url": "https://sauweb.org/wp-content/uploads/2026/03/24214-SAU-AUA-Agenda-r2.pdf",
+      "other_urls": [
+        "https://www.wsgr.com/en/events/american-urological-association-annual-meeting-2026.html",
+        "https://sauweb.org/wp-content/uploads/2026/07/0850_DANIEL_Jodi.pdf"
+      ],
+      "reasons": [
+        {
+          "url": "https://sauweb.org/wp-content/uploads/2026/03/24214-SAU-AUA-Agenda-r2.pdf",
+          "main": true,
+          "code": "unreadable-type",
+          "detail": "",
+          "text": "The main link is a file the search can't read (such as an image or a locked PDF)."
+        },
+        {
+          "url": "https://www.wsgr.com/en/events/american-urological-association-annual-meeting-2026.html",
+          "main": false,
+          "code": "no-match",
+          "detail": "",
+          "text": "Another page mentions Jodi Daniel, but doesn't name this item the way the search expected."
+        },
+        {
+          "url": "https://sauweb.org/wp-content/uploads/2026/07/0850_DANIEL_Jodi.pdf",
+          "main": false,
+          "code": "unreadable-type",
+          "detail": "",
+          "text": "Another page is a file the search can't read (such as an image or a locked PDF)."
+        }
+      ],
+      "entry": {
+        "collection": "media",
+        "slug": "1-2026-sau-at-aua",
+        "path": "_media/1-2026-sau-at-aua.md",
+        "content": "---\ncategory: \"Talks & Panels\"\ntitle: \"2026 SAU at AUA\"\nsource: \"Society of Academic Urologists\"\ndate_display: \"May 2026\"\narticle_url: \"https://sauweb.org/wp-content/uploads/2026/03/24214-SAU-AUA-Agenda-r2.pdf\"\nweight: 1\n---\n"
+      }
+    },
+    {
+      "id": "278b59b2847a5fe0",
+      "status": "unconfirmed",
+      "kind": "past_talk",
+      "title": "The Virtual Forty-Third National HIPAA Summit",
+      "outlet": "Global Health Care, LLC",
+      "date": "2026-04-09",
+      "end_date": null,
+      "primary_url": "https://www.healthcareupdatenewsservice.com/archive/2026/HIPAASummit20260203.html",
+      "other_urls": [],
+      "reasons": [
+        {
+          "url": "https://www.healthcareupdatenewsservice.com/archive/2026/HIPAASummit20260203.html",
+          "main": true,
+          "code": "http-status",
+          "detail": "406",
+          "text": "The main link turned away the search's automatic check."
+        }
+      ],
+      "entry": {
+        "collection": "media",
+        "slug": "1-the-virtual-forty-third-national-hipaa-summit",
+        "path": "_media/1-the-virtual-forty-third-national-hipaa-summit.md",
+        "content": "---\ncategory: \"Talks & Panels\"\ntitle: \"The Virtual Forty-Third National HIPAA Summit\"\nsource: \"Global Health Care, LLC\"\ndate_display: \"April 2026\"\narticle_url: \"https://www.healthcareupdatenewsservice.com/archive/2026/HIPAASummit20260203.html\"\nweight: 1\n---\n"
+      }
+    },
+    {
+      "id": "56aed48fcf0bd3ec",
+      "status": "unconfirmed",
+      "kind": "podcast",
+      "title": "Privacy, AI & the future of HIPAA with the former founding director of ONC",
+      "outlet": "Second Opinion Media",
+      "date": "2026-06-03",
+      "end_date": null,
+      "primary_url": "https://streamyard.com/watch/bzW4sh8WAPyS",
+      "other_urls": [],
+      "reasons": [
+        {
+          "url": "https://streamyard.com/watch/bzW4sh8WAPyS",
+          "main": true,
+          "code": "identity",
+          "detail": "no-name",
+          "text": "The main link doesn't show Jodi Daniel's name. It may only be in a video or image."
+        }
+      ],
+      "entry": {
+        "collection": "media",
+        "slug": "1-privacy-ai-the-future-of-hipaa-with-the-former-founding",
+        "path": "_media/1-privacy-ai-the-future-of-hipaa-with-the-former-founding.md",
+        "content": "---\ncategory: \"Podcasts & Interviews\"\ntitle: \"Privacy, AI & the future of HIPAA with the former founding director of ONC\"\nsource: \"Second Opinion Media\"\ndate_display: \"June 2026\"\narticle_url: \"https://streamyard.com/watch/bzW4sh8WAPyS\"\nweight: 1\n---\n"
+      }
+    },
+    {
+      "id": "d53586da14cb6e0c",
+      "status": "unconfirmed",
+      "kind": "press",
+      "title": "Trump’s Personnel Agency Is Asking for Federal Workers’ Medical Records",
+      "outlet": "KFF Health News",
+      "date": "2026-04-08",
+      "end_date": null,
+      "primary_url": "https://kffhealthnews.org/health-industry/trump-opm-federal-workers-medical-records-privacy/",
+      "other_urls": [],
+      "reasons": [
+        {
+          "url": "https://kffhealthnews.org/health-industry/trump-opm-federal-workers-medical-records-privacy/",
+          "main": true,
+          "code": "identity",
+          "detail": "no-identity-marker",
+          "text": "The main link names Jodi Daniel, but nothing near the name (such as a current or past job) shows it's the same person."
+        }
+      ],
+      "entry": {
+        "collection": "media",
+        "slug": "1-trump-s-personnel-agency-is-asking-for-federal-workers",
+        "path": "_media/1-trump-s-personnel-agency-is-asking-for-federal-workers.md",
+        "content": "---\ncategory: \"Press Coverage\"\ntitle: \"Trump’s Personnel Agency Is Asking for Federal Workers’ Medical Records\"\nsource: \"KFF Health News\"\ndate_display: \"April 2026\"\narticle_url: \"https://kffhealthnews.org/health-industry/trump-opm-federal-workers-medical-records-privacy/\"\nweight: 1\n---\n"
+      }
+    }
+  ]
+}
