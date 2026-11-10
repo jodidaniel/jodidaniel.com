@@ -40,21 +40,22 @@
           "main": true,
           "code": "unreadable-type",
           "detail": "",
-          "text": "The main link is a file the search can't read (such as an image or a locked PDF)."
+          "text": "is a file the search can't read (such as an image or a locked PDF)."
         },
         {
           "url": "https://www.wsgr.com/en/events/american-urological-association-annual-meeting-2026.html",
           "main": false,
           "code": "no-match",
           "detail": "",
-          "text": "Another page mentions Jodi Daniel, but doesn't name this item the way the search expected."
+          "text": "mentions Jodi Daniel, but doesn't name this item the way the search expected."
         },
         {
           "url": "https://sauweb.org/wp-content/uploads/2026/07/0850_DANIEL_Jodi.pdf",
           "main": false,
           "code": "unreadable-type",
           "detail": "",
-          "text": "Another page is a file the search can't read (such as an image or a locked PDF)."
+          "text": "is a file the search can't read (such as an image or a locked PDF).",
+          "title": "Artificial Intelligence in Medicine: Policy, Governance, and the Path from Innovation to Implementation"
         }
       ],
       "entry": {
@@ -80,7 +81,7 @@
           "main": true,
           "code": "http-status",
           "detail": "406",
-          "text": "The main link turned away the search's automatic check."
+          "text": "turned away the search's automatic check."
         }
       ],
       "entry": {
@@ -106,7 +107,7 @@
           "main": true,
           "code": "identity",
           "detail": "no-name",
-          "text": "The main link doesn't show Jodi Daniel's name. It may only be in a video or image."
+          "text": "doesn't show Jodi Daniel's name. It may only be in a video or image."
         }
       ],
       "entry": {
@@ -132,7 +133,7 @@
           "main": true,
           "code": "identity",
           "detail": "no-identity-marker",
-          "text": "The main link names Jodi Daniel, but nothing near the name (such as a current or past job) shows it's the same person."
+          "text": "names Jodi Daniel, but nothing near the name (such as a current or past job) shows it's the same person."
         }
       ],
       "entry": {
