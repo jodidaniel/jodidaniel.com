@@ -9,5 +9,5 @@ group :jekyll_plugins do
   # platform.lock and the uses: pins — when the platform tags a new release;
   # Dependabot is set to ignore this gem (see .github/dependabot.yml,
   # cms-platform#242).
-  gem "cms-platform-theme", git: "https://github.com/Adam-S-Daniel/cms-platform", glob: "theme/*.gemspec", ref: "dc2c086d770640026c1592e6fcfb37b97b39ffd9"
+  gem "cms-platform-theme", git: "https://github.com/Adam-S-Daniel/cms-platform", glob: "theme/*.gemspec", ref: "dfc07a125c84fc6746d97788da699c7ad18a1285"
 end
