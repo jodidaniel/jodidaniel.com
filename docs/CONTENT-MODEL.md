@@ -159,7 +159,7 @@ on the moment it was *built*, not on its content — exactly the
 non-determinism the platform's visual-regression lane and this repo's own
 test rules (AGENTS.md: "no reliance on wall-clock time") forbid. The owner
 moves a finished event out of Upcoming Events herself once it has passed:
-add it under Media Items as a "Talks & Panels" entry (event name or her
+add it under Writing, talks & press as a "Talks & Panels" entry (event name or her
 session title, host, month and year, the event page as the link), then delete
 the event entry. UNIFY was moved this way on 2026-10-05 rather than deleted, so
 the panel stays on the record. An event she only attended (blank "Your
