@@ -12,7 +12,7 @@ data file:
 | `_data/header.yml`   | `name`, `tagline`                              | **Header / Hero** (`site_header`) |
 | `_data/about.yml`    | `photo`, `intro_heading`, `lead`, `bio[]`, `nav[]` | **About** (`site_about`) |
 | `_data/contact.yml`  | `heading`, `intro`, `links[]`                  | **Contact** (`site_contact`) |
-| `_data/settings.yml` | `site_live` GATE, `coming_soon`, `seo` (site name, launch title, Google description), `footer`, `back_to_top_label`, `skip_link_label`, `section_headings`, `share` (search-engine-only facts) | **Site Settings** (`site_settings`) |
+| `_data/settings.yml` | `site_live` GATE, `coming_soon`, `seo` (site name, launch title, Google description), `footer`, `back_to_top_label`, `skip_link_label`, `section_headings`, `share` (link-preview picture and search-engine-only facts) | **Site Settings** (`site_settings`) |
 | `_data/not_found.yml` | `heading`, `message`, `home_link_label`, `skip_link_label` — the 404 page (`404.html` → `_layouts/not-found.html`) | **Site Settings** → "Page-Not-Found Page" (`site_settings` file `not_found`) |
 
 The layout reads these as `site.data.header` / `.about` / `.contact` /
@@ -32,8 +32,19 @@ pin-consistency check require: do not delete it.
 
 The open home page's `{% seo %}` output is led by her name in the share titles,
 and it carries one `Person` entity; media item pages describe themselves
-honestly. **No link-preview image is set** (that work is separate, and whether
-her headshot belongs on a preview is an open decision).
+honestly.
+
+- **Link-preview picture**: `settings.share.image` (+ `image_alt`), "Link
+  Preview Image" in Site Settings. `_plugins/share_image_from_settings.rb` sets
+  it as `page.image` on the home and media pages **only while `site_live` is
+  true**; the coming-soon page carries no picture, because the default card
+  holds her headshot, which is not cleared for the coming-soon page (Adam,
+  2026-11-09). `{% seo %}` turns it into `og:image` / `twitter:image` on home;
+  `_layouts/media.html` prints the same tags by hand. The default,
+  `assets/images/uploads/share-card.png`, is made by
+  `scripts/build-share-card.py` from the About photo and the header name; the
+  owner can upload a different picture in `/admin` without it. Unit tests:
+  `scripts/test-share-image.rb`.
 
 - **Open**: `_includes/home-seo.html` calls `{% seo %}` with the share titles led
   by her name (the tab `<title>` is unchanged) and adds one `Person` JSON-LD

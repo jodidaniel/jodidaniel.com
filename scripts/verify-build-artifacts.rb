@@ -152,6 +152,11 @@ unless OPEN_PASS
   site_meta_passed = system(RbConfig.ruby, File.join(__dir__, "test-site-meta.rb"))
   check(failures, "scripts/test-site-meta.rb passes (output above)") { site_meta_passed == true }
 
+  puts "== unit tests: scripts/test-share-image.rb =="
+  $stdout.flush
+  share_image_passed = system(RbConfig.ruby, File.join(__dir__, "test-share-image.rb"))
+  check(failures, "scripts/test-share-image.rb passes (output above)") { share_image_passed == true }
+
   puts "== unit tests: scripts/test-favicon-include.rb =="
   $stdout.flush
   favicon_include_passed = system(RbConfig.ruby, File.join(__dir__, "test-favicon-include.rb"))
@@ -1490,12 +1495,48 @@ end
 
 home_share_html = read(File.join(SITE, "index.html"))
 home_metas = head_metas(home_share_html)
-# No link preview image is set by this change (whether her headshot belongs on
-# one is an open decision), so neither page type may carry one yet.
-check(failures, "the home page sets no og:image or twitter:image") do
-  !home_metas.key?("og:image") && !home_metas.key?("twitter:image")
-end
 settings_src = YAML.safe_load(read(File.join(ROOT, "_data", "settings.yml"))) || {}
+# The link-preview picture (Site Settings `share.image`): on the open site every
+# home and media page carries it, as a large card with its description; while
+# gated, none does (the default card holds her headshot, not cleared for the
+# coming-soon page). Expected values come from the data file, so an /admin
+# change of picture or description moves the expectation with it.
+share_src = settings_src["share"].is_a?(Hash) ? settings_src["share"] : {}
+share_path = share_src["image"].to_s
+share_alt = share_src["image_alt"].to_s.strip
+share_set = share_path.start_with?("/") && !share_path.include?("..") && File.file?(File.join(ROOT, share_path))
+share_url = "#{site_url}#{share_path}"
+share_metas_ok = lambda do |metas|
+  next !metas.key?("og:image") && !metas.key?("twitter:image") unless share_set
+
+  metas["og:image"] == [share_url] && metas["twitter:image"] == [share_url] &&
+    metas["twitter:card"] == ["summary_large_image"] &&
+    (share_alt.empty? ? !metas.key?("og:image:alt") : metas["og:image:alt"] == [share_alt])
+end
+media_share_pages = Dir[File.join(SITE, "media", "*", "index.html")].sort
+if settings_src["site_live"] == true
+  check(failures, "share image #{share_path.inspect} is a file in the built site") { !share_set || File.file?(File.join(SITE, share_path)) }
+  check(failures, "home page link preview uses the Site Settings picture (#{share_set ? share_url : "none set"}): #{home_metas.values_at("og:image", "twitter:card").inspect}") do
+    share_metas_ok.call(home_metas)
+  end
+  media_share_pages.each do |f|
+    slug = File.basename(File.dirname(f))
+    metas = head_metas(read(f))
+    check(failures, "media/#{slug}: link preview uses the Site Settings picture (#{share_set ? share_url : "none set"})") do
+      share_metas_ok.call(metas) && (share_set || metas["twitter:card"] == ["summary"])
+    end
+  end
+else
+  check(failures, "gated home page sets no og:image or twitter:image (no headshot before sign-off)") do
+    !home_metas.key?("og:image") && !home_metas.key?("twitter:image") &&
+      (share_path.empty? || !home_share_html.to_s.include?(share_path))
+  end
+  media_share_pages.each do |f|
+    slug = File.basename(File.dirname(f))
+    metas = head_metas(read(f))
+    check(failures, "gated media/#{slug}: sets no og:image or twitter:image") { !metas.key?("og:image") && !metas.key?("twitter:image") }
+  end
+end
 if settings_src["site_live"] == true
   # --- open gate: Person on the home page ---------------------------------
   # The share title leads with her name (a bare role title read as a slogan with
@@ -1564,9 +1605,6 @@ if settings_src["site_live"] == true
     end
     check(failures, "media/#{slug}: keeps og:locale and the author meta the tag used to emit") do
       metas["og:locale"] == ["en_US"] && metas["author"] == [author_name]
-    end
-    check(failures, "media/#{slug}: sets no og:image or twitter:image, and uses the small card") do
-      !metas.key?("og:image") && !metas.key?("twitter:image") && metas["twitter:card"] == ["summary"]
     end
   end
   check(failures, "every media page has its own description (not one site-wide string)") do
