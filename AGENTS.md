@@ -84,8 +84,9 @@ site-owned seam (`admin/collections.site.yml`).
 ([ADR 0024](https://github.com/Adam-S-Daniel/_agent-guidance/blob/main/docs/decisions/0024-actions-pin-through-lockfiles.md)). The fleet guidance's "Pinning GitHub Actions" section names the lockfile form, but
 cms-platform and both its consumers stay on full SHAs: actionlint and
 `gh actions-lock --verify` both reject the platform's local-action refs, and
-every workflow here calls into the platform. The `github-actions-sha-pinning`
-skill has the detail.
+every workflow here calls into the platform. cms-platform's
+[`AGENTS.md`](https://github.com/Adam-S-Daniel/cms-platform/blob/main/AGENTS.md),
+section "No `actions.lock` here or in either consumer", has the detail.
 
 ## Name variants
 
