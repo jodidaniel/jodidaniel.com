@@ -33,7 +33,7 @@ cat >"$PLATFORM/infrastructure/bootstrap/deploy.sh" <<'STUB'
 #!/usr/bin/env bash
 {
   for k in BOOTSTRAP_STACK_NAME AWS_REGION CREATE_OIDC_PROVIDER CREATE_APEX_DNS_RECORDS \
-    GITHUB_ORG GITHUB_REPO APEX_DOMAIN MEDIA_ARCHIVE_BUCKET ALLOW_STACK_CREATE \
+    GITHUB_ORG GITHUB_REPO APEX_DOMAIN MEDIA_ARCHIVE_BUCKET ADMIN_DOMAIN ALLOW_STACK_CREATE \
     SITE_PARAMS_FILE; do
     printf '%s=%s\n' "$k" "${!k-}"
   done
@@ -94,6 +94,7 @@ GITHUB_ORG=jodidaniel
 GITHUB_REPO=example.net
 APEX_DOMAIN=example.net
 MEDIA_ARCHIVE_BUCKET=jodidaniel-com-media-archive
+ADMIN_DOMAIN=admin.example.net
 ALLOW_STACK_CREATE=
 SITE_PARAMS_FILE=$SITE/infrastructure/site-params.env
 STACK_NAME=<unset>"
@@ -114,6 +115,25 @@ check "case 3 exits non-zero" "1" "$RC"
 check "case 3 never reaches the platform script" "absent" "$([[ -e "$RECORD" ]] && echo present || echo absent)"
 check "case 3 says it refused" "yes" "$([[ "$OUT" == *"Refusing: the bootstrap stack name jodidaniel-com-bootstrap is the STACK_NAME"* ]] && echo yes || echo no)"
 check "case 3 made no platform checkout" "absent" "$([[ -e "$SITE/.cms-platform" ]] && echo present || echo absent)"
+
+# ── Case 4: the editor's own host (cms-platform#517) ─────────────────────────
+# Defaults to admin.<apex>, so a plain redeploy keeps the admin host (a missing
+# value would ask CloudFormation to remove it). An explicitly EMPTY value is
+# the rollback and must reach the platform script as empty; a value from
+# site-params.env or the caller wins.
+new_site 'export APEX_DOMAIN="example.net"'
+run_wrapper
+check "case 4 defaults the admin host to admin.<apex>" "ADMIN_DOMAIN=admin.example.net" \
+  "$(grep '^ADMIN_DOMAIN=' "$RECORD" 2>/dev/null || echo '<platform script did not run>')"
+new_site 'export APEX_DOMAIN="example.net"'
+run_wrapper ADMIN_DOMAIN=
+check "case 4 an explicitly empty ADMIN_DOMAIN rolls back" "ADMIN_DOMAIN=" \
+  "$(grep '^ADMIN_DOMAIN=' "$RECORD" 2>/dev/null || echo '<platform script did not run>')"
+new_site 'export APEX_DOMAIN="example.net"
+export ADMIN_DOMAIN="edit.example.net"'
+run_wrapper
+check "case 4 site-params.env's ADMIN_DOMAIN wins" "ADMIN_DOMAIN=edit.example.net" \
+  "$(grep '^ADMIN_DOMAIN=' "$RECORD" 2>/dev/null || echo '<platform script did not run>')"
 
 printf '%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]

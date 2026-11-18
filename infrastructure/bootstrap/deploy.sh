@@ -40,6 +40,8 @@
 #   CREATE_OIDC_PROVIDER=false   (the account's one GitHub OIDC provider exists)
 #   CREATE_APEX_DNS_RECORDS=false (the apex alias is not managed by this stack)
 #   GITHUB_ORG=jodidaniel, MEDIA_ARCHIVE_BUCKET=jodidaniel-com-media-archive
+# ADMIN_DOMAIN defaults to admin.<apex> (the editor's own host, cms-platform#517)
+# and, unlike the pins above, can be overridden: empty rolls it back.
 # They override the caller's environment and site-params.env on purpose. The
 # wrapper refuses, before any platform checkout or AWS call, if the bootstrap
 # stack name equals site-params.env's STACK_NAME (the OAuth proxy stack).
@@ -105,6 +107,16 @@ export GITHUB_ORG="jodidaniel"
 export MEDIA_ARCHIVE_BUCKET="jodidaniel-com-media-archive"
 export GITHUB_REPO="${GITHUB_REPO:-jodidaniel.com}"
 export APEX_DOMAIN="${APEX_DOMAIN:-jodidaniel.com}"
+# The editor's own host (cms-platform#517; runbook: cms-platform
+# docs/ADMIN-AUTH-SECURITY.md, "Runbook, per site"). Defaulted here because the
+# platform script re-sends every parameter: a redeploy without it would ask
+# CloudFormation to REMOVE the admin distribution, certificate and record.
+# `-` and not `:-` on purpose: an explicitly empty ADMIN_DOMAIN is the
+# rollback (`ADMIN_DOMAIN= bash infrastructure/bootstrap/deploy.sh`). The first
+# run with this default CREATES the admin host and turns <apex>/admin into a
+# redirect to it, so deploy the OAuth proxy with the admin origin in
+# ALLOWED_ORIGINS first (runbook step 2).
+export ADMIN_DOMAIN="${ADMIN_DOMAIN-admin.${APEX_DOMAIN}}"
 if [[ -n "$PROXY_STACK_NAME" && "$BOOTSTRAP_STACK_NAME" == "$PROXY_STACK_NAME" ]]; then
   error "Refusing: the bootstrap stack name ${BOOTSTRAP_STACK_NAME} is the STACK_NAME in ${PARAMS_FILE}, the OAuth proxy stack. Nothing was deployed."
 fi

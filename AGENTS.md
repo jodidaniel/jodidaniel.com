@@ -212,8 +212,13 @@ platform script by hand: that is how the proxy stack got targeted.
 
 - The stack exists, so a run is an update; `ALLOW_STACK_CREATE=1` is for a
   first create only and the wrapper never sets it.
+- `ADMIN_DOMAIN` defaults to `admin.<apex>`, the editor's own host
+  (`cms.admin_origin` in `_config.yml`; cms-platform's
+  `docs/ADMIN-AUTH-SECURITY.md`, "Runbook, per site"). The first run with it
+  creates that host and turns `<apex>/admin` into a redirect, so the OAuth
+  proxy must already list the admin origin. `ADMIN_DOMAIN=` (empty) rolls back.
 - The platform script re-sends every parameter, so a setting the wrapper does
-  not pin (`ADMIN_DOMAIN`, `HSTS_*`, `ADMIN_CSP_MODE`) reverts to its default
+  not pin (`HSTS_*`, `ADMIN_CSP_MODE`) reverts to its default
   unless exported. Compare `aws cloudformation describe-stacks --stack-name
   jodidaniel-com-bootstrap --region us-east-1 --query 'Stacks[0].Parameters'`
   with the printed change set, and use `ALLOW_DESTRUCTIVE_CHANGES=1` only when

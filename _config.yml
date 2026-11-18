@@ -32,6 +32,11 @@ cms:
   # section editors. `base_collections` is a KEEP-LIST; [] hides them all.
   # (Honored by cms-platform-theme >= v0.1.7.)
   base_collections: []
+  # The origin the editor is served from once the admin host exists
+  # (cms-platform#517; runbook in cms-platform docs/ADMIN-AUTH-SECURITY.md).
+  # Inert while /admin is still served from the apex: the admin scripts act on
+  # it only when the page's own origin equals it.
+  admin_origin: https://admin.jodidaniel.com
   # The site-level publish gate, declared for /admin (cms-platform >= v0.1.95).
   #
   # This site ships coming-soon behind `site_live` in _data/settings.yml, and
