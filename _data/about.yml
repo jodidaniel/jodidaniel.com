@@ -33,3 +33,4 @@ nav:
   - { label: "Writing, Talks & Press", anchor: "media" }
   - { label: "Education",       anchor: "education" }
   - { label: "Contact",         anchor: "contact" }
+
