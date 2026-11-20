@@ -22,8 +22,8 @@ permissions:
 
 jobs:
   probe:
-    uses: Adam-S-Daniel/cms-platform/.github/workflows/canary-prod.yml@v0.1.187
+    uses: Adam-S-Daniel/cms-platform/.github/workflows/canary-prod.yml@ac60a532228c77118a583c502768ac0bd0e2de36
     with:
       prod_url: https://jodidaniel.com
       apex: jodidaniel.com
-      platform_ref: v0.1.187
+      platform_ref: ac60a532228c77118a583c502768ac0bd0e2de36
