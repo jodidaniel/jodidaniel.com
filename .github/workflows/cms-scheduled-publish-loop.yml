@@ -20,14 +20,14 @@ run-name: >-
         && format('scheduled — {0}', github.event.schedule)
    || format('manual — @{0}', github.actor) }}
 
+# OPTED OUT of triggers (cms-platform#1102 / #1068): this single-page site has
+# `cms.base_collections: []`, so the loop's specs self-skip and, since
+# cms-platform#1102, a loop that executed zero tests FAILS ("Loop published
+# nothing"). docs/CI-INVARIANTS.md in cms-platform lists a loop that drives this
+# site's own collections as the open part of #1068. Until it exists, the
+# schedule/push triggers are removed and only workflow_dispatch remains.
+# Restore the triggers from cms-platform's examples/site caller with that loop.
 on:
-  schedule:
-    # 05:00 UTC daily — a free slot in the consumer's daily cron map
-    # (04 sweep, 07 platform-bump, 08 rearm/health, 11 cleanup,
-    # 12 canary + host loop, 13 label audit, 14 scheduled posts,
-    # 15 media loop), well clear of the other prod-mutating loop crons
-    # so the shared lane rarely queues. Tune per site.
-    - cron: '0 5 * * *'
   workflow_dispatch:
 
 permissions:
