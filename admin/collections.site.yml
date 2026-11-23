@@ -41,7 +41,7 @@
       - { name: weight, label: "Order", widget: number, hint: "1–7; controls sort order" }
 
   - name: media
-    label: "Media Items"
+    label: "Writing, talks & press"
     folder: "_media"
     create: true
     slug: "{{weight}}-{{slug}}"
@@ -210,7 +210,7 @@
               # longer drift silently -- a mismatch fails the build instead
               # of shipping a picker option nobody can jump to (or a real
               # section the picker can't reach).
-              - { name: anchor, label: "Anchor (destination section)", widget: select, options: ["events", "expertise", "experience", "accomplishments", "media", "education", "contact"], hint: "Which section this pill jumps to when clicked. This is NOT the same as Label above -- Label is the visible button text; changing Label alone will not change where the pill goes." }
+              - { name: anchor, label: "Anchor (destination section)", widget: select, options: ["events", "expertise", "experience", "accomplishments", { label: "writing, talks & press", value: "media" }, "education", "contact"], hint: "Which section this pill jumps to when clicked. This is NOT the same as Label above -- Label is the visible button text; changing Label alone will not change where the pill goes." }
 
   - name: site_contact
     label: "Contact"
@@ -274,7 +274,7 @@
               - { name: expertise_heading,       label: "Expertise Heading", widget: string }
               - { name: experience_heading,      label: "Experience Heading", widget: string }
               - { name: accomplishments_heading, label: "Accomplishments Heading", widget: string }
-              - { name: media_heading,           label: "Media Heading", widget: string }
+              - { name: media_heading,           label: "Writing, Talks & Press Heading", widget: string }
               - { name: media_authored_heading,  label: "Written Work Label", widget: string, hint: "The small label above the first group in the writing, talks and press section, for the articles, briefs and testimony you wrote." }
               - { name: media_coverage_heading,  label: "Appearances Label", widget: string, hint: "The small label above the second group in the writing, talks and press section, for the talks, interviews and press about you." }
               - { name: education_heading,       label: "Education Heading", widget: string }

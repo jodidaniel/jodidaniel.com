@@ -537,7 +537,7 @@ know what to do without calling her son?
 7. **Delete flows**: delete the test Expertise card (find the way; note
    how discoverable and how scary/safe it feels — confirmation?). Verify
    it's gone from the site.
-8. **Edit a media item + validation**: Media Items → open the FDA
+8. **Edit a media item + validation**: Writing, talks & press → open the FDA
    generative-AI entry. Change the Article URL to `not a url` and try to
    save — what stops you, and is the message understandable? Fix it back to
    what it was (retype it carefully from what's shown). Then look at the
@@ -628,7 +628,7 @@ corner, pastes real-world text, and makes the mistakes busy people make.
    `presss` (typo) and save: click it on the site — what happens? As Jodi,
    would you notice you broke it, and would you know why? Restore label
    `Media` + anchor `media`, save, verify the jump works again.
-6. **Section headings ripple**: Site Settings → change "Media Heading" to
+6. **Section headings ripple**: Site Settings → change "Writing, Talks & Press Heading" to
    `In the Press`, save. Check (a) the section heading on the home page and
    (b) open ANY media item's own page and look at its back link — did the
    wording follow? Restore `Publications & Media`, save, verify both spots.
@@ -655,7 +655,7 @@ corner, pastes real-world text, and makes the mistakes busy people make.
    and saving — does the admin allow it, and what happens on the site's
    ordering? Restore the original number, save, verify.
 10. **Phone admin**: new context at 390×844 (touch): open the admin, get to
-    Media Items, open an entry, make a trivial edit (add and remove a
+    Writing, talks & press, open an entry, make a trivial edit (add and remove a
     character), Save. Judge honestly: could Jodi fix a typo from her phone
     in a taxi? Screenshot the editor, the sidebar, and the entry list at
     phone size; note anything unusable (buttons off-screen, sidebar
@@ -702,7 +702,7 @@ by that question.
 
 ## Checklist (9 items)
 
-1. **Editor chrome inventory (real admin)**: open Media Items → any entry.
+1. **Editor chrome inventory (real admin)**: open Writing, talks & press → any entry.
    Screenshot the full editor. List every button/link/indicator you can see
    (toolbar and elsewhere). For each: would Jodi know what it does before
    clicking? Anything that looks like a status indicator? Anything that

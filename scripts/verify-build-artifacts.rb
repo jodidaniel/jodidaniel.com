@@ -1318,7 +1318,12 @@ end
 
 nav_seam_field = about_seam_fields.find { |f| f.is_a?(Hash) && f["name"] == "nav" }
 anchor_seam_field = (nav_seam_field && nav_seam_field["fields"]).to_a.find { |f| f.is_a?(Hash) && f["name"] == "anchor" }
-anchor_seam_options = (anchor_seam_field && anchor_seam_field["options"]).to_a
+# Decap select options are either a bare string or a { label, value } mapping
+# (the label is what the editor sees; the value is what gets saved). Compare
+# the saved values, since those are what must match a section id.
+anchor_seam_options = (anchor_seam_field && anchor_seam_field["options"]).to_a.map do |opt|
+  opt.is_a?(Hash) ? opt["value"].to_s : opt.to_s
+end
 
 home_html_for_ids = read(File.join(SITE, "index.html"))
 all_section_ids = home_html_for_ids.to_s.scan(/<section\s+id="([a-z-]+)"/).flatten.uniq
