@@ -16,26 +16,15 @@ run-name: >-
         && format('push — {0} @{1}', github.ref_name, github.actor)
    || format('manual — @{0}', github.actor) }}
 
+# OPTED OUT of triggers (cms-platform#1102 / #1068): this single-page site has
+# `cms.base_collections: []`, so the loop's specs self-skip and, since
+# cms-platform#1102, a loop that executed zero tests FAILS ("Loop published
+# nothing"). docs/CI-INVARIANTS.md in cms-platform lists a loop that drives this
+# site's own collections as the open part of #1068. Until it exists, the
+# schedule/push triggers are removed and only workflow_dispatch remains.
+# Restore the triggers from cms-platform's examples/site caller with that loop.
 on:
-  schedule:
-    # 12:00 UTC daily. All real-prod loops serialize through the shared
-    # `prod-mutating-loop` concurrency group declared on each loop's
-    # heavy job, so mutual exclusion is structural, not time-based.
-    - cron: '0 12 * * *'
   workflow_dispatch:
-  push:
-    branches: [main]
-    # #70: disjoint push paths — only this caller + the canary surfaces;
-    # prod OWNS the shared infra paths on push, host covers them via its
-    # 12:00 cron. This site has NO canary surfaces to list: `_e2e/canary-*.md`
-    # and `_layouts/canary.html`/`default.html` never exist here — this
-    # single-page bio's `cms.base_collections: []` hides the `e2e` collection
-    # from `/admin`, so the host-loop's own canary spec self-skips
-    # (cms-platform's e2e/cms-publish-loop.spec.js `hasE2ECanaries` guard) and
-    # never writes those files. The only real trigger is the caller file
-    # itself; this loop otherwise runs solely off the 12:00 UTC cron.
-    paths:
-      - .github/workflows/cms-publish-loop-host.yml
 
 permissions:
   contents: read

@@ -16,16 +16,15 @@ run-name: >-
         && format('push — {0} @{1}', github.ref_name, github.actor)
    || format('manual — @{0}', github.actor) }}
 
+# OPTED OUT of triggers (cms-platform#1102 / #1068): this single-page site has
+# `cms.base_collections: []`, so the loop's specs self-skip and, since
+# cms-platform#1102, a loop that executed zero tests FAILS ("Loop published
+# nothing"). docs/CI-INVARIANTS.md in cms-platform lists a loop that drives this
+# site's own collections as the open part of #1068. Until it exists, the
+# schedule/push triggers are removed and only workflow_dispatch remains.
+# Restore the triggers from cms-platform's examples/site caller with that loop.
 on:
-  schedule:
-    - cron: '0 15 * * *'
   workflow_dispatch:
-  push:
-    branches: [main]
-    # #70: disjoint push paths — prod OWNS the shared infra paths on push;
-    # this loop covers them via its 15:00 cron.
-    paths:
-      - .github/workflows/cms-media-roundtrip.yml
 
 permissions:
   contents: read

@@ -14,22 +14,14 @@ run-name: >-
         && format('push — {0} @{1}', github.ref_name, github.actor)
    || format('manual — @{0}', github.actor) }}
 
+# OPTED OUT of triggers (cms-platform#1102 / #1068): this single-page site has
+# `cms.base_collections: []`, so the loop's specs self-skip and, since
+# cms-platform#1102, a loop that executed zero tests FAILS ("Loop published
+# nothing"). docs/CI-INVARIANTS.md in cms-platform lists a loop that drives this
+# site's own collections as the open part of #1068. Until it exists, the
+# schedule/push triggers are removed and only workflow_dispatch remains.
+# Restore the triggers from cms-platform's examples/site caller with that loop.
 on:
-  push:
-    branches: [main]
-    # Shared-infra paths this loop owns on push. Trimmed to what actually
-    # exists in this repo: no playwright.config.js / package.json /
-    # package-lock.json (this site vendors no Node toolchain — the e2e
-    # harness runs from the platform checkout, .cms-platform/) and no
-    # _layouts/post.html (single-page bio, no _posts collection; only
-    # _layouts/home.html exists, and it isn't part of this loop's
-    # _posts-collection flow). This loop's mutate spec also self-skips here
-    # (cms-platform's e2e/cms-publish-loop-prod-mutate.spec.js
-    # hasE2ECanaries-style guard: no _posts, base_collections:[] hides it).
-    paths:
-      - .github/workflows/cms-publish-loop-prod.yml
-      - admin/**
-      - _config.yml
   workflow_dispatch:
 
 permissions:
