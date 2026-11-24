@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "decisions": {
+    "8c22bf569a5d32e3": {
+      "decision": "added",
+      "at": "2026-11-24T04:31:58.402Z",
+      "by": "Adam-S-Daniel",
+      "draft": {
+        "number": 572,
+        "branch": "cms/media/1-2026-sau-at-aua"
+      }
+    }
+  }
+}
