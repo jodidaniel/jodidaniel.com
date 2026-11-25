@@ -1,5 +1,9 @@
-heading: "Connect"
-intro: "Building something in digital health, or looking for a speaker? Get in touch."
+heading: Connect e2e 1795615778869
+intro: Building something in digital health, or looking for a speaker? Get in touch.
 links:
-  - { label: "Wilson Sonsini Profile", url: "https://www.wsgr.com/en/people/jodi-daniel.html", icon: "globe" }
-  - { label: "LinkedIn",               url: "https://www.linkedin.com/in/jodidaniel/",          icon: "linkedin" }
+  - label: Wilson Sonsini Profile
+    url: https://www.wsgr.com/en/people/jodi-daniel.html
+    icon: globe
+  - label: LinkedIn
+    url: https://www.linkedin.com/in/jodidaniel/
+    icon: linkedin
