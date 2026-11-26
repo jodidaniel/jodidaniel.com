@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "searched_at": "2026-11-10T13:00:00Z",
+  "searched_at": "2026-11-26T00:16:54Z",
   "person": "Jodi Daniel",
   "findings": [
     {
@@ -19,7 +19,8 @@
         "slug": "1-health-policy-academy",
         "path": "_media/1-health-policy-academy.md",
         "content": "---\ncategory: \"Talks & Panels\"\ntitle: \"Health Policy Academy\"\nsource: \"Alliance for Health Policy\"\ndate_display: \"March 2026\"\narticle_url: \"https://www.allhealthpolicy.org/events/panel-4-health-policy-academy-deep-dive-artificial-intelligence-in-health-care\"\nweight: 1\n---\n"
-      }
+      },
+      "last_seen": "2026-11-26T00:16:54Z"
     },
     {
       "id": "8c22bf569a5d32e3",
@@ -89,7 +90,8 @@
         "slug": "1-the-virtual-forty-third-national-hipaa-summit",
         "path": "_media/1-the-virtual-forty-third-national-hipaa-summit.md",
         "content": "---\ncategory: \"Talks & Panels\"\ntitle: \"The Virtual Forty-Third National HIPAA Summit\"\nsource: \"Global Health Care, LLC\"\ndate_display: \"April 2026\"\narticle_url: \"https://www.healthcareupdatenewsservice.com/archive/2026/HIPAASummit20260203.html\"\nweight: 1\n---\n"
-      }
+      },
+      "last_seen": "2026-11-26T00:16:54Z"
     },
     {
       "id": "56aed48fcf0bd3ec",
@@ -134,14 +136,173 @@
           "code": "identity",
           "detail": "no-identity-marker",
           "text": "names Jodi Daniel, but nothing near the name (such as a current or past job) shows it's the same person."
+        },
+        {
+          "url": "https://insurancenewsnet.com/oarticle/trumps-personnel-agency-is-asking-for-federal-workers-medical-records",
+          "main": false,
+          "code": "http-status",
+          "detail": "403",
+          "text": "turned away the search's automatic check."
         }
       ],
       "entry": {
         "collection": "media",
         "slug": "1-trump-s-personnel-agency-is-asking-for-federal-workers",
         "path": "_media/1-trump-s-personnel-agency-is-asking-for-federal-workers.md",
-        "content": "---\ncategory: \"Press Coverage\"\ntitle: \"Trump’s Personnel Agency Is Asking for Federal Workers’ Medical Records\"\nsource: \"KFF Health News\"\ndate_display: \"April 2026\"\narticle_url: \"https://kffhealthnews.org/health-industry/trump-opm-federal-workers-medical-records-privacy/\"\nweight: 1\n---\n"
-      }
+        "content": "---\ncategory: \"Press Coverage\"\ntitle: \"Trump's Personnel Agency Is Asking for Federal Workers' Medical Records\"\nsource: \"KFF Health News\"\ndate_display: \"April 2026\"\narticle_url: \"https://kffhealthnews.org/health-industry/trump-opm-federal-workers-medical-records-privacy/\"\nweight: 1\n---\n"
+      },
+      "last_seen": "2026-11-26T00:16:54Z"
+    },
+    {
+      "id": "6c68ea93c719a6f9",
+      "status": "confirmed",
+      "kind": "past_talk",
+      "title": "Privacy AI and the Future of HIPAA",
+      "outlet": "Second Opinion Media",
+      "date": "2026-06-03",
+      "end_date": null,
+      "primary_url": "https://www.secondopinion.media/privacy-ai-and-the-future-of-hipaa/",
+      "other_urls": [
+        "https://www.wsgr.com/en/events/privacy-ai-and-the-future-of-hipaa-with-the-former-founding-director-of-onc.html",
+        "https://streamyard.com/watch/bzW4sh8WAPyS"
+      ],
+      "reasons": [],
+      "entry": {
+        "collection": "media",
+        "slug": "1-privacy-ai-and-the-future-of-hipaa",
+        "path": "_media/1-privacy-ai-and-the-future-of-hipaa.md",
+        "content": "---\ncategory: \"Talks & Panels\"\ntitle: \"Privacy AI and the Future of HIPAA\"\nsource: \"Second Opinion Media\"\ndate_display: \"June 2026\"\narticle_url: \"https://www.secondopinion.media/privacy-ai-and-the-future-of-hipaa/\"\nweight: 1\n---\n"
+      },
+      "first_seen": "2026-11-26T00:16:54Z",
+      "last_seen": "2026-11-26T00:16:54Z"
+    },
+    {
+      "id": "e0ab8376ea9c6d10",
+      "status": "confirmed",
+      "kind": "past_talk",
+      "title": "IAPP AI Governance Global North America 2025",
+      "outlet": "IAPP",
+      "date": "2025-09-18",
+      "end_date": null,
+      "primary_url": "https://iapp.org/conference/iapp-aigg25/agenda/how-should-liability-be-distributed-in-the-ai-value-chain-",
+      "other_urls": [
+        "https://www.wsgr.com/en/events/iapp-ai-governance-global-north-america-2025.html",
+        "https://iapp.org/about/person/jodi-g-daniel/",
+        "https://x.com/wilsonsonsini/status/1963700105716150286"
+      ],
+      "reasons": [],
+      "entry": {
+        "collection": "media",
+        "slug": "1-iapp-ai-governance-global-north-america-2025",
+        "path": "_media/1-iapp-ai-governance-global-north-america-2025.md",
+        "content": "---\ncategory: \"Talks & Panels\"\ntitle: \"IAPP AI Governance Global North America 2025\"\nsource: \"IAPP\"\ndate_display: \"September 2025\"\narticle_url: \"https://iapp.org/conference/iapp-aigg25/agenda/how-should-liability-be-distributed-in-the-ai-value-chain-\"\nweight: 1\n---\n"
+      },
+      "first_seen": "2026-11-26T00:16:54Z",
+      "last_seen": "2026-11-26T00:16:54Z"
+    },
+    {
+      "id": "3be489d57e1cf61f",
+      "status": "unconfirmed",
+      "kind": "past_talk",
+      "title": "American Urological Association Annual Meeting 2026",
+      "outlet": "Society of Academic Urologists",
+      "date": "2026-05-14",
+      "end_date": null,
+      "primary_url": "https://sauweb.org/wp-content/uploads/2026/07/0850_DANIEL_Jodi.pdf",
+      "other_urls": [
+        "https://www.wsgr.com/en/events/american-urological-association-annual-meeting-2026.html"
+      ],
+      "reasons": [
+        {
+          "url": "https://sauweb.org/wp-content/uploads/2026/07/0850_DANIEL_Jodi.pdf",
+          "main": true,
+          "code": "identity",
+          "detail": "no-identity-marker",
+          "text": "names Jodi Daniel, but nothing near the name (such as a current or past job) shows it's the same person."
+        }
+      ],
+      "entry": {
+        "collection": "media",
+        "slug": "1-american-urological-association-annual-meeting-2026",
+        "path": "_media/1-american-urological-association-annual-meeting-2026.md",
+        "content": "---\ncategory: \"Talks & Panels\"\ntitle: \"American Urological Association Annual Meeting 2026\"\nsource: \"Society of Academic Urologists\"\ndate_display: \"May 2026\"\narticle_url: \"https://sauweb.org/wp-content/uploads/2026/07/0850_DANIEL_Jodi.pdf\"\nweight: 1\n---\n"
+      },
+      "first_seen": "2026-11-26T00:16:54Z",
+      "last_seen": "2026-11-26T00:16:54Z"
+    },
+    {
+      "id": "3016c3d274632e59",
+      "status": "unconfirmed",
+      "kind": "past_talk",
+      "title": "Health Tech Day 2026",
+      "outlet": "Endpoints News",
+      "date": "2026-11-05",
+      "end_date": null,
+      "primary_url": "https://wsgr.com/print/v2/content/49080840/Endpoints-Health-Tech-Day:-The-Health-Record-Floodgates-are-Open%E2%80%94Now-What?.pdf=",
+      "other_urls": [
+        "https://x.com/wilsonsonsini/status/2118078330964504846"
+      ],
+      "reasons": [
+        {
+          "url": "https://wsgr.com/print/v2/content/49080840/Endpoints-Health-Tech-Day:-The-Health-Record-Floodgates-are-Open%E2%80%94Now-What?.pdf=",
+          "main": true,
+          "code": "http-status",
+          "detail": "0",
+          "text": "couldn't be reached."
+        }
+      ],
+      "entry": {
+        "collection": "media",
+        "slug": "1-health-tech-day-2026",
+        "path": "_media/1-health-tech-day-2026.md",
+        "content": "---\ncategory: \"Talks & Panels\"\ntitle: \"Health Tech Day 2026\"\nsource: \"Endpoints News\"\ndate_display: \"November 2026\"\narticle_url: \"https://wsgr.com/print/v2/content/49080840/Endpoints-Health-Tech-Day:-The-Health-Record-Floodgates-are-Open%E2%80%94Now-What?.pdf=\"\nweight: 1\n---\n"
+      },
+      "first_seen": "2026-11-26T00:16:54Z",
+      "last_seen": "2026-11-26T00:16:54Z"
+    },
+    {
+      "id": "ce7af88cab360aea",
+      "status": "confirmed",
+      "kind": "past_talk",
+      "title": "HIMSS Northern California Presents: Patient Safety, Legal Risk, and Accountability Webinar",
+      "outlet": "HIMSS Northern California",
+      "date": "2026-03-26",
+      "end_date": null,
+      "primary_url": "https://www.wsgr.com/en/events/himss-northern-california-presents-patient-safety-legal-risk-and-accountability-webinar.html",
+      "other_urls": [
+        "https://www.linkedin.com/in/darrelschmucker/"
+      ],
+      "reasons": [],
+      "entry": {
+        "collection": "media",
+        "slug": "1-himss-northern-california-presents-patient-safety-legal-risk",
+        "path": "_media/1-himss-northern-california-presents-patient-safety-legal-risk.md",
+        "content": "---\ncategory: \"Talks & Panels\"\ntitle: \"HIMSS Northern California Presents: Patient Safety, Legal Risk, and Accountability Webinar\"\nsource: \"HIMSS Northern California\"\ndate_display: \"March 2026\"\narticle_url: \"https://www.wsgr.com/en/events/himss-northern-california-presents-patient-safety-legal-risk-and-accountability-webinar.html\"\nweight: 1\n---\n"
+      },
+      "first_seen": "2026-11-26T00:16:54Z",
+      "last_seen": "2026-11-26T00:16:54Z"
+    },
+    {
+      "id": "36f892a2ad0ceb2d",
+      "status": "confirmed",
+      "kind": "press",
+      "title": "AI governance has to follow the work",
+      "outlet": "Health Data Management",
+      "date": "2026-11-24",
+      "end_date": null,
+      "primary_url": "https://www.healthdatamanagement.com/articles/ai-governance-has-to-follow-the-work/",
+      "other_urls": [
+        "https://www.wsgr.com/en/events/artificial-intelligence-governance-real-world-experience-of-leaders-in-the-industry.html"
+      ],
+      "reasons": [],
+      "entry": {
+        "collection": "media",
+        "slug": "1-ai-governance-has-to-follow-the-work",
+        "path": "_media/1-ai-governance-has-to-follow-the-work.md",
+        "content": "---\ncategory: \"Press Coverage\"\ntitle: \"AI governance has to follow the work\"\nsource: \"Health Data Management\"\ndate_display: \"November 2026\"\narticle_url: \"https://www.healthdatamanagement.com/articles/ai-governance-has-to-follow-the-work/\"\nweight: 1\n---\n"
+      },
+      "first_seen": "2026-11-26T00:16:54Z",
+      "last_seen": "2026-11-26T00:16:54Z"
     }
   ]
 }
