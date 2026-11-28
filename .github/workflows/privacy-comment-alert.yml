@@ -36,7 +36,7 @@ jobs:
   # NOT `scan`: `scan / scan` is the secrets scan's required context, and a
   # second publisher of that name would be read as it.
   privacy-comment-alert:
-    uses: Adam-S-Daniel/cms-platform/.github/workflows/site-privacy-comment-alert.yml@v0.1.194
+    uses: Adam-S-Daniel/cms-platform/.github/workflows/site-privacy-comment-alert.yml@89a1d9af7a6c1ff593e091851e14c1079a7e3dfc
     secrets:
       privacy_denylist: ${{ secrets.PRIVACY_DENYLIST }}
       self_alert_app_private_key: ${{ secrets.SELF_ALERT_APP_PRIVATE_KEY }}

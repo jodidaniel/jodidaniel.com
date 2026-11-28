@@ -33,6 +33,6 @@ jobs:
   # The job name is the first half of the published context —
   # `agent-checks / agent-checks` — so it must stay `agent-checks`.
   agent-checks:
-    uses: Adam-S-Daniel/cms-platform/.github/workflows/site-agent-checks.yml@v0.1.194
+    uses: Adam-S-Daniel/cms-platform/.github/workflows/site-agent-checks.yml@89a1d9af7a6c1ff593e091851e14c1079a7e3dfc
     secrets:
       privacy_denylist: ${{ secrets.PRIVACY_DENYLIST }}
